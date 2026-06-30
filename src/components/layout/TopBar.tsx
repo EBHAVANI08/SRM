@@ -1,0 +1,189 @@
+'use client'
+
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import {
+  Bell, Search, Sparkles, Menu, ChevronDown, Sun, Moon,
+  Globe, HelpCircle, Settings, Maximize2, Wifi, Battery, Activity
+} from 'lucide-react'
+import { useAppStore } from '@/lib/store'
+import { MODULES, ROLE_INFO } from '@/lib/modules'
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel
+} from '@/components/ui/dropdown-menu'
+import { Badge } from '@/components/ui/badge'
+import { formatDistanceToNow } from 'date-fns'
+
+export function TopBar() {
+  const user = useAppStore((s) => s.user)
+  const currentView = useAppStore((s) => s.currentView)
+  const setView = useAppStore((s) => s.setView)
+  const setAIAssistantOpen = useAppStore((s) => s.setAIAssistantOpen)
+  const notifications = useAppStore((s) => s.notifications)
+  const markRead = useAppStore((s) => s.markNotificationRead)
+  const toggleSidebar = useAppStore((s) => s.toggleSidebar)
+
+  const [search, setSearch] = useState('')
+
+  if (!user) return null
+
+  const currentModule = MODULES.find((m) => m.key === currentView)
+  const unread = notifications.filter((n) => !n.read).length
+  const now = new Date()
+
+  return (
+    <header className="sticky top-0 z-30 h-16 bg-white/80 backdrop-blur-xl border-b border-slate-200/80 px-4 lg:px-6 flex items-center gap-3 lg:gap-5">
+      {/* Mobile menu */}
+      <button
+        onClick={toggleSidebar}
+        className="lg:hidden p-2 rounded-lg hover:bg-slate-100"
+      >
+        <Menu className="w-5 h-5 text-slate-700" />
+      </button>
+
+      {/* Breadcrumb / module title */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 text-xs text-slate-500 mb-0.5">
+          <span>LearnX AI</span>
+          <span className="text-slate-300">/</span>
+          <span className="capitalize">{currentModule?.category || 'operations'}</span>
+          {currentModule?.aiPowered && (
+            <Badge className="ml-1 h-4 px-1.5 text-[9px] font-semibold bg-gradient-to-r from-violet-100 to-orange-100 text-violet-700 border border-violet-200">
+              <Sparkles className="w-2.5 h-2.5 mr-0.5" />
+              AI
+            </Badge>
+          )}
+        </div>
+        <h1 className="text-base lg:text-lg font-bold text-slate-900 truncate">
+          {currentModule?.title || 'Dashboard'}
+        </h1>
+      </div>
+
+      {/* Search */}
+      <div className="hidden md:flex relative w-64 lg:w-80">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search students, staff, modules..."
+          className="w-full pl-10 pr-4 py-2 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-violet-300 focus:ring-2 focus:ring-violet-100 transition-all"
+        />
+        <kbd className="absolute right-2 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[9px] font-mono text-slate-500 bg-white border border-slate-200 rounded">
+          ⌘K
+        </kbd>
+      </div>
+
+      {/* Live indicators */}
+      <div className="hidden xl:flex items-center gap-3 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200">
+        <span className="dot-pulse" />
+        <span className="text-[11px] font-semibold text-emerald-700">All Systems Operational</span>
+      </div>
+
+      {/* AI Assistant */}
+      <Button
+        onClick={() => setAIAssistantOpen(true)}
+        size="sm"
+        className="hidden sm:flex h-9 px-3 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-semibold shadow-md shadow-violet-200 gap-1.5"
+      >
+        <Sparkles className="w-3.5 h-3.5" />
+        <span className="text-xs">Ask AI</span>
+      </Button>
+
+      {/* Notifications */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button className="relative p-2 rounded-xl hover:bg-slate-100 transition-colors">
+            <Bell className="w-5 h-5 text-slate-700" />
+            {unread > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+                {unread}
+              </span>
+            )}
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-80 p-0">
+          <div className="p-3 border-b border-slate-100 flex items-center justify-between">
+            <span className="text-sm font-semibold text-slate-900">Notifications</span>
+            <Badge variant="secondary" className="text-[10px]">{unread} new</Badge>
+          </div>
+          <div className="max-h-96 overflow-y-auto custom-scroll">
+            {notifications.length === 0 ? (
+              <div className="p-8 text-center text-xs text-slate-400">
+                No notifications yet
+              </div>
+            ) : (
+              notifications.slice(0, 8).map((n) => (
+                <DropdownMenuItem
+                  key={n.id}
+                  onClick={() => markRead(n.id)}
+                  className="p-3 border-b border-slate-50 cursor-pointer flex flex-col items-start gap-1"
+                >
+                  <div className="flex items-center gap-2 w-full">
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        n.type === 'success' ? 'bg-emerald-500'
+                          : n.type === 'warning' ? 'bg-amber-500'
+                          : n.type === 'error' ? 'bg-red-500'
+                          : 'bg-blue-500'
+                      }`}
+                    />
+                    <span className="text-xs font-semibold text-slate-800 flex-1">{n.title}</span>
+                    {!n.read && <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />}
+                  </div>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">{n.message}</p>
+                  <span className="text-[10px] text-slate-400">
+                    {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}
+                  </span>
+                </DropdownMenuItem>
+              ))
+            )}
+          </div>
+          <div className="p-2 border-t border-slate-100">
+            <Button variant="ghost" size="sm" className="w-full text-xs h-8">
+              View all notifications
+            </Button>
+          </div>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {/* User menu */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button className="flex items-center gap-2 p-1 pr-2 rounded-xl hover:bg-slate-100 transition-colors">
+            <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${ROLE_INFO[user.role].color} flex items-center justify-center text-white font-bold text-xs`}>
+              {user.name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+            </div>
+            <div className="hidden lg:block text-left">
+              <div className="text-xs font-semibold text-slate-800 leading-tight">{user.name}</div>
+              <div className="text-[10px] text-slate-500 leading-tight">{ROLE_INFO[user.role].label}</div>
+            </div>
+            <ChevronDown className="hidden lg:block w-3.5 h-3.5 text-slate-400" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuLabel className="text-xs">
+            <div className="font-semibold text-slate-900">{user.name}</div>
+            <div className="text-slate-500 font-normal">{user.email}</div>
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => setView('settings')}>
+            <Settings className="w-3.5 h-3.5 mr-2" /> Settings
+          </DropdownMenuItem>
+          <DropdownMenuItem>
+            <HelpCircle className="w-3.5 h-3.5 mr-2" /> Help & Support
+          </DropdownMenuItem>
+          <DropdownMenuItem>
+            <Globe className="w-3.5 h-3.5 mr-2" /> Language: English
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem className="text-red-600" onClick={() => useAppStore.getState().logout()}>
+            Sign out
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </header>
+  )
+}
