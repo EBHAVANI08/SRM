@@ -41,11 +41,11 @@ const FEE_COLLECTION = [
 ]
 
 const MODULE_DISTRIBUTION = [
-  { name: 'Academic', value: 32, color: '#1D1D1F' },
-  { name: 'Operations', value: 24, color: '#6E6E73' },
-  { name: 'AI Modules', value: 22, color: '#A1A1A6' },
-  { name: 'Admin', value: 14, color: '#D2D2D7' },
-  { name: 'Infra', value: 8, color: '#E8E8ED' },
+  { name: 'Academic', value: 32, color: '#4F46E5' },
+  { name: 'Operations', value: 24, color: '#06B6D4' },
+  { name: 'AI Modules', value: 22, color: '#8B5CF6' },
+  { name: 'Admin', value: 14, color: '#F59E0B' },
+  { name: 'Infra', value: 8, color: '#EC4899' },
 ]
 
 const AI_INSIGHTS = [
@@ -80,12 +80,12 @@ const AI_INSIGHTS = [
 ]
 
 const LIVE_ACTIVITIES = [
-  { time: '2 min ago', action: 'AI Safety Alert', detail: 'Class 8-A fight detected, resolved in 1.2 min', icon: ShieldCheck, color: 'text-[#C9302C]' },
-  { time: '5 min ago', action: 'Fee Payment', detail: '₹38,400 received from 12 parents via UPI', icon: Wallet, color: 'text-[#247A4A]' },
-  { time: '8 min ago', action: 'AI Substitution', detail: 'Maths teacher Grade 8-B auto-substituted by Mrs. Verma', icon: BrainCircuit, color: 'text-[#1D1D1F]' },
-  { time: '12 min ago', action: 'Admission', detail: 'New KG application: Aarav Sharma (AI Score: 92)', icon: GraduationCap, color: 'text-[#1D1D1F]' },
-  { time: '18 min ago', action: 'Transport Alert', detail: 'Bus 14 arrived at Stop 7 (AI ETA accurate ±2 min)', icon: Bus, color: 'text-[#1D1D1F]' },
-  { time: '25 min ago', action: 'Document Verified', detail: 'AI OCR verified 24 transfer certificates', icon: CheckCircle2, color: 'text-[#247A4A]' },
+  { time: '2 min ago', action: 'AI Safety Alert', detail: 'Class 8-A fight detected, resolved in 1.2 min', icon: ShieldCheck, color: 'text-rose-600' },
+  { time: '5 min ago', action: 'Fee Payment', detail: '₹38,400 received from 12 parents via UPI', icon: Wallet, color: 'text-emerald-600' },
+  { time: '8 min ago', action: 'AI Substitution', detail: 'Maths teacher Grade 8-B auto-substituted by Mrs. Verma', icon: BrainCircuit, color: 'text-slate-900' },
+  { time: '12 min ago', action: 'Admission', detail: 'New KG application: Aarav Sharma (AI Score: 92)', icon: GraduationCap, color: 'text-slate-900' },
+  { time: '18 min ago', action: 'Transport Alert', detail: 'Bus 14 arrived at Stop 7 (AI ETA accurate ±2 min)', icon: Bus, color: 'text-slate-900' },
+  { time: '25 min ago', action: 'Document Verified', detail: 'AI OCR verified 24 transfer certificates', icon: CheckCircle2, color: 'text-emerald-600' },
 ]
 
 export function DashboardHome() {
@@ -118,33 +118,33 @@ export function DashboardHome() {
   return (
     <div className="p-4 lg:p-8 space-y-6 animate-page-enter max-w-[1600px] mx-auto">
       {/* Hero header — Apple style: clean white card with subtle accent */}
-      <div className="relative overflow-hidden rounded-2xl bg-white border border-[#E8E8ED] p-6 lg:p-8">
-        <div className="absolute top-0 left-0 w-1 h-full bg-[#1D1D1F]" />
+      <div className="relative overflow-hidden rounded-2xl bg-white border border-slate-200 p-6 lg:p-8">
+        <div className="absolute top-0 left-0 w-1 h-full bg-indigo-600" />
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex-1">
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#F5F5F7] border border-[#E8E8ED] mb-3">
-              <Sparkles className="w-3 h-3 text-[#1D1D1F]" />
-              <span className="text-[11px] font-semibold text-[#1D1D1F]">AI Command Center</span>
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 mb-3">
+              <Sparkles className="w-3 h-3 text-slate-900" />
+              <span className="text-[11px] font-semibold text-slate-900">AI Command Center</span>
               <span className="dot-pulse" />
             </div>
-            <h2 className="text-2xl lg:text-3xl font-semibold text-[#1D1D1F] mb-2 tracking-tight">
+            <h2 className="text-2xl lg:text-3xl font-semibold text-slate-900 mb-2 tracking-tight">
               {greeting}, {user?.name?.split(' ')[0]}!
             </h2>
-            <p className="text-[#6E6E73] text-sm lg:text-base max-w-2xl leading-relaxed">
+            <p className="text-slate-500 text-sm lg:text-base max-w-2xl leading-relaxed">
               Your AI co-pilot is monitoring 30+ modules. Today's operations are running at 94.2% efficiency with 3 AI insights ready for review.
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-2">
             <Button
               onClick={() => setAIAssistantOpen(true)}
-              className="bg-[#1D1D1F] hover:bg-[#000000] text-white font-medium gap-1.5 h-10 rounded-xl"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium gap-1.5 h-10 rounded-xl"
             >
               <Sparkles className="w-3.5 h-3.5" />
               Ask LearnX AI
             </Button>
             <Button
               variant="outline"
-              className="border-[#E8E8ED] hover:bg-[#F5F5F7] text-[#1D1D1F] font-medium gap-1.5 h-10 rounded-xl"
+              className="border-slate-200 hover:bg-slate-100 text-slate-900 font-medium gap-1.5 h-10 rounded-xl"
               onClick={() => setView('ai-academic')}
             >
               <BrainCircuit className="w-3.5 h-3.5" />
@@ -153,6 +153,26 @@ export function DashboardHome() {
           </div>
         </div>
       </div>
+
+      {/* Module grid */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
+              <Cpu className="w-4 h-4 text-slate-900" />
+              All Modules
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">{availableModules.length} modules available · {availableModules.filter(m => m.aiPowered).length} AI-powered</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-4">
+          {availableModules.map((m, i) => (
+            <ModuleCard key={m.key} module={m} index={i} onClick={() => setView(m.key)} />
+          ))}
+        </div>
+      </div>
+
 
       {/* KPIs — Apple style: clean white cards with graphite icons */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
@@ -165,16 +185,16 @@ export function DashboardHome() {
           >
             <Card className="p-5 elevated-card rounded-2xl">
               <div className="flex items-start justify-between mb-4">
-                <div className="w-10 h-10 rounded-xl bg-[#F5F5F7] flex items-center justify-center text-[#1D1D1F]">
+                <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-900">
                   <kpi.icon className="w-5 h-5" />
                 </div>
-                <div className={`flex items-center gap-0.5 text-[11px] font-semibold ${kpi.up ? 'text-[#247A4A]' : 'text-[#C9302C]'}`}>
+                <div className={`flex items-center gap-0.5 text-[11px] font-semibold ${kpi.up ? 'text-emerald-600' : 'text-rose-600'}`}>
                   {kpi.up ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
                   {kpi.trend}
                 </div>
               </div>
-              <div className="text-2xl font-semibold text-[#1D1D1F] mb-1 tracking-tight">{kpi.value}</div>
-              <div className="text-xs text-[#6E6E73]">{kpi.label}</div>
+              <div className="text-2xl font-semibold text-slate-900 mb-1 tracking-tight">{kpi.value}</div>
+              <div className="text-xs text-slate-500">{kpi.label}</div>
             </Card>
           </motion.div>
         ))}
@@ -186,10 +206,10 @@ export function DashboardHome() {
         <Card className="lg:col-span-2 p-6 elevated-card rounded-2xl">
           <div className="flex items-center justify-between mb-5">
             <div>
-              <h3 className="text-base font-semibold text-[#1D1D1F]">Attendance Trend</h3>
-              <p className="text-xs text-[#6E6E73] mt-0.5">Last 7 days · AI anomaly detection active</p>
+              <h3 className="text-base font-semibold text-slate-900">Attendance Trend</h3>
+              <p className="text-xs text-slate-500 mt-0.5">Last 7 days · AI anomaly detection active</p>
             </div>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#F0FAF3] text-[#247A4A] text-[11px] font-semibold border border-[#D4EDDB]">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[11px] font-semibold border border-emerald-200">
               <span className="dot-pulse" />
               Live
             </span>
@@ -198,17 +218,17 @@ export function DashboardHome() {
             <AreaChart data={ATTENDANCE_TREND} margin={{ top: 5, right: 5, bottom: 5, left: -25 }}>
               <defs>
                 <linearGradient id="attGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#1D1D1F" stopOpacity={0.12} />
-                  <stop offset="100%" stopColor="#1D1D1F" stopOpacity={0} />
+                  <stop offset="0%" stopColor="#4F46E5" stopOpacity={0.12} />
+                  <stop offset="100%" stopColor="#4F46E5" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F7" vertical={false} />
-              <XAxis dataKey="day" stroke="#A1A1A6" fontSize={11} tickLine={false} axisLine={false} />
-              <YAxis stroke="#A1A1A6" fontSize={11} tickLine={false} axisLine={false} domain={[85, 100]} />
+              <XAxis dataKey="day" stroke="#8B5CF6" fontSize={11} tickLine={false} axisLine={false} />
+              <YAxis stroke="#8B5CF6" fontSize={11} tickLine={false} axisLine={false} domain={[85, 100]} />
               <Tooltip
                 contentStyle={{
                   background: '#FFFFFF',
-                  border: '1px solid #E8E8ED',
+                  border: '1px solid #EC4899',
                   borderRadius: '12px',
                   fontSize: '12px',
                   boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
@@ -217,11 +237,11 @@ export function DashboardHome() {
               <Area
                 type="monotone"
                 dataKey="value"
-                stroke="#1D1D1F"
+                stroke="#4F46E5"
                 strokeWidth={2}
                 fill="url(#attGrad)"
-                dot={{ r: 3, fill: '#1D1D1F', strokeWidth: 2, stroke: '#fff' }}
-                activeDot={{ r: 5, fill: '#1D1D1F' }}
+                dot={{ r: 3, fill: '#4F46E5', strokeWidth: 2, stroke: '#fff' }}
+                activeDot={{ r: 5, fill: '#4F46E5' }}
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -231,10 +251,10 @@ export function DashboardHome() {
         <Card className="p-6 elevated-card rounded-2xl">
           <div className="flex items-center justify-between mb-5">
             <div>
-              <h3 className="text-base font-semibold text-[#1D1D1F]">Module Usage</h3>
-              <p className="text-xs text-[#6E6E73] mt-0.5">AI feature distribution</p>
+              <h3 className="text-base font-semibold text-slate-900">Module Usage</h3>
+              <p className="text-xs text-slate-500 mt-0.5">AI feature distribution</p>
             </div>
-            <Brain className="w-4 h-4 text-[#6E6E73]" />
+            <Brain className="w-4 h-4 text-slate-500" />
           </div>
           <ResponsiveContainer width="100%" height={180}>
             <PieChart>
@@ -254,7 +274,7 @@ export function DashboardHome() {
               <Tooltip
                 contentStyle={{
                   background: '#FFFFFF',
-                  border: '1px solid #E8E8ED',
+                  border: '1px solid #EC4899',
                   borderRadius: '12px',
                   fontSize: '12px',
                 }}
@@ -266,9 +286,9 @@ export function DashboardHome() {
               <div key={m.name} className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full" style={{ background: m.color }} />
-                  <span className="text-[#424245]">{m.name}</span>
+                  <span className="text-slate-700">{m.name}</span>
                 </div>
-                <span className="font-semibold text-[#1D1D1F]">{m.value}%</span>
+                <span className="font-semibold text-slate-900">{m.value}%</span>
               </div>
             ))}
           </div>
@@ -281,24 +301,24 @@ export function DashboardHome() {
         <div className="lg:col-span-2 space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-base font-semibold text-[#1D1D1F] flex items-center gap-2">
-                <BrainCircuit className="w-4 h-4 text-[#1D1D1F]" />
+              <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
+                <BrainCircuit className="w-4 h-4 text-slate-900" />
                 AI Insights & Recommendations
               </h3>
-              <p className="text-xs text-[#6E6E73] mt-0.5">Generated by LearnX AI · {new Date().toLocaleString()}</p>
+              <p className="text-xs text-slate-500 mt-0.5">Generated by LearnX AI · {new Date().toLocaleString()}</p>
             </div>
-            <Button variant="ghost" size="sm" className="text-xs h-7 text-[#1D1D1F] hover:bg-[#F5F5F7]" onClick={() => setAIAssistantOpen(true)}>
+            <Button variant="ghost" size="sm" className="text-xs h-7 text-slate-900 hover:bg-slate-100" onClick={() => setAIAssistantOpen(true)}>
               View all <ArrowRight className="w-3 h-3 ml-1" />
             </Button>
           </div>
 
           {aiInsight && (
-            <Card className="p-4 bg-[#FBFBFD] border-[#E8E8ED] rounded-2xl">
+            <Card className="p-4 bg-slate-50 border-slate-200 rounded-2xl">
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-lg bg-[#1D1D1F] flex items-center justify-center text-white flex-shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white flex-shrink-0">
                   <Sparkles className="w-4 h-4" />
                 </div>
-                <div className="flex-1 text-xs text-[#424245] whitespace-pre-wrap leading-relaxed">
+                <div className="flex-1 text-xs text-slate-700 whitespace-pre-wrap leading-relaxed">
                   {aiInsight}
                 </div>
               </div>
@@ -317,17 +337,17 @@ export function DashboardHome() {
                   <div className="flex items-start gap-3 mb-2">
                     <insight.icon
                       className={`w-4 h-4 flex-shrink-0 ${
-                        insight.type === 'success' ? 'text-[#247A4A]'
-                          : insight.type === 'warning' ? 'text-[#8A6D1C]'
-                          : 'text-[#1D1D1F]'
+                        insight.type === 'success' ? 'text-emerald-600'
+                          : insight.type === 'warning' ? 'text-amber-600'
+                          : 'text-slate-900'
                       }`}
                     />
                     <div className="flex-1">
-                      <div className="text-xs font-semibold text-[#1D1D1F] mb-0.5">{insight.title}</div>
-                      <div className="text-[11px] text-[#6E6E73] leading-relaxed">{insight.desc}</div>
+                      <div className="text-xs font-semibold text-slate-900 mb-0.5">{insight.title}</div>
+                      <div className="text-[11px] text-slate-500 leading-relaxed">{insight.desc}</div>
                     </div>
                   </div>
-                  <button className="text-[11px] font-medium text-[#1D1D1F] hover:underline flex items-center gap-1 mt-2">
+                  <button className="text-[11px] font-medium text-slate-900 hover:underline flex items-center gap-1 mt-2">
                     {insight.action}
                     <ChevronRight className="w-3 h-3" />
                   </button>
@@ -341,10 +361,10 @@ export function DashboardHome() {
         <Card className="p-6 elevated-card rounded-2xl">
           <div className="flex items-center justify-between mb-5">
             <div>
-              <h3 className="text-base font-semibold text-[#1D1D1F]">Live Activity</h3>
-              <p className="text-xs text-[#6E6E73] mt-0.5">Real-time system events</p>
+              <h3 className="text-base font-semibold text-slate-900">Live Activity</h3>
+              <p className="text-xs text-slate-500 mt-0.5">Real-time system events</p>
             </div>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#F0FAF3] text-[#247A4A] text-[11px] font-semibold border border-[#D4EDDB]">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[11px] font-semibold border border-emerald-200">
               <span className="dot-pulse" />
               Live
             </span>
@@ -358,18 +378,18 @@ export function DashboardHome() {
                 transition={{ delay: i * 0.05 }}
                 className="flex gap-3"
               >
-                <div className="w-8 h-8 rounded-lg bg-[#F5F5F7] flex items-center justify-center flex-shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
                   <act.icon className={`w-3.5 h-3.5 ${act.color}`} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-[11px] font-semibold text-[#1D1D1F]">{act.action}</span>
-                    <span className="text-[10px] text-[#A1A1A6] flex items-center gap-0.5">
+                    <span className="text-[11px] font-semibold text-slate-900">{act.action}</span>
+                    <span className="text-[10px] text-slate-400 flex items-center gap-0.5">
                       <Clock className="w-2.5 h-2.5" />
                       {act.time}
                     </span>
                   </div>
-                  <p className="text-[11px] text-[#6E6E73] mt-0.5 leading-relaxed">{act.detail}</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">{act.detail}</p>
                 </div>
               </motion.div>
             ))}
@@ -377,24 +397,6 @@ export function DashboardHome() {
         </Card>
       </div>
 
-      {/* Module grid */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-base font-semibold text-[#1D1D1F] flex items-center gap-2">
-              <Cpu className="w-4 h-4 text-[#1D1D1F]" />
-              All Modules
-            </h3>
-            <p className="text-xs text-[#6E6E73] mt-0.5">{availableModules.length} modules available · {availableModules.filter(m => m.aiPowered).length} AI-powered</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-4">
-          {availableModules.map((m, i) => (
-            <ModuleCard key={m.key} module={m} index={i} onClick={() => setView(m.key)} />
-          ))}
-        </div>
-      </div>
     </div>
   )
 }
@@ -417,14 +419,14 @@ function ModuleCard({ module, index, onClick }: { module: typeof MODULES[0]; ind
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.03 }}
       className="module-card group"
-      style={{ ['--card-accent' as any]: '#1D1D1F' }}
+      style={{ ['--card-accent' as any]: '#4F46E5' }}
       onMouseEnter={() => setShowPopup(true)}
       onMouseLeave={() => setShowPopup(false)}
       onClick={onClick}
     >
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
-        <div className="w-10 h-10 rounded-xl bg-[#F5F5F7] flex items-center justify-center text-[#1D1D1F] group-hover:bg-[#1D1D1F] group-hover:text-white transition-colors">
+        <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-900 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
           <Icon className="w-5 h-5" />
         </div>
         {module.aiPowered && (
@@ -436,16 +438,16 @@ function ModuleCard({ module, index, onClick }: { module: typeof MODULES[0]; ind
       </div>
 
       {/* Title */}
-      <h4 className="text-sm font-semibold text-[#1D1D1F] mb-1.5 leading-tight tracking-tight">{module.shortTitle}</h4>
-      <p className="text-[11px] text-[#6E6E73] leading-relaxed line-clamp-2 mb-4">{module.description}</p>
+      <h4 className="text-sm font-semibold text-slate-900 mb-1.5 leading-tight tracking-tight">{module.shortTitle}</h4>
+      <p className="text-[11px] text-slate-500 leading-relaxed line-clamp-2 mb-4">{module.description}</p>
 
       {/* Stats */}
       {module.stats && (
         <div className="grid grid-cols-2 gap-1.5 mb-4">
           {module.stats.slice(0, 2).map((stat, i) => (
-            <div key={i} className="p-2 rounded-lg bg-[#FBFBFD] border border-[#E8E8ED]">
-              <div className="text-[10px] text-[#6E6E73] truncate">{stat.label}</div>
-              <div className="text-xs font-semibold text-[#1D1D1F]">{stat.value}</div>
+            <div key={i} className="p-2 rounded-lg bg-slate-50 border border-slate-200">
+              <div className="text-[10px] text-slate-500 truncate">{stat.label}</div>
+              <div className="text-xs font-semibold text-slate-900">{stat.value}</div>
             </div>
           ))}
         </div>
@@ -453,11 +455,11 @@ function ModuleCard({ module, index, onClick }: { module: typeof MODULES[0]; ind
 
       {/* Footer */}
       <div className="flex items-center justify-between text-[10px]">
-        <div className="flex items-center gap-1 text-[#1D1D1F] font-medium">
+        <div className="flex items-center gap-1 text-slate-900 font-medium">
           <span>Open module</span>
           <ArrowUpRight className="w-3 h-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
         </div>
-        <span className="text-[#A1A1A6] capitalize">{module.category}</span>
+        <span className="text-slate-400 capitalize">{module.category}</span>
       </div>
 
       {/* Hover popup */}
@@ -465,12 +467,12 @@ function ModuleCard({ module, index, onClick }: { module: typeof MODULES[0]; ind
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="absolute z-20 left-0 right-0 top-full mt-1 mx-0 p-3 rounded-xl bg-white border border-[#E8E8ED] shadow-xl"
+          className="absolute z-20 left-0 right-0 top-full mt-1 mx-0 p-3 rounded-xl bg-white border border-slate-200 shadow-xl"
         >
-          <div className="text-[10px] font-semibold text-[#6E6E73] uppercase tracking-wider mb-2">Key Features</div>
+          <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Key Features</div>
           <div className="flex flex-wrap gap-1">
             {module.features.slice(0, 4).map((f) => (
-              <span key={f} className="px-1.5 py-0.5 rounded-md bg-[#FBFBFD] border border-[#E8E8ED] text-[10px] text-[#424245]">
+              <span key={f} className="px-1.5 py-0.5 rounded-md bg-slate-50 border border-slate-200 text-[10px] text-slate-700">
                 {f}
               </span>
             ))}

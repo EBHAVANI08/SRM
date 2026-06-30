@@ -65,7 +65,7 @@ export function Sidebar() {
       }`}
     >
       {/* Brand header — logo on top-left */}
-      <div className="relative z-10 px-5 py-5 border-b border-[#E8E8ED]">
+      <div className="relative z-10 px-5 py-5 border-b border-slate-200">
         <div className="flex items-center justify-between">
           <div className={`flex items-center gap-2.5 ${collapsed ? 'justify-center' : ''}`}>
             <img
@@ -77,7 +77,7 @@ export function Sidebar() {
           {!collapsed && (
             <button
               onClick={toggle}
-              className="p-1.5 rounded-lg hover:bg-[#F5F5F7] text-[#6E6E73] hover:text-[#1D1D1F] transition-all"
+              className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-900 transition-all"
             >
               <PanelLeftClose className="w-4 h-4" />
             </button>
@@ -86,7 +86,7 @@ export function Sidebar() {
         {collapsed && (
           <button
             onClick={toggle}
-            className="mt-3 mx-auto p-1.5 rounded-lg hover:bg-[#F5F5F7] text-[#6E6E73] hover:text-[#1D1D1F] transition-all block"
+            className="mt-3 mx-auto p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-900 transition-all block"
           >
             <PanelLeft className="w-4 h-4" />
           </button>
@@ -97,13 +97,13 @@ export function Sidebar() {
       <div className="relative z-10 px-3 py-3">
         <button
           onClick={() => setAIAssistantOpen(true)}
-          className={`group relative w-full overflow-hidden rounded-xl bg-[#1D1D1F] hover:bg-[#000000] transition-all p-2.5 ${
+          className={`group relative w-full overflow-hidden rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 transition-all p-2.5 ${
             collapsed ? 'flex justify-center' : 'flex items-center gap-2.5'
           }`}
         >
           <div className="relative flex-shrink-0">
             <Sparkles className="w-4 h-4 text-white" />
-            <span className="absolute -top-1 -right-1 w-1.5 h-1.5 bg-[#34C759] rounded-full" />
+            <span className="absolute -top-1 -right-1 w-1.5 h-1.5 bg-emerald-500 rounded-full" />
           </div>
           {!collapsed && (
             <div className="flex-1 text-left">
@@ -119,13 +119,13 @@ export function Sidebar() {
       {!collapsed && (
         <div className="relative z-10 px-3 pb-2">
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#A1A1A6]" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search modules..."
-              className="w-full pl-8 pr-3 py-2 text-xs rounded-lg bg-[#F5F5F7] border border-transparent text-[#1D1D1F] placeholder:text-[#A1A1A6] focus:outline-none focus:bg-white focus:border-[#E8E8ED] transition-all"
+              className="w-full pl-8 pr-3 py-2 text-xs rounded-lg bg-slate-100 border border-transparent text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-slate-200 transition-all"
             />
           </div>
         </div>
@@ -139,7 +139,7 @@ export function Sidebar() {
           return (
             <div key={cat} className="mb-4">
               {!collapsed && (
-                <div className="text-[10px] font-semibold text-[#A1A1A6] uppercase tracking-wider px-2 mb-1.5">
+                <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-2 mb-1.5">
                   {CATEGORY_LABELS[cat]}
                 </div>
               )}
@@ -161,12 +161,12 @@ export function Sidebar() {
                         <>
                           <span className="flex-1 text-left truncate">{m.shortTitle}</span>
                           {m.aiPowered && (
-                            <span className="w-1 h-1 rounded-full bg-[#1D1D1F] opacity-40" />
+                            <span className="w-1 h-1 rounded-full bg-indigo-500 opacity-50" />
                           )}
                         </>
                       )}
                       {collapsed && m.aiPowered && (
-                        <span className="absolute top-1.5 right-1.5 w-1 h-1 rounded-full bg-[#1D1D1F] opacity-40" />
+                        <span className="absolute top-1.5 right-1.5 w-1 h-1 rounded-full bg-indigo-500 opacity-50" />
                       )}
                     </button>
                   )
@@ -178,28 +178,28 @@ export function Sidebar() {
       </div>
 
       {/* User card — elegant */}
-      <div className="relative z-10 px-3 pt-3 border-t border-[#E8E8ED]">
+      <div className="relative z-10 px-3 pt-3 border-t border-slate-200">
         <div
-          className={`flex items-center gap-2.5 p-2 rounded-xl bg-[#FBFBFD] border border-[#E8E8ED] ${
+          className={`flex items-center gap-2.5 p-2 rounded-xl bg-slate-50 border border-slate-200 ${
             collapsed ? 'justify-center' : ''
           }`}
         >
           <div
-            className={`relative w-8 h-8 rounded-lg bg-[#1D1D1F] flex items-center justify-center text-white font-semibold text-xs flex-shrink-0`}
+            className={`relative w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-semibold text-xs flex-shrink-0`}
           >
             {user.name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
-            <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-[#34C759] rounded-full border-2 border-white" />
+            <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white" />
           </div>
           {!collapsed && (
             <div className="flex-1 min-w-0">
-              <div className="text-xs font-semibold text-[#1D1D1F] truncate">{user.name}</div>
-              <div className="text-[10px] text-[#6E6E73] truncate">{roleInfo.label}</div>
+              <div className="text-xs font-semibold text-slate-900 truncate">{user.name}</div>
+              <div className="text-[10px] text-slate-500 truncate">{roleInfo.label}</div>
             </div>
           )}
           {!collapsed && (
             <button
               onClick={logout}
-              className="p-1.5 rounded-md text-[#A1A1A6] hover:text-[#C9302C] hover:bg-[#FDF2F2] transition-all"
+              className="p-1.5 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
               title="Sign out"
             >
               <LogOut className="w-3.5 h-3.5" />
