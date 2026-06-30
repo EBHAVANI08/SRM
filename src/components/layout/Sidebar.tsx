@@ -1,19 +1,17 @@
 'use client'
 
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import {
   LayoutDashboard, ConciergeBell, UserPlus, Fingerprint, Wallet, BookOpen,
   FileText, BrainCircuit, UtensilsCrossed, Bus, ScanFace, MessageSquare,
   CalendarDays, Trophy, Award, FolderLock, ShieldCheck, Cog, Brain, Users,
   CalendarClock, Library, HeartPulse, Building2, GraduationCap, UserCog,
   Landmark, CalendarRange, FileQuestion, Compass, Siren, Target, Database,
-  Settings, ChevronLeft, ChevronRight, Sparkles, Search, Bell, LogOut,
+  Settings, Sparkles, Search, Bell, LogOut,
   PanelLeftClose, PanelLeft, Zap
 } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
 import { MODULES, ROLE_INFO } from '@/lib/modules'
-import type { ModuleConfig } from '@/lib/modules'
 
 const ICON_MAP: Record<string, any> = {
   LayoutDashboard, ConciergeBell, UserPlus, Fingerprint, Wallet, BookOpen,
@@ -44,7 +42,6 @@ export function Sidebar() {
   const notifications = useAppStore((s) => s.notifications)
 
   const [search, setSearch] = useState('')
-  const [hoveredItem, setHoveredItem] = useState<string | null>(null)
 
   if (!user) return null
 
@@ -67,22 +64,20 @@ export function Sidebar() {
         collapsed ? 'w-[76px]' : 'w-[280px]'
       }`}
     >
-      {/* Brand header */}
-      <div className="relative z-10 px-4 py-4 border-b border-white/5">
+      {/* Brand header — logo on top-left */}
+      <div className="relative z-10 px-5 py-5 border-b border-[#E8E8ED]">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5 overflow-hidden">
-            <div className={`relative ${collapsed ? 'mx-auto' : ''}`}>
-              <img
-                src="/logo.png"
-                alt="LearnX"
-                className={`brightness-0 invert transition-all ${collapsed ? 'w-9' : 'w-32'}`}
-              />
-            </div>
+          <div className={`flex items-center gap-2.5 ${collapsed ? 'justify-center' : ''}`}>
+            <img
+              src="/logo.png"
+              alt="LearnX"
+              className={`transition-all ${collapsed ? 'w-9' : 'w-28'}`}
+            />
           </div>
           {!collapsed && (
             <button
               onClick={toggle}
-              className="p-1.5 rounded-lg hover:bg-white/5 text-white/60 hover:text-white transition-all"
+              className="p-1.5 rounded-lg hover:bg-[#F5F5F7] text-[#6E6E73] hover:text-[#1D1D1F] transition-all"
             >
               <PanelLeftClose className="w-4 h-4" />
             </button>
@@ -91,64 +86,60 @@ export function Sidebar() {
         {collapsed && (
           <button
             onClick={toggle}
-            className="mt-3 mx-auto p-1.5 rounded-lg hover:bg-white/5 text-white/60 hover:text-white transition-all block"
+            className="mt-3 mx-auto p-1.5 rounded-lg hover:bg-[#F5F5F7] text-[#6E6E73] hover:text-[#1D1D1F] transition-all block"
           >
             <PanelLeft className="w-4 h-4" />
           </button>
         )}
       </div>
 
-      {/* AI Assistant Button */}
+      {/* AI Assistant Button — elegant graphite */}
       <div className="relative z-10 px-3 py-3">
         <button
           onClick={() => setAIAssistantOpen(true)}
-          className={`group relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-violet-600 via-fuchsia-600 to-orange-500 p-[1px] transition-all hover:shadow-lg hover:shadow-violet-500/30`}
+          className={`group relative w-full overflow-hidden rounded-xl bg-[#1D1D1F] hover:bg-[#000000] transition-all p-2.5 ${
+            collapsed ? 'flex justify-center' : 'flex items-center gap-2.5'
+          }`}
         >
-          <div
-            className={`relative rounded-[11px] bg-[#0B1F3A] ${
-              collapsed ? 'px-2 py-2' : 'px-3 py-2.5'
-            } flex items-center ${collapsed ? 'justify-center' : 'gap-2.5'}`}
-          >
-            <div className="relative flex-shrink-0">
-              <Sparkles className="w-4 h-4 text-white" />
-              <span className="absolute -top-1 -right-1 w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
-            </div>
-            {!collapsed && (
-              <div className="flex-1 text-left">
-                <div className="text-[11px] font-bold text-white leading-tight">Ask LearnX AI</div>
-                <div className="text-[9px] text-white/60 leading-tight">RAG-powered · 30+ modules</div>
-              </div>
-            )}
-            {!collapsed && <Zap className="w-3 h-3 text-orange-300" />}
+          <div className="relative flex-shrink-0">
+            <Sparkles className="w-4 h-4 text-white" />
+            <span className="absolute -top-1 -right-1 w-1.5 h-1.5 bg-[#34C759] rounded-full" />
           </div>
+          {!collapsed && (
+            <div className="flex-1 text-left">
+              <div className="text-[12px] font-semibold text-white leading-tight">Ask LearnX AI</div>
+              <div className="text-[10px] text-white/60 leading-tight">RAG-powered · 30+ modules</div>
+            </div>
+          )}
+          {!collapsed && <Zap className="w-3 h-3 text-white/40" />}
         </button>
       </div>
 
       {/* Search */}
       {!collapsed && (
-        <div className="relative z-10 px-3 pb-3">
+        <div className="relative z-10 px-3 pb-2">
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/40" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#A1A1A6]" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search modules..."
-              className="w-full pl-8 pr-3 py-2 text-xs rounded-lg bg-white/5 border border-white/10 text-white placeholder:text-white/40 focus:outline-none focus:border-violet-400/50 focus:bg-white/10 transition-all"
+              className="w-full pl-8 pr-3 py-2 text-xs rounded-lg bg-[#F5F5F7] border border-transparent text-[#1D1D1F] placeholder:text-[#A1A1A6] focus:outline-none focus:bg-white focus:border-[#E8E8ED] transition-all"
             />
           </div>
         </div>
       )}
 
       {/* Modules list */}
-      <div className="relative z-10 flex-1 overflow-y-auto custom-scroll px-3 pb-3">
+      <div className="relative z-10 flex-1 overflow-y-auto custom-scroll px-3 pb-3 pt-1">
         {categories.map((cat) => {
           const catModules = filteredModules.filter((m) => m.category === cat)
           if (catModules.length === 0) return null
           return (
             <div key={cat} className="mb-4">
               {!collapsed && (
-                <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider px-2 mb-1.5">
+                <div className="text-[10px] font-semibold text-[#A1A1A6] uppercase tracking-wider px-2 mb-1.5">
                   {CATEGORY_LABELS[cat]}
                 </div>
               )}
@@ -160,8 +151,6 @@ export function Sidebar() {
                     <button
                       key={m.key}
                       onClick={() => setView(m.key)}
-                      onMouseEnter={() => setHoveredItem(m.key)}
-                      onMouseLeave={() => setHoveredItem(null)}
                       className={`sidebar-item w-full ${isActive ? 'active' : ''} ${
                         collapsed ? 'justify-center' : ''
                       }`}
@@ -172,12 +161,12 @@ export function Sidebar() {
                         <>
                           <span className="flex-1 text-left truncate">{m.shortTitle}</span>
                           {m.aiPowered && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-violet-400 to-orange-400" />
+                            <span className="w-1 h-1 rounded-full bg-[#1D1D1F] opacity-40" />
                           )}
                         </>
                       )}
                       {collapsed && m.aiPowered && (
-                        <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-gradient-to-r from-violet-400 to-orange-400" />
+                        <span className="absolute top-1.5 right-1.5 w-1 h-1 rounded-full bg-[#1D1D1F] opacity-40" />
                       )}
                     </button>
                   )
@@ -188,29 +177,29 @@ export function Sidebar() {
         })}
       </div>
 
-      {/* User card */}
-      <div className="relative z-10 px-3 pt-3 border-t border-white/5">
+      {/* User card — elegant */}
+      <div className="relative z-10 px-3 pt-3 border-t border-[#E8E8ED]">
         <div
-          className={`flex items-center gap-2.5 p-2 rounded-xl bg-white/5 border border-white/10 ${
+          className={`flex items-center gap-2.5 p-2 rounded-xl bg-[#FBFBFD] border border-[#E8E8ED] ${
             collapsed ? 'justify-center' : ''
           }`}
         >
           <div
-            className={`relative w-8 h-8 rounded-lg bg-gradient-to-br ${roleInfo.color} flex items-center justify-center text-white font-bold text-xs flex-shrink-0`}
+            className={`relative w-8 h-8 rounded-lg bg-[#1D1D1F] flex items-center justify-center text-white font-semibold text-xs flex-shrink-0`}
           >
             {user.name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
-            <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-[#0B1F3A]" />
+            <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-[#34C759] rounded-full border-2 border-white" />
           </div>
           {!collapsed && (
             <div className="flex-1 min-w-0">
-              <div className="text-xs font-semibold text-white truncate">{user.name}</div>
-              <div className="text-[10px] text-white/60 truncate">{roleInfo.label}</div>
+              <div className="text-xs font-semibold text-[#1D1D1F] truncate">{user.name}</div>
+              <div className="text-[10px] text-[#6E6E73] truncate">{roleInfo.label}</div>
             </div>
           )}
           {!collapsed && (
             <button
               onClick={logout}
-              className="p-1.5 rounded-md text-white/40 hover:text-red-300 hover:bg-red-500/10 transition-all"
+              className="p-1.5 rounded-md text-[#A1A1A6] hover:text-[#C9302C] hover:bg-[#FDF2F2] transition-all"
               title="Sign out"
             >
               <LogOut className="w-3.5 h-3.5" />

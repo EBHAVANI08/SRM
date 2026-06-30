@@ -23,10 +23,10 @@ import {
 const MODULE_DATA: Record<string, any> = {
   'front-desk': {
     stats: [
-      { label: 'Visitors Today', value: '47', trend: '+12%', icon: Users, color: 'from-amber-500 to-orange-600' },
-      { label: 'Pending Approvals', value: '3', trend: '-2', icon: Clock, color: 'from-red-500 to-rose-600' },
-      { label: 'Avg Check-in Time', value: '42s', trend: '-18%', icon: Zap, color: 'from-emerald-500 to-teal-600' },
-      { label: 'Gate Passes Issued', value: '128', trend: '+8%', icon: FileText, color: 'from-violet-500 to-purple-600' },
+      { label: 'Visitors Today', value: '47', trend: '+12%', icon: Users },
+      { label: 'Pending Approvals', value: '3', trend: '-2', icon: Clock },
+      { label: 'Avg Check-in Time', value: '42s', trend: '-18%', icon: Zap },
+      { label: 'Gate Passes Issued', value: '128', trend: '+8%', icon: FileText },
     ],
     cards: [
       { title: 'Smart Visitor Check-In', desc: 'AI face capture + OTP verification + auto gate pass', icon: 'ScanFace', action: 'Start Check-In' },
@@ -44,10 +44,10 @@ const MODULE_DATA: Record<string, any> = {
   },
   admissions: {
     stats: [
-      { label: 'Applications (2026-27)', value: '1,284', trend: '+24%', icon: FileText, color: 'from-emerald-500 to-teal-600' },
-      { label: 'Confirmed Seats', value: '612', trend: '+18%', icon: CheckCircle2, color: 'from-violet-500 to-purple-600' },
-      { label: 'KG Registrations', value: '184', trend: '+32%', icon: Users, color: 'from-orange-500 to-amber-600' },
-      { label: 'Conversion Rate', value: '68.5%', trend: '+5.2%', icon: TrendingUp, color: 'from-blue-500 to-cyan-600' },
+      { label: 'Applications (2026-27)', value: '1,284', trend: '+24%', icon: FileText },
+      { label: 'Confirmed Seats', value: '612', trend: '+18%', icon: CheckCircle2 },
+      { label: 'KG Registrations', value: '184', trend: '+32%', icon: Users },
+      { label: 'Conversion Rate', value: '68.5%', trend: '+5.2%', icon: TrendingUp },
     ],
     cards: [
       { title: 'Online Application Form', desc: 'AI-validated multi-step form with document upload', icon: 'FileText', action: 'New Application' },
@@ -71,10 +71,10 @@ const MODULE_DATA: Record<string, any> = {
   },
   attendance: {
     stats: [
-      { label: 'Present Today', value: '2,683', trend: '94.2%', icon: CheckCircle2, color: 'from-emerald-500 to-teal-600' },
-      { label: 'Absent', value: '164', trend: '5.8%', icon: X, color: 'from-red-500 to-rose-600' },
-      { label: 'Late Arrivals', value: '47', trend: '+3', icon: Clock, color: 'from-amber-500 to-orange-600' },
-      { label: 'On Leave', value: '23', trend: '-5', icon: Calendar, color: 'from-blue-500 to-indigo-600' },
+      { label: 'Present Today', value: '2,683', trend: '94.2%', icon: CheckCircle2 },
+      { label: 'Absent', value: '164', trend: '5.8%', icon: X },
+      { label: 'Late Arrivals', value: '47', trend: '+3', icon: Clock },
+      { label: 'On Leave', value: '23', trend: '-5', icon: Calendar },
     ],
     cards: [
       { title: 'Biometric Attendance', desc: 'Fingerprint scanners across 12 gates', icon: 'Fingerprint', action: 'View Devices' },
@@ -85,14 +85,14 @@ const MODULE_DATA: Record<string, any> = {
       { title: 'Auto SMS/WhatsApp', desc: 'Instant parent notification for absentees', icon: 'MessageSquare', action: 'Configure' },
     ],
     breakdown: [
-      { name: 'Biometric', value: 48, color: '#7C3AED' },
-      { name: 'RFID', value: 32, color: '#EA580C' },
-      { name: 'Face AI', value: 18, color: '#059669' },
-      { name: 'Manual', value: 2, color: '#94A3B8' },
+      { name: 'Biometric', value: 48, color: '#1D1D1F' },
+      { name: 'RFID', value: 32, color: '#6E6E73' },
+      { name: 'Face AI', value: 18, color: '#A1A1A6' },
+      { name: 'Manual', value: 2, color: '#D2D2D7' },
     ],
     trend: [
-      { day: 'Mon', present: 92.1 }, { day: 'Tue', present: 93.4 }, { day: 'Wed', present: 94.2 },
-      { day: 'Thu', present: 93.8 }, { day: 'Fri', present: 94.5 }, { day: 'Sat', present: 95.1 }, { day: 'Today', present: 94.2 },
+      { day: 'Mon', value: 92.1 }, { day: 'Tue', value: 93.4 }, { day: 'Wed', value: 94.2 },
+      { day: 'Thu', value: 93.8 }, { day: 'Fri', value: 94.5 }, { day: 'Sat', value: 95.1 }, { day: 'Today', value: 94.2 },
     ],
     table: [
       { name: 'Aarav Singh', grade: '7-A', status: 'Present', time: '08:12', method: 'Face AI' },
@@ -126,40 +126,50 @@ export function ModuleView({ moduleKey }: { moduleKey: string }) {
 
   const data = MODULE_DATA[moduleKey] || generateGenericData(currentModule)
 
-  return (
-    <div className="p-4 lg:p-6 space-y-6 animate-page-enter">
-      {/* Module hero header */}
-      <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${module.color} p-6 text-white`}>
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.2),transparent_50%)]" />
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
+  // Determine the data key for the trend chart safely
+  const trendDataKey = data.trend && data.trend[0]
+    ? ('month' in data.trend[0] ? 'apps' : 'present' in data.trend[0] ? 'present' : 'value')
+    : 'value'
+  const trendXKey = data.trend && data.trend[0]
+    ? ('month' in data.trend[0] ? 'month' : 'day' in data.trend[0] ? 'day' : 'name')
+    : 'name'
 
-        <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+  return (
+    <div className="p-4 lg:p-8 space-y-6 animate-page-enter max-w-[1600px] mx-auto">
+      {/* Module hero header — Apple style: clean white with subtle accent */}
+      <div className="relative overflow-hidden rounded-2xl bg-white border border-[#E8E8ED] p-6 lg:p-8">
+        <div className="absolute top-0 left-0 w-1 h-full bg-[#1D1D1F]" />
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              {module.aiPowered && (
-                <Badge className="bg-white/15 text-white border-white/30 backdrop-blur-sm text-[10px] h-5">
+            <div className="flex items-center gap-2 mb-3">
+              {currentModule.aiPowered && (
+                <span className="ai-badge">
                   <Sparkles className="w-2.5 h-2.5 mr-0.5" />
-                  AI POWERED
-                </Badge>
+                  AI Powered
+                </span>
               )}
-              <Badge className="bg-white/15 text-white border-white/30 backdrop-blur-sm text-[10px] h-5 capitalize">
-                {module.category}
-              </Badge>
+              <span className="text-[11px] font-semibold text-[#6E6E73] uppercase tracking-wider capitalize">
+                {currentModule.category}
+              </span>
             </div>
-            <h2 className="text-2xl lg:text-3xl font-bold mb-1">{module.title}</h2>
-            <p className="text-white/80 text-sm max-w-2xl">{module.description}</p>
+            <h2 className="text-2xl lg:text-3xl font-semibold text-[#1D1D1F] mb-2 tracking-tight">
+              {currentModule.title}
+            </h2>
+            <p className="text-[#6E6E73] text-sm lg:text-base max-w-2xl leading-relaxed">
+              {currentModule.description}
+            </p>
           </div>
           <div className="flex gap-2">
             <Button
               onClick={() => setAIAssistantOpen(true)}
-              className="bg-white text-slate-900 hover:bg-white/90 font-semibold gap-1.5"
+              variant="outline"
+              className="h-10 px-4 rounded-xl border-[#E8E8ED] hover:bg-[#F5F5F7] font-medium gap-1.5"
             >
               <Sparkles className="w-3.5 h-3.5" />
               Ask AI
             </Button>
             <Button
-              variant="outline"
-              className="bg-white/10 border-white/30 text-white hover:bg-white/20 backdrop-blur-sm font-semibold gap-1.5"
+              className="h-10 px-4 rounded-xl bg-[#1D1D1F] hover:bg-[#000000] text-white font-medium gap-1.5"
             >
               <Plus className="w-3.5 h-3.5" />
               New
@@ -168,24 +178,27 @@ export function ModuleView({ moduleKey }: { moduleKey: string }) {
         </div>
       </div>
 
-      {/* AI Insight banner */}
+      {/* AI Insight banner — subtle, elegant */}
       {aiInsight && (
-        <Card className="p-4 bg-gradient-to-br from-violet-50 to-orange-50 border-violet-200">
-          <div className="flex items-start gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-orange-500 flex items-center justify-center text-white flex-shrink-0 ai-glow">
+        <Card className="p-5 bg-[#FBFBFD] border-[#E8E8ED] rounded-2xl">
+          <div className="flex items-start gap-4">
+            <div className="w-9 h-9 rounded-xl bg-[#1D1D1F] flex items-center justify-center text-white flex-shrink-0">
               <Brain className="w-4 h-4" />
             </div>
             <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs font-bold text-slate-900">AI Insight</span>
-                <Badge className="bg-violet-100 text-violet-700 border-violet-200 text-[9px] h-4">Live</Badge>
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="text-xs font-semibold text-[#1D1D1F]">AI Insight</span>
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[#F0FAF3] text-[#247A4A] text-[10px] font-semibold border border-[#D4EDDB]">
+                  <span className="dot-pulse" />
+                  Live
+                </span>
               </div>
-              <div className="text-xs text-slate-700 whitespace-pre-wrap leading-relaxed">{aiInsight}</div>
+              <div className="text-sm text-[#424245] whitespace-pre-wrap leading-relaxed">{aiInsight}</div>
             </div>
             <Button
               size="sm"
               variant="ghost"
-              className="text-xs h-7 text-violet-600"
+              className="text-xs h-7 text-[#1D1D1F] hover:bg-[#F5F5F7]"
               onClick={() => setAIAssistantOpen(true)}
             >
               Ask more
@@ -195,7 +208,7 @@ export function ModuleView({ moduleKey }: { moduleKey: string }) {
         </Card>
       )}
 
-      {/* KPI Stats */}
+      {/* KPI Stats — Apple style: clean white cards, graphite icons */}
       {data.stats && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
           {data.stats.map((stat: any, i: number) => (
@@ -205,17 +218,17 @@ export function ModuleView({ moduleKey }: { moduleKey: string }) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
             >
-              <Card className="p-4 lg:p-5 elevated-card">
-                <div className="flex items-start justify-between mb-3">
-                  <div className={`w-9 h-9 lg:w-10 lg:h-10 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center text-white shadow-md`}>
-                    <stat.icon className="w-4 h-4 lg:w-5 lg:h-5" />
+              <Card className="p-5 elevated-card rounded-2xl">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-[#F5F5F7] flex items-center justify-center text-[#1D1D1F]">
+                    <stat.icon className="w-5 h-5" />
                   </div>
-                  <div className="flex items-center gap-0.5 text-[11px] font-bold text-slate-600">
+                  <div className="text-[11px] font-semibold text-[#6E6E73]">
                     {stat.trend}
                   </div>
                 </div>
-                <div className="text-xl lg:text-2xl font-bold text-slate-900 mb-0.5">{stat.value}</div>
-                <div className="text-[11px] lg:text-xs text-slate-500">{stat.label}</div>
+                <div className="text-2xl font-semibold text-[#1D1D1F] mb-1 tracking-tight">{stat.value}</div>
+                <div className="text-xs text-[#6E6E73]">{stat.label}</div>
               </Card>
             </motion.div>
           ))}
@@ -225,43 +238,45 @@ export function ModuleView({ moduleKey }: { moduleKey: string }) {
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {data.trend && (
-          <Card className="lg:col-span-2 p-5 elevated-card">
-            <div className="flex items-center justify-between mb-4">
+          <Card className="lg:col-span-2 p-6 elevated-card rounded-2xl">
+            <div className="flex items-center justify-between mb-5">
               <div>
-                <h3 className="text-sm font-bold text-slate-900">7-Day Trend</h3>
-                <p className="text-xs text-slate-500">AI-powered analytics</p>
+                <h3 className="text-base font-semibold text-[#1D1D1F]">7-Day Trend</h3>
+                <p className="text-xs text-[#6E6E73] mt-0.5">AI-powered analytics</p>
               </div>
-              <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200">
-                <span className="dot-pulse mr-1" />
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#F0FAF3] text-[#247A4A] text-[11px] font-semibold border border-[#D4EDDB]">
+                <span className="dot-pulse" />
                 Live
-              </Badge>
+              </span>
             </div>
             <ResponsiveContainer width="100%" height={220}>
               <AreaChart data={data.trend} margin={{ top: 5, right: 5, bottom: 5, left: -25 }}>
                 <defs>
                   <linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={module.accent} stopOpacity={0.3} />
-                    <stop offset="100%" stopColor={module.accent} stopOpacity={0} />
+                    <stop offset="0%" stopColor="#1D1D1F" stopOpacity={0.12} />
+                    <stop offset="100%" stopColor="#1D1D1F" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
-                <XAxis dataKey={data.trend[0].month ? 'month' : 'day'} stroke="#94A3B8" fontSize={11} tickLine={false} axisLine={false} />
-                <YAxis stroke="#94A3B8" fontSize={11} tickLine={false} axisLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F7" vertical={false} />
+                <XAxis dataKey={trendXKey} stroke="#A1A1A6" fontSize={11} tickLine={false} axisLine={false} />
+                <YAxis stroke="#A1A1A6" fontSize={11} tickLine={false} axisLine={false} />
                 <Tooltip
                   contentStyle={{
-                    background: 'white',
-                    border: '1px solid #E2E8F0',
+                    background: '#FFFFFF',
+                    border: '1px solid #E8E8ED',
                     borderRadius: '12px',
                     fontSize: '12px',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
                   }}
                 />
                 <Area
                   type="monotone"
-                  dataKey={data.trend[0].month ? 'apps' : 'present' in data.trend[0] ? 'present' : 'value'}
-                  stroke={module.accent}
-                  strokeWidth={2.5}
+                  dataKey={trendDataKey}
+                  stroke="#1D1D1F"
+                  strokeWidth={2}
                   fill="url(#trendGrad)"
-                  dot={{ r: 4, fill: module.accent, strokeWidth: 2, stroke: '#fff' }}
+                  dot={{ r: 3, fill: '#1D1D1F', strokeWidth: 2, stroke: '#fff' }}
+                  activeDot={{ r: 5, fill: '#1D1D1F' }}
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -269,13 +284,13 @@ export function ModuleView({ moduleKey }: { moduleKey: string }) {
         )}
 
         {data.breakdown && (
-          <Card className="p-5 elevated-card">
-            <div className="flex items-center justify-between mb-4">
+          <Card className="p-6 elevated-card rounded-2xl">
+            <div className="flex items-center justify-between mb-5">
               <div>
-                <h3 className="text-sm font-bold text-slate-900">Distribution</h3>
-                <p className="text-xs text-slate-500">By method</p>
+                <h3 className="text-base font-semibold text-[#1D1D1F]">Distribution</h3>
+                <p className="text-xs text-[#6E6E73] mt-0.5">By method</p>
               </div>
-              <Database className="w-4 h-4 text-violet-500" />
+              <Database className="w-4 h-4 text-[#6E6E73]" />
             </div>
             <ResponsiveContainer width="100%" height={180}>
               <PieChart>
@@ -285,18 +300,18 @@ export function ModuleView({ moduleKey }: { moduleKey: string }) {
                   ))}
                 </Pie>
                 <Tooltip
-                  contentStyle={{ background: 'white', border: '1px solid #E2E8F0', borderRadius: '12px', fontSize: '12px' }}
+                  contentStyle={{ background: '#FFFFFF', border: '1px solid #E8E8ED', borderRadius: '12px', fontSize: '12px' }}
                 />
               </PieChart>
             </ResponsiveContainer>
-            <div className="space-y-1.5 mt-2">
+            <div className="space-y-2 mt-3">
               {data.breakdown.map((b: any) => (
                 <div key={b.name} className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full" style={{ background: b.color }} />
-                    <span className="text-slate-700">{b.name}</span>
+                    <span className="text-[#424245]">{b.name}</span>
                   </div>
-                  <span className="font-semibold text-slate-900">{b.value}%</span>
+                  <span className="font-semibold text-[#1D1D1F]">{b.value}%</span>
                 </div>
               ))}
             </div>
@@ -309,16 +324,13 @@ export function ModuleView({ moduleKey }: { moduleKey: string }) {
         <div>
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <Cpu className="w-4 h-4 text-violet-600" />
-                Sub-Modules & Actions
-              </h3>
-              <p className="text-xs text-slate-500">{data.cards.length} features · Click any card to expand details</p>
+              <h3 className="text-base font-semibold text-[#1D1D1F]">Sub-Modules & Actions</h3>
+              <p className="text-xs text-[#6E6E73] mt-0.5">{data.cards.length} features · Click any card to expand details</p>
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
             {data.cards.map((card: any, i: number) => (
-              <SubModuleCard key={i} card={card} module={module} onClick={() => setSelectedCard(card.title)} />
+              <SubModuleCard key={i} card={card} module={currentModule} onClick={() => setSelectedCard(card.title)} />
             ))}
           </div>
         </div>
@@ -326,17 +338,17 @@ export function ModuleView({ moduleKey }: { moduleKey: string }) {
 
       {/* Recent records table */}
       {data.table && (
-        <Card className="p-5 elevated-card">
-          <div className="flex items-center justify-between mb-4">
+        <Card className="p-6 elevated-card rounded-2xl">
+          <div className="flex items-center justify-between mb-5">
             <div>
-              <h3 className="text-sm font-bold text-slate-900">Recent Records</h3>
-              <p className="text-xs text-slate-500">Latest activity in this module</p>
+              <h3 className="text-base font-semibold text-[#1D1D1F]">Recent Records</h3>
+              <p className="text-xs text-[#6E6E73] mt-0.5">Latest activity in this module</p>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" className="h-8 text-xs gap-1">
+              <Button variant="outline" size="sm" className="h-8 text-xs gap-1 rounded-lg border-[#E8E8ED]">
                 <Filter className="w-3 h-3" /> Filter
               </Button>
-              <Button variant="outline" size="sm" className="h-8 text-xs gap-1">
+              <Button variant="outline" size="sm" className="h-8 text-xs gap-1 rounded-lg border-[#E8E8ED]">
                 <Download className="w-3 h-3" /> Export
               </Button>
             </div>
@@ -372,28 +384,28 @@ export function ModuleView({ moduleKey }: { moduleKey: string }) {
                           </span>
                         ) : key === 'score' || key === 'aiScore' ? (
                           <div className="flex items-center gap-2">
-                            <div className="w-12 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div className="w-12 h-1.5 bg-[#F5F5F7] rounded-full overflow-hidden">
                               <div
-                                className="h-full bg-gradient-to-r from-violet-500 to-orange-500"
+                                className="h-full bg-[#1D1D1F]"
                                 style={{ width: `${val}%` }}
                               />
                             </div>
-                            <span className="text-xs font-bold text-slate-900">{val}</span>
+                            <span className="text-xs font-semibold text-[#1D1D1F]">{val}</span>
                           </div>
                         ) : (
-                          <span className="text-slate-700">{val}</span>
+                          <span className="text-[#1D1D1F]">{val}</span>
                         )}
                       </td>
                     ))}
                     <td>
                       <div className="flex items-center justify-end gap-1">
-                        <button className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500">
+                        <button className="p-1.5 rounded-md hover:bg-[#F5F5F7] text-[#6E6E73] hover:text-[#1D1D1F] transition-colors">
                           <Eye className="w-3.5 h-3.5" />
                         </button>
-                        <button className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500">
+                        <button className="p-1.5 rounded-md hover:bg-[#F5F5F7] text-[#6E6E73] hover:text-[#1D1D1F] transition-colors">
                           <Edit className="w-3.5 h-3.5" />
                         </button>
-                        <button className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500">
+                        <button className="p-1.5 rounded-md hover:bg-[#F5F5F7] text-[#6E6E73] hover:text-[#1D1D1F] transition-colors">
                           <MoreVertical className="w-3.5 h-3.5" />
                         </button>
                       </div>
@@ -406,26 +418,26 @@ export function ModuleView({ moduleKey }: { moduleKey: string }) {
         </Card>
       )}
 
-      {/* AI Features section */}
-      {module.aiPowered && (
-        <Card className="p-5 elevated-card bg-gradient-to-br from-violet-50/50 to-orange-50/30 border-violet-200">
+      {/* AI Features section — elegant */}
+      {currentModule.aiPowered && (
+        <Card className="p-6 elevated-card rounded-2xl bg-[#FBFBFD]">
           <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-orange-500 flex items-center justify-center text-white flex-shrink-0 ai-glow">
+            <div className="w-12 h-12 rounded-xl bg-[#1D1D1F] flex items-center justify-center text-white flex-shrink-0">
               <Bot className="w-6 h-6" />
             </div>
             <div className="flex-1">
-              <div className="flex items-center gap-2 mb-2">
-                <h3 className="text-sm font-bold text-slate-900">AI Capabilities</h3>
-                <Badge className="bg-gradient-to-r from-violet-100 to-orange-100 text-violet-700 border border-violet-200 text-[9px]">
+              <div className="flex items-center gap-2 mb-3">
+                <h3 className="text-base font-semibold text-[#1D1D1F]">AI Capabilities</h3>
+                <span className="ai-badge">
                   <Sparkles className="w-2.5 h-2.5 mr-0.5" />
-                  POWERED BY LEARNX AI
-                </Badge>
+                  Powered by LearnX AI
+                </span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                {module.features.map((f) => (
-                  <div key={f} className="flex items-center gap-2 p-2.5 rounded-lg bg-white border border-violet-100">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
-                    <span className="text-xs text-slate-700">{f}</span>
+                {currentModule.features.map((f) => (
+                  <div key={f} className="flex items-center gap-2 p-3 rounded-xl bg-white border border-[#E8E8ED]">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-[#1D1D1F] flex-shrink-0" />
+                    <span className="text-xs text-[#424245]">{f}</span>
                   </div>
                 ))}
               </div>
@@ -433,12 +445,12 @@ export function ModuleView({ moduleKey }: { moduleKey: string }) {
                 <Button
                   size="sm"
                   onClick={() => setAIAssistantOpen(true)}
-                  className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white h-8 text-xs gap-1.5"
+                  className="h-8 text-xs gap-1.5 bg-[#1D1D1F] hover:bg-[#000000] text-white rounded-lg"
                 >
                   <Sparkles className="w-3 h-3" />
                   Ask AI about this module
                 </Button>
-                <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5">
+                <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5 rounded-lg border-[#E8E8ED]">
                   <Database className="w-3 h-3" />
                   View RAG Sources
                 </Button>
@@ -452,7 +464,7 @@ export function ModuleView({ moduleKey }: { moduleKey: string }) {
       {selectedCard && (
         <CardPopup
           title={selectedCard}
-          module={module}
+          module={currentModule}
           onClose={() => setSelectedCard(null)}
         />
       )}
@@ -466,28 +478,28 @@ function SubModuleCard({ card, module, onClick }: { card: any; module: ModuleCon
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       className="module-card group"
-      style={{ ['--card-accent' as any]: `linear-gradient(90deg, ${module.accent}, ${module.accent}80)` }}
+      style={{ ['--card-accent' as any]: '#1D1D1F' }}
       onClick={onClick}
     >
-      <div className="flex items-start justify-between mb-3">
-        <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${module.color} flex items-center justify-center text-white shadow-md group-hover:scale-110 transition-transform`}>
-          <Activity className="w-4 h-4" />
+      <div className="flex items-start justify-between mb-4">
+        <div className="w-10 h-10 rounded-xl bg-[#F5F5F7] flex items-center justify-center text-[#1D1D1F] group-hover:bg-[#1D1D1F] group-hover:text-white transition-colors">
+          <Activity className="w-5 h-5" />
         </div>
         {module.aiPowered && (
-          <Badge className="bg-gradient-to-r from-violet-100 to-orange-100 text-violet-700 border border-violet-200 text-[9px] h-4 px-1.5 font-semibold">
+          <span className="ai-badge">
             <Sparkles className="w-2.5 h-2.5 mr-0.5" />
             AI
-          </Badge>
+          </span>
         )}
       </div>
-      <h4 className="text-sm font-bold text-slate-900 mb-1">{card.title}</h4>
-      <p className="text-[11px] text-slate-500 leading-relaxed mb-3">{card.desc}</p>
-      <div className="flex items-center justify-between text-[11px]">
-        <button className="flex items-center gap-1 text-violet-600 font-semibold">
+      <h4 className="text-sm font-semibold text-[#1D1D1F] mb-1.5 tracking-tight">{card.title}</h4>
+      <p className="text-xs text-[#6E6E73] leading-relaxed mb-4">{card.desc}</p>
+      <div className="flex items-center justify-between text-xs">
+        <button className="flex items-center gap-1 text-[#1D1D1F] font-medium">
           {card.action}
           <ArrowUpRight className="w-3 h-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
         </button>
-        <button className="text-slate-400">Details</button>
+        <button className="text-[#6E6E73] hover:text-[#1D1D1F]">Details</button>
       </div>
     </motion.div>
   )
@@ -499,40 +511,40 @@ function CardPopup({ title, module, onClose }: { title: string; module: ModuleCo
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm"
       onClick={onClose}
     >
       <motion.div
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         onClick={(e) => e.stopPropagation()}
-        className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6"
+        className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-[#E8E8ED]"
       >
-        <div className="flex items-start justify-between mb-4">
+        <div className="flex items-start justify-between mb-5">
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${module.color} flex items-center justify-center text-white shadow-md`}>
+            <div className="w-11 h-11 rounded-xl bg-[#1D1D1F] flex items-center justify-center text-white">
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-slate-900">{title}</h3>
-              <p className="text-xs text-slate-500">{module.title}</p>
+              <h3 className="text-lg font-semibold text-[#1D1D1F] tracking-tight">{title}</h3>
+              <p className="text-xs text-[#6E6E73]">{module.title}</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100">
-            <X className="w-4 h-4 text-slate-500" />
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[#F5F5F7] transition-colors">
+            <X className="w-4 h-4 text-[#6E6E73]" />
           </button>
         </div>
 
-        <div className="space-y-3 mb-4">
-          <p className="text-sm text-slate-700 leading-relaxed">
+        <div className="space-y-4 mb-5">
+          <p className="text-sm text-[#424245] leading-relaxed">
             This AI-powered feature is part of the {module.title} module. It leverages the LearnX AI engine with RAG-based knowledge retrieval to provide intelligent, context-aware automation.
           </p>
 
-          <div className="p-3 rounded-xl bg-violet-50 border border-violet-100">
-            <div className="text-[10px] font-bold text-violet-700 uppercase tracking-wide mb-1">AI Capabilities</div>
-            <div className="flex flex-wrap gap-1">
+          <div className="p-4 rounded-xl bg-[#FBFBFD] border border-[#E8E8ED]">
+            <div className="text-[10px] font-semibold text-[#6E6E73] uppercase tracking-wider mb-2">AI Capabilities</div>
+            <div className="flex flex-wrap gap-1.5">
               {module.features.map((f) => (
-                <span key={f} className="px-2 py-0.5 rounded-md bg-white border border-violet-100 text-[10px] text-slate-700">
+                <span key={f} className="px-2 py-1 rounded-md bg-white border border-[#E8E8ED] text-[11px] text-[#424245]">
                   {f}
                 </span>
               ))}
@@ -540,23 +552,23 @@ function CardPopup({ title, module, onClose }: { title: string; module: ModuleCo
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-            <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
-              <div className="text-[10px] text-slate-500">Status</div>
-              <div className="text-xs font-bold text-emerald-600 flex items-center gap-1">
+            <div className="p-3 rounded-xl bg-[#FBFBFD] border border-[#E8E8ED]">
+              <div className="text-[10px] text-[#6E6E73] uppercase tracking-wider">Status</div>
+              <div className="text-xs font-semibold text-[#247A4A] flex items-center gap-1.5 mt-1">
                 <span className="dot-pulse" />
                 Active
               </div>
             </div>
-            <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
-              <div className="text-[10px] text-slate-500">Last Run</div>
-              <div className="text-xs font-bold text-slate-900">2 min ago</div>
+            <div className="p-3 rounded-xl bg-[#FBFBFD] border border-[#E8E8ED]">
+              <div className="text-[10px] text-[#6E6E73] uppercase tracking-wider">Last Run</div>
+              <div className="text-xs font-semibold text-[#1D1D1F] mt-1">2 min ago</div>
             </div>
           </div>
         </div>
 
         <div className="flex gap-2">
           <Button
-            className="flex-1 bg-gradient-to-r from-violet-600 to-indigo-600 text-white h-10 gap-1.5"
+            className="flex-1 bg-[#1D1D1F] hover:bg-[#000000] text-white h-10 gap-1.5 rounded-xl"
             onClick={() => {
               useAppStore.getState().setAIAssistantOpen(true)
               onClose()
@@ -565,7 +577,7 @@ function CardPopup({ title, module, onClose }: { title: string; module: ModuleCo
             <Sparkles className="w-4 h-4" />
             Open with AI
           </Button>
-          <Button variant="outline" className="h-10" onClick={onClose}>
+          <Button variant="outline" className="h-10 rounded-xl border-[#E8E8ED]" onClick={onClose}>
             Close
           </Button>
         </div>
@@ -579,7 +591,6 @@ function generateGenericData(module: ModuleConfig) {
     stats: module.stats?.map((s, i) => ({
       ...s,
       icon: [Users, Activity, TrendingUp, Target][i % 4],
-      color: ['from-violet-500 to-purple-600', 'from-emerald-500 to-teal-600', 'from-orange-500 to-amber-600', 'from-blue-500 to-cyan-600'][i % 4],
     })) || [],
     cards: module.features.map((f) => ({
       title: f,
@@ -592,9 +603,9 @@ function generateGenericData(module: ModuleConfig) {
       { day: 'Thu', value: 89 }, { day: 'Fri', value: 90 }, { day: 'Sat', value: 91 }, { day: 'Today', value: 92 },
     ],
     breakdown: [
-      { name: 'Active', value: 65, color: module.accent },
-      { name: 'Idle', value: 25, color: '#94A3B8' },
-      { name: 'Maintenance', value: 10, color: '#F59E0B' },
+      { name: 'Active', value: 65, color: '#1D1D1F' },
+      { name: 'Idle', value: 25, color: '#A1A1A6' },
+      { name: 'Maintenance', value: 10, color: '#D2D2D7' },
     ],
     table: [
       { id: 'TXN-001', name: 'AI Auto-Task', status: 'Completed', time: '2 min ago', method: 'AI Engine' },

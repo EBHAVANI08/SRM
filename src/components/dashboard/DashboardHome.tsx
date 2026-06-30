@@ -24,10 +24,10 @@ import {
 } from 'recharts'
 
 const KPIS = [
-  { label: 'Total Students', value: '2,847', trend: '+4.2%', up: true, icon: Users, color: 'from-violet-500 to-purple-600', accent: '#7C3AED' },
-  { label: 'Staff Online', value: '186', trend: '+1.8%', up: true, icon: GraduationCap, color: 'from-emerald-500 to-teal-600', accent: '#059669' },
-  { label: 'Fee Collection', value: '₹4.82 Cr', trend: '+12.5%', up: true, icon: Wallet, color: 'from-orange-500 to-amber-600', accent: '#EA580C' },
-  { label: 'Avg Attendance', value: '94.2%', trend: '+0.8%', up: true, icon: Activity, color: 'from-cyan-500 to-blue-600', accent: '#0891B2' },
+  { label: 'Total Students', value: '2,847', trend: '+4.2%', up: true, icon: Users },
+  { label: 'Staff Online', value: '186', trend: '+1.8%', up: true, icon: GraduationCap },
+  { label: 'Fee Collection', value: '₹4.82 Cr', trend: '+12.5%', up: true, icon: Wallet },
+  { label: 'Avg Attendance', value: '94.2%', trend: '+0.8%', up: true, icon: Activity },
 ]
 
 const ATTENDANCE_TREND = [
@@ -41,11 +41,11 @@ const FEE_COLLECTION = [
 ]
 
 const MODULE_DISTRIBUTION = [
-  { name: 'Academic', value: 32, color: '#3B82F6' },
-  { name: 'Operations', value: 24, color: '#7C3AED' },
-  { name: 'AI Modules', value: 22, color: '#EA580C' },
-  { name: 'Admin', value: 14, color: '#059669' },
-  { name: 'Infra', value: 8, color: '#F59E0B' },
+  { name: 'Academic', value: 32, color: '#1D1D1F' },
+  { name: 'Operations', value: 24, color: '#6E6E73' },
+  { name: 'AI Modules', value: 22, color: '#A1A1A6' },
+  { name: 'Admin', value: 14, color: '#D2D2D7' },
+  { name: 'Infra', value: 8, color: '#E8E8ED' },
 ]
 
 const AI_INSIGHTS = [
@@ -80,12 +80,12 @@ const AI_INSIGHTS = [
 ]
 
 const LIVE_ACTIVITIES = [
-  { time: '2 min ago', action: 'AI Safety Alert', detail: 'Class 8-A fight detected, resolved in 1.2 min', icon: ShieldCheck, color: 'text-red-500' },
-  { time: '5 min ago', action: 'Fee Payment', detail: '₹38,400 received from 12 parents via UPI', icon: Wallet, color: 'text-emerald-500' },
-  { time: '8 min ago', action: 'AI Substitution', detail: 'Maths teacher Grade 8-B auto-substituted by Mrs. Verma', icon: BrainCircuit, color: 'text-violet-500' },
-  { time: '12 min ago', action: 'Admission', detail: 'New KG application: Aarav Sharma (AI Score: 92)', icon: GraduationCap, color: 'text-blue-500' },
-  { time: '18 min ago', action: 'Transport Alert', detail: 'Bus 14 arrived at Stop 7 (AI ETA accurate ±2 min)', icon: Bus, color: 'text-orange-500' },
-  { time: '25 min ago', action: 'Document Verified', detail: 'AI OCR verified 24 transfer certificates', icon: CheckCircle2, color: 'text-emerald-500' },
+  { time: '2 min ago', action: 'AI Safety Alert', detail: 'Class 8-A fight detected, resolved in 1.2 min', icon: ShieldCheck, color: 'text-[#C9302C]' },
+  { time: '5 min ago', action: 'Fee Payment', detail: '₹38,400 received from 12 parents via UPI', icon: Wallet, color: 'text-[#247A4A]' },
+  { time: '8 min ago', action: 'AI Substitution', detail: 'Maths teacher Grade 8-B auto-substituted by Mrs. Verma', icon: BrainCircuit, color: 'text-[#1D1D1F]' },
+  { time: '12 min ago', action: 'Admission', detail: 'New KG application: Aarav Sharma (AI Score: 92)', icon: GraduationCap, color: 'text-[#1D1D1F]' },
+  { time: '18 min ago', action: 'Transport Alert', detail: 'Bus 14 arrived at Stop 7 (AI ETA accurate ±2 min)', icon: Bus, color: 'text-[#1D1D1F]' },
+  { time: '25 min ago', action: 'Document Verified', detail: 'AI OCR verified 24 transfer certificates', icon: CheckCircle2, color: 'text-[#247A4A]' },
 ]
 
 export function DashboardHome() {
@@ -98,7 +98,6 @@ export function DashboardHome() {
   const [aiInsight, setAiInsight] = useState<string>('')
 
   useEffect(() => {
-    // Simulate AI summary fetch
     fetch('/api/ai/analytics', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -117,38 +116,35 @@ export function DashboardHome() {
   })()
 
   return (
-    <div className="p-4 lg:p-6 space-y-6 animate-page-enter">
-      {/* Hero header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-600 via-indigo-600 to-purple-700 p-6 lg:p-8 text-white">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.2),transparent_50%)]" />
-        <div className="absolute top-0 right-0 w-64 h-64 bg-orange-400/20 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-1/3 w-48 h-48 bg-violet-300/30 rounded-full blur-3xl" />
-
-        <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+    <div className="p-4 lg:p-8 space-y-6 animate-page-enter max-w-[1600px] mx-auto">
+      {/* Hero header — Apple style: clean white card with subtle accent */}
+      <div className="relative overflow-hidden rounded-2xl bg-white border border-[#E8E8ED] p-6 lg:p-8">
+        <div className="absolute top-0 left-0 w-1 h-full bg-[#1D1D1F]" />
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex-1">
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 mb-3">
-              <Sparkles className="w-3 h-3" />
-              <span className="text-[11px] font-medium">AI Command Center · Live</span>
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#F5F5F7] border border-[#E8E8ED] mb-3">
+              <Sparkles className="w-3 h-3 text-[#1D1D1F]" />
+              <span className="text-[11px] font-semibold text-[#1D1D1F]">AI Command Center</span>
               <span className="dot-pulse" />
             </div>
-            <h2 className="text-2xl lg:text-3xl font-bold mb-1">
+            <h2 className="text-2xl lg:text-3xl font-semibold text-[#1D1D1F] mb-2 tracking-tight">
               {greeting}, {user?.name?.split(' ')[0]}!
             </h2>
-            <p className="text-white/80 text-sm max-w-xl">
+            <p className="text-[#6E6E73] text-sm lg:text-base max-w-2xl leading-relaxed">
               Your AI co-pilot is monitoring 30+ modules. Today's operations are running at 94.2% efficiency with 3 AI insights ready for review.
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-2">
             <Button
               onClick={() => setAIAssistantOpen(true)}
-              className="bg-white text-violet-700 hover:bg-white/90 font-semibold gap-1.5"
+              className="bg-[#1D1D1F] hover:bg-[#000000] text-white font-medium gap-1.5 h-10 rounded-xl"
             >
               <Sparkles className="w-3.5 h-3.5" />
               Ask LearnX AI
             </Button>
             <Button
               variant="outline"
-              className="bg-white/10 border-white/30 text-white hover:bg-white/20 backdrop-blur-sm font-semibold gap-1.5"
+              className="border-[#E8E8ED] hover:bg-[#F5F5F7] text-[#1D1D1F] font-medium gap-1.5 h-10 rounded-xl"
               onClick={() => setView('ai-academic')}
             >
               <BrainCircuit className="w-3.5 h-3.5" />
@@ -158,7 +154,7 @@ export function DashboardHome() {
         </div>
       </div>
 
-      {/* KPIs */}
+      {/* KPIs — Apple style: clean white cards with graphite icons */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
         {KPIS.map((kpi, i) => (
           <motion.div
@@ -167,18 +163,18 @@ export function DashboardHome() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05 }}
           >
-            <Card className="p-4 lg:p-5 elevated-card">
-              <div className="flex items-start justify-between mb-3">
-                <div className={`w-9 h-9 lg:w-10 lg:h-10 rounded-xl bg-gradient-to-br ${kpi.color} flex items-center justify-center text-white shadow-md`}>
-                  <kpi.icon className="w-4 h-4 lg:w-5 lg:h-5" />
+            <Card className="p-5 elevated-card rounded-2xl">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-10 h-10 rounded-xl bg-[#F5F5F7] flex items-center justify-center text-[#1D1D1F]">
+                  <kpi.icon className="w-5 h-5" />
                 </div>
-                <div className={`flex items-center gap-0.5 text-[11px] font-bold ${kpi.up ? 'text-emerald-600' : 'text-red-600'}`}>
+                <div className={`flex items-center gap-0.5 text-[11px] font-semibold ${kpi.up ? 'text-[#247A4A]' : 'text-[#C9302C]'}`}>
                   {kpi.up ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
                   {kpi.trend}
                 </div>
               </div>
-              <div className="text-xl lg:text-2xl font-bold text-slate-900 mb-0.5">{kpi.value}</div>
-              <div className="text-[11px] lg:text-xs text-slate-500">{kpi.label}</div>
+              <div className="text-2xl font-semibold text-[#1D1D1F] mb-1 tracking-tight">{kpi.value}</div>
+              <div className="text-xs text-[#6E6E73]">{kpi.label}</div>
             </Card>
           </motion.div>
         ))}
@@ -187,58 +183,58 @@ export function DashboardHome() {
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Attendance trend */}
-        <Card className="lg:col-span-2 p-5 elevated-card">
-          <div className="flex items-center justify-between mb-4">
+        <Card className="lg:col-span-2 p-6 elevated-card rounded-2xl">
+          <div className="flex items-center justify-between mb-5">
             <div>
-              <h3 className="text-sm font-bold text-slate-900">Attendance Trend</h3>
-              <p className="text-xs text-slate-500">Last 7 days · AI anomaly detection active</p>
+              <h3 className="text-base font-semibold text-[#1D1D1F]">Attendance Trend</h3>
+              <p className="text-xs text-[#6E6E73] mt-0.5">Last 7 days · AI anomaly detection active</p>
             </div>
-            <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200">
-              <span className="dot-pulse mr-1" />
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#F0FAF3] text-[#247A4A] text-[11px] font-semibold border border-[#D4EDDB]">
+              <span className="dot-pulse" />
               Live
-            </Badge>
+            </span>
           </div>
           <ResponsiveContainer width="100%" height={220}>
             <AreaChart data={ATTENDANCE_TREND} margin={{ top: 5, right: 5, bottom: 5, left: -25 }}>
               <defs>
                 <linearGradient id="attGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#7C3AED" stopOpacity={0.3} />
-                  <stop offset="100%" stopColor="#7C3AED" stopOpacity={0} />
+                  <stop offset="0%" stopColor="#1D1D1F" stopOpacity={0.12} />
+                  <stop offset="100%" stopColor="#1D1D1F" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
-              <XAxis dataKey="day" stroke="#94A3B8" fontSize={11} tickLine={false} axisLine={false} />
-              <YAxis stroke="#94A3B8" fontSize={11} tickLine={false} axisLine={false} domain={[85, 100]} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F7" vertical={false} />
+              <XAxis dataKey="day" stroke="#A1A1A6" fontSize={11} tickLine={false} axisLine={false} />
+              <YAxis stroke="#A1A1A6" fontSize={11} tickLine={false} axisLine={false} domain={[85, 100]} />
               <Tooltip
                 contentStyle={{
-                  background: 'white',
-                  border: '1px solid #E2E8F0',
+                  background: '#FFFFFF',
+                  border: '1px solid #E8E8ED',
                   borderRadius: '12px',
                   fontSize: '12px',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
                 }}
               />
               <Area
                 type="monotone"
                 dataKey="value"
-                stroke="#7C3AED"
-                strokeWidth={2.5}
+                stroke="#1D1D1F"
+                strokeWidth={2}
                 fill="url(#attGrad)"
-                dot={{ r: 4, fill: '#7C3AED', strokeWidth: 2, stroke: '#fff' }}
-                activeDot={{ r: 6, fill: '#7C3AED' }}
+                dot={{ r: 3, fill: '#1D1D1F', strokeWidth: 2, stroke: '#fff' }}
+                activeDot={{ r: 5, fill: '#1D1D1F' }}
               />
             </AreaChart>
           </ResponsiveContainer>
         </Card>
 
         {/* Module distribution */}
-        <Card className="p-5 elevated-card">
-          <div className="flex items-center justify-between mb-4">
+        <Card className="p-6 elevated-card rounded-2xl">
+          <div className="flex items-center justify-between mb-5">
             <div>
-              <h3 className="text-sm font-bold text-slate-900">Module Usage</h3>
-              <p className="text-xs text-slate-500">AI feature distribution</p>
+              <h3 className="text-base font-semibold text-[#1D1D1F]">Module Usage</h3>
+              <p className="text-xs text-[#6E6E73] mt-0.5">AI feature distribution</p>
             </div>
-            <Brain className="w-4 h-4 text-violet-500" />
+            <Brain className="w-4 h-4 text-[#6E6E73]" />
           </div>
           <ResponsiveContainer width="100%" height={180}>
             <PieChart>
@@ -257,22 +253,22 @@ export function DashboardHome() {
               </Pie>
               <Tooltip
                 contentStyle={{
-                  background: 'white',
-                  border: '1px solid #E2E8F0',
+                  background: '#FFFFFF',
+                  border: '1px solid #E8E8ED',
                   borderRadius: '12px',
                   fontSize: '12px',
                 }}
               />
             </PieChart>
           </ResponsiveContainer>
-          <div className="space-y-1.5 mt-2">
+          <div className="space-y-2 mt-3">
             {MODULE_DISTRIBUTION.map((m) => (
               <div key={m.name} className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full" style={{ background: m.color }} />
-                  <span className="text-slate-700">{m.name}</span>
+                  <span className="text-[#424245]">{m.name}</span>
                 </div>
-                <span className="font-semibold text-slate-900">{m.value}%</span>
+                <span className="font-semibold text-[#1D1D1F]">{m.value}%</span>
               </div>
             ))}
           </div>
@@ -285,24 +281,24 @@ export function DashboardHome() {
         <div className="lg:col-span-2 space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <BrainCircuit className="w-4 h-4 text-violet-600" />
+              <h3 className="text-base font-semibold text-[#1D1D1F] flex items-center gap-2">
+                <BrainCircuit className="w-4 h-4 text-[#1D1D1F]" />
                 AI Insights & Recommendations
               </h3>
-              <p className="text-xs text-slate-500">Generated by LearnX AI · {new Date().toLocaleString()}</p>
+              <p className="text-xs text-[#6E6E73] mt-0.5">Generated by LearnX AI · {new Date().toLocaleString()}</p>
             </div>
-            <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => setAIAssistantOpen(true)}>
+            <Button variant="ghost" size="sm" className="text-xs h-7 text-[#1D1D1F] hover:bg-[#F5F5F7]" onClick={() => setAIAssistantOpen(true)}>
               View all <ArrowRight className="w-3 h-3 ml-1" />
             </Button>
           </div>
 
           {aiInsight && (
-            <Card className="p-4 bg-gradient-to-br from-violet-50 to-orange-50 border-violet-200">
+            <Card className="p-4 bg-[#FBFBFD] border-[#E8E8ED] rounded-2xl">
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-orange-500 flex items-center justify-center text-white flex-shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-[#1D1D1F] flex items-center justify-center text-white flex-shrink-0">
                   <Sparkles className="w-4 h-4" />
                 </div>
-                <div className="flex-1 text-xs text-slate-700 whitespace-pre-wrap leading-relaxed">
+                <div className="flex-1 text-xs text-[#424245] whitespace-pre-wrap leading-relaxed">
                   {aiInsight}
                 </div>
               </div>
@@ -317,21 +313,21 @@ export function DashboardHome() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
               >
-                <Card className="p-4 elevated-card cursor-pointer">
+                <Card className="p-4 elevated-card rounded-2xl cursor-pointer">
                   <div className="flex items-start gap-3 mb-2">
                     <insight.icon
                       className={`w-4 h-4 flex-shrink-0 ${
-                        insight.type === 'success' ? 'text-emerald-600'
-                          : insight.type === 'warning' ? 'text-amber-600'
-                          : 'text-violet-600'
+                        insight.type === 'success' ? 'text-[#247A4A]'
+                          : insight.type === 'warning' ? 'text-[#8A6D1C]'
+                          : 'text-[#1D1D1F]'
                       }`}
                     />
                     <div className="flex-1">
-                      <div className="text-xs font-bold text-slate-900 mb-0.5">{insight.title}</div>
-                      <div className="text-[11px] text-slate-600 leading-relaxed">{insight.desc}</div>
+                      <div className="text-xs font-semibold text-[#1D1D1F] mb-0.5">{insight.title}</div>
+                      <div className="text-[11px] text-[#6E6E73] leading-relaxed">{insight.desc}</div>
                     </div>
                   </div>
-                  <button className="text-[11px] font-semibold text-violet-600 hover:underline flex items-center gap-1 mt-2">
+                  <button className="text-[11px] font-medium text-[#1D1D1F] hover:underline flex items-center gap-1 mt-2">
                     {insight.action}
                     <ChevronRight className="w-3 h-3" />
                   </button>
@@ -342,18 +338,18 @@ export function DashboardHome() {
         </div>
 
         {/* Live activity */}
-        <Card className="p-5 elevated-card">
-          <div className="flex items-center justify-between mb-4">
+        <Card className="p-6 elevated-card rounded-2xl">
+          <div className="flex items-center justify-between mb-5">
             <div>
-              <h3 className="text-sm font-bold text-slate-900">Live Activity</h3>
-              <p className="text-xs text-slate-500">Real-time system events</p>
+              <h3 className="text-base font-semibold text-[#1D1D1F]">Live Activity</h3>
+              <p className="text-xs text-[#6E6E73] mt-0.5">Real-time system events</p>
             </div>
-            <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200">
-              <span className="dot-pulse mr-1" />
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#F0FAF3] text-[#247A4A] text-[11px] font-semibold border border-[#D4EDDB]">
+              <span className="dot-pulse" />
               Live
-            </Badge>
+            </span>
           </div>
-          <div className="space-y-3 max-h-[420px] overflow-y-auto custom-scroll pr-2">
+          <div className="space-y-4 max-h-[420px] overflow-y-auto custom-scroll pr-2">
             {LIVE_ACTIVITIES.map((act, i) => (
               <motion.div
                 key={i}
@@ -362,18 +358,18 @@ export function DashboardHome() {
                 transition={{ delay: i * 0.05 }}
                 className="flex gap-3"
               >
-                <div className={`w-7 h-7 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 ${act.color}`}>
-                  <act.icon className="w-3.5 h-3.5" />
+                <div className="w-8 h-8 rounded-lg bg-[#F5F5F7] flex items-center justify-center flex-shrink-0">
+                  <act.icon className={`w-3.5 h-3.5 ${act.color}`} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-[11px] font-semibold text-slate-800">{act.action}</span>
-                    <span className="text-[10px] text-slate-400 flex items-center gap-0.5">
+                    <span className="text-[11px] font-semibold text-[#1D1D1F]">{act.action}</span>
+                    <span className="text-[10px] text-[#A1A1A6] flex items-center gap-0.5">
                       <Clock className="w-2.5 h-2.5" />
                       {act.time}
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">{act.detail}</p>
+                  <p className="text-[11px] text-[#6E6E73] mt-0.5 leading-relaxed">{act.detail}</p>
                 </div>
               </motion.div>
             ))}
@@ -385,11 +381,11 @@ export function DashboardHome() {
       <div>
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <Cpu className="w-4 h-4 text-violet-600" />
+            <h3 className="text-base font-semibold text-[#1D1D1F] flex items-center gap-2">
+              <Cpu className="w-4 h-4 text-[#1D1D1F]" />
               All Modules
             </h3>
-            <p className="text-xs text-slate-500">{availableModules.length} modules available · {availableModules.filter(m => m.aiPowered).length} AI-powered</p>
+            <p className="text-xs text-[#6E6E73] mt-0.5">{availableModules.length} modules available · {availableModules.filter(m => m.aiPowered).length} AI-powered</p>
           </div>
         </div>
 
@@ -421,35 +417,35 @@ function ModuleCard({ module, index, onClick }: { module: typeof MODULES[0]; ind
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.03 }}
       className="module-card group"
-      style={{ ['--card-accent' as any]: `linear-gradient(90deg, ${module.accent}, ${module.accent}80)` }}
+      style={{ ['--card-accent' as any]: '#1D1D1F' }}
       onMouseEnter={() => setShowPopup(true)}
       onMouseLeave={() => setShowPopup(false)}
       onClick={onClick}
     >
       {/* Header */}
-      <div className="flex items-start justify-between mb-3">
-        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${module.color} flex items-center justify-center text-white shadow-md group-hover:scale-110 transition-transform`}>
+      <div className="flex items-start justify-between mb-4">
+        <div className="w-10 h-10 rounded-xl bg-[#F5F5F7] flex items-center justify-center text-[#1D1D1F] group-hover:bg-[#1D1D1F] group-hover:text-white transition-colors">
           <Icon className="w-5 h-5" />
         </div>
         {module.aiPowered && (
-          <Badge className="bg-gradient-to-r from-violet-100 to-orange-100 text-violet-700 border border-violet-200 text-[9px] h-4 px-1.5 font-semibold">
+          <span className="ai-badge">
             <Sparkles className="w-2.5 h-2.5 mr-0.5" />
             AI
-          </Badge>
+          </span>
         )}
       </div>
 
       {/* Title */}
-      <h4 className="text-sm font-bold text-slate-900 mb-1 leading-tight">{module.shortTitle}</h4>
-      <p className="text-[11px] text-slate-500 leading-relaxed line-clamp-2 mb-3">{module.description}</p>
+      <h4 className="text-sm font-semibold text-[#1D1D1F] mb-1.5 leading-tight tracking-tight">{module.shortTitle}</h4>
+      <p className="text-[11px] text-[#6E6E73] leading-relaxed line-clamp-2 mb-4">{module.description}</p>
 
       {/* Stats */}
       {module.stats && (
-        <div className="grid grid-cols-2 gap-1.5 mb-3">
+        <div className="grid grid-cols-2 gap-1.5 mb-4">
           {module.stats.slice(0, 2).map((stat, i) => (
-            <div key={i} className="p-1.5 rounded-lg bg-slate-50 border border-slate-100">
-              <div className="text-[10px] text-slate-500 truncate">{stat.label}</div>
-              <div className="text-xs font-bold text-slate-900">{stat.value}</div>
+            <div key={i} className="p-2 rounded-lg bg-[#FBFBFD] border border-[#E8E8ED]">
+              <div className="text-[10px] text-[#6E6E73] truncate">{stat.label}</div>
+              <div className="text-xs font-semibold text-[#1D1D1F]">{stat.value}</div>
             </div>
           ))}
         </div>
@@ -457,11 +453,11 @@ function ModuleCard({ module, index, onClick }: { module: typeof MODULES[0]; ind
 
       {/* Footer */}
       <div className="flex items-center justify-between text-[10px]">
-        <div className="flex items-center gap-1 text-violet-600 font-semibold">
+        <div className="flex items-center gap-1 text-[#1D1D1F] font-medium">
           <span>Open module</span>
           <ArrowUpRight className="w-3 h-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
         </div>
-        <span className="text-slate-400 capitalize">{module.category}</span>
+        <span className="text-[#A1A1A6] capitalize">{module.category}</span>
       </div>
 
       {/* Hover popup */}
@@ -469,12 +465,12 @@ function ModuleCard({ module, index, onClick }: { module: typeof MODULES[0]; ind
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="absolute z-20 left-0 right-0 top-full mt-1 mx-0 p-3 rounded-xl bg-white border border-slate-200 shadow-xl"
+          className="absolute z-20 left-0 right-0 top-full mt-1 mx-0 p-3 rounded-xl bg-white border border-[#E8E8ED] shadow-xl"
         >
-          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-2">Key Features</div>
+          <div className="text-[10px] font-semibold text-[#6E6E73] uppercase tracking-wider mb-2">Key Features</div>
           <div className="flex flex-wrap gap-1">
             {module.features.slice(0, 4).map((f) => (
-              <span key={f} className="px-1.5 py-0.5 rounded-md bg-slate-50 border border-slate-100 text-[10px] text-slate-700">
+              <span key={f} className="px-1.5 py-0.5 rounded-md bg-[#FBFBFD] border border-[#E8E8ED] text-[10px] text-[#424245]">
                 {f}
               </span>
             ))}
