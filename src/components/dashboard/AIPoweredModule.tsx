@@ -33,7 +33,7 @@ function AI({ }: { generic?: boolean }) {
   return (
     <Card className="p-8">
       <div className="text-center">
-        <Brain className="w-12 h-12 mx-auto text-violet-500 mb-3" />
+        <Brain className="w-12 h-12 mx-auto text-orange-500 mb-3" />
         <p className="text-sm text-slate-500">AI module interface</p>
       </div>
     </Card>
@@ -142,7 +142,7 @@ function QuestionPaperGenerator() {
             <Button
               onClick={generate}
               disabled={loading}
-              className="w-full h-10 bg-indigo-600 text-white font-semibold gap-2"
+              className="w-full h-10 bg-blue-800 text-white font-semibold gap-2"
             >
               {loading ? (
                 <>
@@ -183,7 +183,7 @@ function QuestionPaperGenerator() {
 
           {!paper && !loading && (
             <div className="flex flex-col items-center justify-center h-80 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-indigo-600 flex items-center justify-center text-white mb-3">
+              <div className="w-16 h-16 rounded-2xl bg-blue-800 flex items-center justify-center text-white mb-3">
                 <FileText className="w-7 h-7" />
               </div>
               <h4 className="text-sm font-bold text-slate-900 mb-1">No paper generated yet</h4>
@@ -195,7 +195,7 @@ function QuestionPaperGenerator() {
 
           {loading && (
             <div className="flex flex-col items-center justify-center h-80">
-              <Loader2 className="w-10 h-10 text-violet-500 animate-spin mb-3" />
+              <Loader2 className="w-10 h-10 text-orange-500 animate-spin mb-3" />
               <h4 className="text-sm font-bold text-slate-900 mb-1">AI is composing your paper...</h4>
               <p className="text-xs text-slate-500">Selecting questions · Calibrating difficulty · Building blueprint</p>
               <div className="flex gap-1.5 mt-3">
@@ -239,7 +239,7 @@ function QuestionPaperGenerator() {
                 <div key={i} className="border border-slate-200 rounded-xl p-3">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <Badge className="bg-violet-100 text-slate-900 border-slate-200">{section.name}</Badge>
+                      <Badge className="bg-orange-100 text-slate-900 border-slate-200">{section.name}</Badge>
                       <span className="text-xs font-semibold text-slate-700">{section.type}</span>
                     </div>
                     <span className="text-xs font-bold text-slate-900">{section.marks} marks</span>
@@ -385,7 +385,7 @@ function CareerCounselling() {
                     </div>
                     <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-indigo-600"
+                        className="h-full bg-blue-800"
                         style={{ width: `${s.value}%` }}
                       />
                     </div>
@@ -397,7 +397,7 @@ function CareerCounselling() {
             <Button
               onClick={analyze}
               disabled={loading}
-              className="w-full h-10 bg-indigo-600 text-white font-semibold gap-2"
+              className="w-full h-10 bg-blue-800 text-white font-semibold gap-2"
             >
               {loading ? (
                 <>
@@ -475,11 +475,11 @@ function CareerCounselling() {
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: i * 0.1 }}
-                        className="p-3 rounded-xl border border-slate-200 hover:border-violet-300 transition-colors"
+                        className="p-3 rounded-xl border border-slate-200 hover:border-orange-300 transition-colors"
                       >
                         <div className="flex items-start justify-between mb-1">
                           <div className="flex items-center gap-2">
-                            <span className="w-7 h-7 rounded-lg bg-indigo-600 text-white text-xs font-bold flex items-center justify-center">
+                            <span className="w-7 h-7 rounded-lg bg-blue-800 text-white text-xs font-bold flex items-center justify-center">
                               {i + 1}
                             </span>
                             <span className="text-sm font-bold text-slate-900">{c.name}</span>
@@ -557,7 +557,7 @@ function MockEngine() {
           { label: 'AI Study Plans', value: '1,847', icon: Brain, color: 'from-neutral-800 to-neutral-900' },
         ].map((s, i) => (
           <Card key={i} className="p-4 elevated-card">
-            <div className={`w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-md mb-3`}>
+            <div className={`w-9 h-9 rounded-xl bg-blue-800 flex items-center justify-center text-white shadow-md mb-3`}>
               <s.icon className="w-4 h-4" />
             </div>
             <div className="text-xl font-bold text-slate-900">{s.value}</div>
@@ -609,7 +609,7 @@ function MockEngine() {
               </Select>
             </div>
 
-            <Button className="w-full h-10 bg-indigo-600 text-white font-semibold gap-2">
+            <Button className="w-full h-10 bg-blue-800 text-white font-semibold gap-2">
               <Sparkles className="w-4 h-4" />
               Start AI-Powered Mock Test
             </Button>
@@ -669,7 +669,7 @@ function SafetyAlertSystem() {
           { label: 'False Positive', value: '0.8%', icon: CheckCircle2, color: 'from-neutral-800 to-neutral-900' },
         ].map((s, i) => (
           <Card key={i} className="p-4 elevated-card">
-            <div className={`w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-md mb-3`}>
+            <div className={`w-9 h-9 rounded-xl bg-blue-800 flex items-center justify-center text-white shadow-md mb-3`}>
               <s.icon className="w-4 h-4" />
             </div>
             <div className="text-xl font-bold text-slate-900">{s.value}</div>
@@ -783,7 +783,7 @@ function SubstitutionEngine() {
           { label: 'Match Accuracy', value: '96%', icon: Target, color: 'from-neutral-800 to-neutral-900' },
         ].map((s, i) => (
           <Card key={i} className="p-4 elevated-card">
-            <div className={`w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-md mb-3`}>
+            <div className={`w-9 h-9 rounded-xl bg-blue-800 flex items-center justify-center text-white shadow-md mb-3`}>
               <s.icon className="w-4 h-4" />
             </div>
             <div className="text-xl font-bold text-slate-900">{s.value}</div>
@@ -798,7 +798,7 @@ function SubstitutionEngine() {
             <h3 className="text-sm font-bold text-slate-900">Today's AI Substitutions</h3>
             <p className="text-xs text-slate-500">Auto-allocated by AI in 4.2s avg</p>
           </div>
-          <Button size="sm" className="h-8 text-xs gap-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg">
+          <Button size="sm" className="h-8 text-xs gap-1 bg-blue-800 hover:bg-blue-900 text-white rounded-lg">
             <Sparkles className="w-3 h-3" />
             Trigger AI Allocation
           </Button>
@@ -835,12 +835,12 @@ function SubstitutionEngine() {
                     {row.match > 0 ? (
                       <div className="flex items-center gap-2">
                         <div className="w-10 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                          <div className="h-full bg-indigo-600" style={{ width: `${row.match}%` }} />
+                          <div className="h-full bg-blue-800" style={{ width: `${row.match}%` }} />
                         </div>
                         <span className="text-xs font-bold text-slate-900">{row.match}%</span>
                       </div>
                     ) : (
-                      <Loader2 className="w-3 h-3 animate-spin text-violet-500" />
+                      <Loader2 className="w-3 h-3 animate-spin text-orange-500" />
                     )}
                   </td>
                   <td>
@@ -877,7 +877,7 @@ function AcademicIntelligence() {
           { label: 'Prediction Accuracy', value: '91.4%', icon: Target, color: 'from-neutral-800 to-neutral-900' },
         ].map((s, i) => (
           <Card key={i} className="p-4 elevated-card">
-            <div className={`w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-md mb-3`}>
+            <div className={`w-9 h-9 rounded-xl bg-blue-800 flex items-center justify-center text-white shadow-md mb-3`}>
               <s.icon className="w-4 h-4" />
             </div>
             <div className="text-xl font-bold text-slate-900">{s.value}</div>
@@ -973,7 +973,7 @@ function BehaviorTracker() {
           { label: 'AI Insights', value: '847', icon: Sparkles, color: 'from-neutral-800 to-neutral-900' },
         ].map((s, i) => (
           <Card key={i} className="p-4 elevated-card">
-            <div className={`w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-md mb-3`}>
+            <div className={`w-9 h-9 rounded-xl bg-blue-800 flex items-center justify-center text-white shadow-md mb-3`}>
               <s.icon className="w-4 h-4" />
             </div>
             <div className="text-xl font-bold text-slate-900">{s.value}</div>
@@ -1017,7 +1017,7 @@ function ModuleHeroHeader({ title, description, color, aiBadge }: { title: strin
   const setAIAssistantOpen = useAppStore((s) => s.setAIAssistantOpen)
   return (
     <div className="relative overflow-hidden rounded-2xl bg-white border border-slate-200 p-6 lg:p-8">
-      <div className="absolute top-0 left-0 w-1 h-full bg-indigo-600" />
+      <div className="absolute top-0 left-0 w-1 h-full bg-blue-800" />
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-3">

@@ -119,7 +119,7 @@ export function DashboardHome() {
     <div className="p-4 lg:p-8 space-y-6 animate-page-enter max-w-[1600px] mx-auto">
       {/* Hero header — Apple style: clean white card with subtle accent */}
       <div className="relative overflow-hidden rounded-2xl bg-white border border-slate-200 p-6 lg:p-8">
-        <div className="absolute top-0 left-0 w-1 h-full bg-indigo-600" />
+        <div className="absolute top-0 left-0 w-1 h-full bg-blue-800" />
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex-1">
             <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 mb-3">
@@ -137,7 +137,7 @@ export function DashboardHome() {
           <div className="flex flex-col sm:flex-row gap-2">
             <Button
               onClick={() => setAIAssistantOpen(true)}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium gap-1.5 h-10 rounded-xl"
+              className="bg-blue-800 hover:bg-blue-900 text-white font-medium gap-1.5 h-10 rounded-xl"
             >
               <Sparkles className="w-3.5 h-3.5" />
               Ask LearnX AI
@@ -218,13 +218,13 @@ export function DashboardHome() {
             <AreaChart data={ATTENDANCE_TREND} margin={{ top: 5, right: 5, bottom: 5, left: -25 }}>
               <defs>
                 <linearGradient id="attGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#4F46E5" stopOpacity={0.12} />
-                  <stop offset="100%" stopColor="#4F46E5" stopOpacity={0} />
+                  <stop offset="0%" stopColor="#1E3A8A" stopOpacity={0.12} />
+                  <stop offset="100%" stopColor="#1E3A8A" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F7" vertical={false} />
-              <XAxis dataKey="day" stroke="#8B5CF6" fontSize={11} tickLine={false} axisLine={false} />
-              <YAxis stroke="#8B5CF6" fontSize={11} tickLine={false} axisLine={false} domain={[85, 100]} />
+              <XAxis dataKey="day" stroke="#F97316" fontSize={11} tickLine={false} axisLine={false} />
+              <YAxis stroke="#F97316" fontSize={11} tickLine={false} axisLine={false} domain={[85, 100]} />
               <Tooltip
                 contentStyle={{
                   background: '#FFFFFF',
@@ -237,7 +237,7 @@ export function DashboardHome() {
               <Area
                 type="monotone"
                 dataKey="value"
-                stroke="#4F46E5"
+                stroke="#1E3A8A"
                 strokeWidth={2}
                 fill="url(#attGrad)"
                 dot={{ r: 3, fill: '#4F46E5', strokeWidth: 2, stroke: '#fff' }}
@@ -315,7 +315,7 @@ export function DashboardHome() {
           {aiInsight && (
             <Card className="p-4 bg-slate-50 border-slate-200 rounded-2xl">
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white flex-shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-blue-800 flex items-center justify-center text-white flex-shrink-0">
                   <Sparkles className="w-4 h-4" />
                 </div>
                 <div className="flex-1 text-xs text-slate-700 whitespace-pre-wrap leading-relaxed">
@@ -426,7 +426,7 @@ function ModuleCard({ module, index, onClick }: { module: typeof MODULES[0]; ind
     >
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
-        <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-900 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+        <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-900 group-hover:bg-blue-800 group-hover:text-white transition-colors">
           <Icon className="w-5 h-5" />
         </div>
         {module.aiPowered && (

@@ -57,10 +57,10 @@ export function LoginScreen() {
   return (
     <div className="min-h-screen w-full flex flex-col lg:flex-row bg-white">
       {/* Left brand panel — Apple style: clean off-white with subtle accent */}
-      <div className="lg:w-[55%] xl:w-[58%] relative overflow-hidden bg-[#FBFBFD] text-[#1D1D1F]">
+      <div className="lg:w-[55%] xl:w-[58%] relative overflow-hidden bg-[#F8FAFC] text-slate-900">
         {/* Subtle decoration */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[#F5F5F7] rounded-full blur-3xl opacity-60" />
-        <div className="absolute bottom-0 left-0 w-80 h-80 bg-[#F5F5F7] rounded-full blur-3xl opacity-50" />
+        <div className="absolute top-0 right-0 w-96 h-96 bg-slate-100 rounded-full blur-3xl opacity-60" />
+        <div className="absolute bottom-0 left-0 w-80 h-80 bg-slate-100 rounded-full blur-3xl opacity-50" />
 
         <div className="relative z-10 h-full flex flex-col p-8 lg:p-14 xl:p-20">
           {/* Brand */}
@@ -75,20 +75,20 @@ export function LoginScreen() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
             >
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-[#E8E8ED] mb-6">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-slate-200 mb-6">
                 <span className="dot-pulse" />
-                <span className="text-xs font-medium text-[#1D1D1F]">AI Engine Online · RAG Active</span>
+                <span className="text-xs font-medium text-slate-900">AI Engine Online · RAG Active</span>
               </div>
 
-              <h1 className="text-4xl lg:text-5xl xl:text-6xl font-semibold leading-[1.05] tracking-tight mb-6 text-[#1D1D1F]">
+              <h1 className="text-4xl lg:text-5xl xl:text-6xl font-semibold leading-[1.05] tracking-tight mb-6 text-slate-900">
                 The world's first
                 <br />
-                <span className="text-[#6E6E73]">fully AI-powered</span>
+                <span className="text-slate-500">fully AI-powered</span>
                 <br />
                 school ERP platform.
               </h1>
 
-              <p className="text-base lg:text-lg text-[#6E6E73] leading-relaxed mb-10 max-w-xl">
+              <p className="text-base lg:text-lg text-slate-500 leading-relaxed mb-10 max-w-xl">
                 One unified intelligent platform for admissions, academics, attendance, fees,
                 transport, HRMS, safety & 30+ AI-powered modules — built for schools of the future.
               </p>
@@ -102,9 +102,9 @@ export function LoginScreen() {
                 ].map((f) => (
                   <div
                     key={f.label}
-                    className="flex items-center gap-2.5 p-3 rounded-xl bg-white border border-[#E8E8ED]"
+                    className="flex items-center gap-2.5 p-3 rounded-xl bg-white border border-slate-200"
                   >
-                    <f.icon className="w-4 h-4 text-[#1D1D1F]" />
+                    <f.icon className="w-4 h-4 text-slate-900" />
                     <span className="text-xs font-medium text-[#424245]">{f.label}</span>
                   </div>
                 ))}
@@ -115,7 +115,7 @@ export function LoginScreen() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.6, delay: 0.3 }}
-              className="flex items-center gap-6 text-[#A1A1A6] text-xs"
+              className="flex items-center gap-6 text-slate-400 text-xs"
             >
               <div className="flex items-center gap-2">
                 <Users className="w-3.5 h-3.5" />
@@ -151,16 +151,16 @@ export function LoginScreen() {
               transition={{ duration: 0.3 }}
             >
               <div className="mb-8">
-                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#F5F5F7] border border-[#E8E8ED] mb-4">
-                  <Sparkles className="w-3 h-3 text-[#1D1D1F]" />
-                  <span className="text-[11px] font-semibold text-[#1D1D1F] uppercase tracking-wide">
+                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 mb-4">
+                  <Sparkles className="w-3 h-3 text-slate-900" />
+                  <span className="text-[11px] font-semibold text-slate-900 uppercase tracking-wide">
                     {mode === 'login' ? 'Welcome Back' : 'Get Started'}
                   </span>
                 </div>
-                <h2 className="text-2xl lg:text-3xl font-semibold text-[#1D1D1F] mb-2 tracking-tight">
+                <h2 className="text-2xl lg:text-3xl font-semibold text-slate-900 mb-2 tracking-tight">
                   {mode === 'login' ? 'Sign in to your portal.' : 'Create your account.'}
                 </h2>
-                <p className="text-sm text-[#6E6E73]">
+                <p className="text-sm text-slate-500">
                   {mode === 'login'
                     ? 'Select your role and access your personalized AI-powered dashboard.'
                     : 'Join thousands of schools running on LearnX AI.'}
@@ -169,7 +169,7 @@ export function LoginScreen() {
 
               {/* Role selector */}
               <div className="mb-5">
-                <Label className="text-xs font-semibold text-[#1D1D1F] mb-2 block uppercase tracking-wider">
+                <Label className="text-xs font-semibold text-slate-900 mb-2 block uppercase tracking-wider">
                   Select Your Portal
                 </Label>
                 <div className="grid grid-cols-4 gap-2">
@@ -183,13 +183,13 @@ export function LoginScreen() {
                         onClick={() => setSelectedRole(role)}
                         className={`group relative p-2.5 rounded-xl border text-center transition-all ${
                           active
-                            ? 'border-[#1D1D1F] bg-[#1D1D1F] shadow-sm'
-                            : 'border-[#E8E8ED] bg-white hover:border-[#D2D2D7]'
+                            ? 'border-[#1D1D1F] bg-blue-800 shadow-sm'
+                            : 'border-slate-200 bg-white hover:border-slate-300'
                         }`}
                       >
                         <div
                           className={`w-7 h-7 mx-auto mb-1 rounded-lg flex items-center justify-center ${
-                            active ? 'bg-white/10 text-white' : 'bg-[#F5F5F7] text-[#1D1D1F]'
+                            active ? 'bg-white/10 text-white' : 'bg-slate-100 text-slate-900'
                           }`}
                         >
                           <GraduationCap className="w-3.5 h-3.5" />
@@ -205,9 +205,9 @@ export function LoginScreen() {
                     )
                   })}
                 </div>
-                <div className="mt-2 p-2.5 rounded-lg bg-[#FBFBFD] border border-[#E8E8ED]">
-                  <p className="text-[11px] text-[#6E6E73]">
-                    <span className="font-semibold text-[#1D1D1F]">
+                <div className="mt-2 p-2.5 rounded-lg bg-[#F8FAFC] border border-slate-200">
+                  <p className="text-[11px] text-slate-500">
+                    <span className="font-semibold text-slate-900">
                       {ROLE_INFO[selectedRole].label}:
                     </span>{' '}
                     {ROLE_INFO[selectedRole].description}
@@ -218,7 +218,7 @@ export function LoginScreen() {
               <form onSubmit={handleLogin} className="space-y-4">
                 {mode === 'signup' && (
                   <div>
-                    <Label htmlFor="name" className="text-xs font-semibold text-[#1D1D1F] mb-1.5 block">
+                    <Label htmlFor="name" className="text-xs font-semibold text-slate-900 mb-1.5 block">
                       Full Name
                     </Label>
                     <Input
@@ -226,48 +226,48 @@ export function LoginScreen() {
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="Dr. Priya Sharma"
-                      className="h-11 rounded-xl border-[#E8E8ED] focus:border-[#1D1D1F] focus:ring-[#F5F5F7] bg-white"
+                      className="h-11 rounded-xl border-slate-200 focus:border-blue-800 focus:ring-orange-100 bg-white"
                     />
                   </div>
                 )}
 
                 <div>
-                  <Label htmlFor="email" className="text-xs font-semibold text-[#1D1D1F] mb-1.5 block">
+                  <Label htmlFor="email" className="text-xs font-semibold text-slate-900 mb-1.5 block">
                     Email Address
                   </Label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#A1A1A6]" />
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <Input
                       id="email"
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="you@school.edu"
-                      className="h-11 pl-10 rounded-xl border-[#E8E8ED] focus:border-[#1D1D1F] focus:ring-[#F5F5F7] bg-white"
+                      className="h-11 pl-10 rounded-xl border-slate-200 focus:border-blue-800 focus:ring-orange-100 bg-white"
                       required
                     />
                   </div>
                 </div>
 
                 <div>
-                  <Label htmlFor="password" className="text-xs font-semibold text-[#1D1D1F] mb-1.5 block">
+                  <Label htmlFor="password" className="text-xs font-semibold text-slate-900 mb-1.5 block">
                     Password
                   </Label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#A1A1A6]" />
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <Input
                       id="password"
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="h-11 pl-10 pr-10 rounded-xl border-[#E8E8ED] focus:border-[#1D1D1F] focus:ring-[#F5F5F7] bg-white"
+                      className="h-11 pl-10 pr-10 rounded-xl border-slate-200 focus:border-blue-800 focus:ring-orange-100 bg-white"
                       required
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword((s) => !s)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#A1A1A6] hover:text-[#1D1D1F] transition-colors"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-900 transition-colors"
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -275,11 +275,11 @@ export function LoginScreen() {
                 </div>
 
                 <div className="flex items-center justify-between text-xs">
-                  <label className="flex items-center gap-2 text-[#6E6E73] cursor-pointer">
-                    <input type="checkbox" className="rounded border-[#E8E8ED] text-[#1D1D1F] focus:ring-[#F5F5F7]" defaultChecked />
+                  <label className="flex items-center gap-2 text-slate-500 cursor-pointer">
+                    <input type="checkbox" className="rounded border-slate-200 text-slate-900 focus:ring-[#F5F5F7]" defaultChecked />
                     Remember me
                   </label>
-                  <button type="button" className="text-[#1D1D1F] font-medium hover:underline">
+                  <button type="button" className="text-slate-900 font-medium hover:underline">
                     Forgot password?
                   </button>
                 </div>
@@ -287,7 +287,7 @@ export function LoginScreen() {
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="w-full h-11 rounded-xl bg-[#1D1D1F] hover:bg-[#000000] text-white font-medium shadow-sm transition-all"
+                  className="w-full h-11 rounded-xl bg-blue-800 hover:bg-blue-900 text-white font-medium shadow-sm transition-all"
                 >
                   {loading ? (
                     <span className="flex items-center gap-2">
@@ -306,7 +306,7 @@ export function LoginScreen() {
               {/* Divider */}
               <div className="flex items-center gap-3 my-5">
                 <div className="flex-1 h-px bg-[#E8E8ED]" />
-                <span className="text-[11px] text-[#A1A1A6] uppercase tracking-wider font-medium">
+                <span className="text-[11px] text-slate-400 uppercase tracking-wider font-medium">
                   or quick demo login
                 </span>
                 <div className="flex-1 h-px bg-[#E8E8ED]" />
@@ -318,27 +318,27 @@ export function LoginScreen() {
                   <button
                     key={role}
                     onClick={() => quickLogin(role)}
-                    className="group flex items-center gap-2 p-2.5 rounded-xl border border-[#E8E8ED] hover:border-[#1D1D1F] hover:bg-[#FBFBFD] transition-all text-left bg-white"
+                    className="group flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 hover:border-[#1D1D1F] hover:bg-[#F8FAFC] transition-all text-left bg-white"
                   >
-                    <div className="w-7 h-7 rounded-lg bg-[#1D1D1F] flex items-center justify-center text-white flex-shrink-0">
+                    <div className="w-7 h-7 rounded-lg bg-blue-800 flex items-center justify-center text-white flex-shrink-0">
                       <GraduationCap className="w-3.5 h-3.5" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-[11px] font-semibold text-[#1D1D1F] truncate">
+                      <div className="text-[11px] font-semibold text-slate-900 truncate">
                         {ROLE_INFO[role].label}
                       </div>
-                      <div className="text-[10px] text-[#A1A1A6]">Demo login</div>
+                      <div className="text-[10px] text-slate-400">Demo login</div>
                     </div>
-                    <ChevronRight className="w-3.5 h-3.5 text-[#A1A1A6] group-hover:text-[#1D1D1F] group-hover:translate-x-0.5 transition-all" />
+                    <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-900 group-hover:translate-x-0.5 transition-all" />
                   </button>
                 ))}
               </div>
 
-              <p className="text-center text-xs text-[#6E6E73] mt-6">
+              <p className="text-center text-xs text-slate-500 mt-6">
                 {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
                 <button
                   onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
-                  className="text-[#1D1D1F] font-semibold hover:underline"
+                  className="text-slate-900 font-semibold hover:underline"
                 >
                   {mode === 'login' ? 'Sign up' : 'Sign in'}
                 </button>

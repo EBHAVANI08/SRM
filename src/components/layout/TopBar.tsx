@@ -85,7 +85,7 @@ export function TopBar() {
       <Button
         onClick={() => setAIAssistantOpen(true)}
         size="sm"
-        className="hidden sm:flex h-9 px-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium gap-1.5"
+        className="hidden sm:flex h-9 px-3.5 rounded-xl bg-blue-800 hover:bg-blue-900 text-white font-medium gap-1.5"
       >
         <Sparkles className="w-3.5 h-3.5" />
         <span className="text-xs">Ask AI</span>
@@ -126,11 +126,11 @@ export function TopBar() {
                         n.type === 'success' ? 'bg-[#247A4A]'
                           : n.type === 'warning' ? 'bg-[#8A6D1C]'
                           : n.type === 'error' ? 'bg-rose-600'
-                          : 'bg-indigo-600'
+                          : 'bg-blue-800'
                       }`}
                     />
                     <span className="text-xs font-semibold text-slate-900 flex-1">{n.title}</span>
-                    {!n.read && <span className="w-1.5 h-1.5 rounded-full bg-indigo-600" />}
+                    {!n.read && <span className="w-1.5 h-1.5 rounded-full bg-blue-800" />}
                   </div>
                   <p className="text-[11px] text-slate-500 leading-relaxed">{n.message}</p>
                   <span className="text-[10px] text-slate-400">
@@ -152,7 +152,7 @@ export function TopBar() {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button className="flex items-center gap-2 p-1 pr-2 rounded-xl hover:bg-slate-100 transition-colors">
-            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-semibold text-xs">
+            <div className="w-8 h-8 rounded-lg bg-blue-800 flex items-center justify-center text-white font-semibold text-xs">
               {user.name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
             </div>
             <div className="hidden lg:block text-left">

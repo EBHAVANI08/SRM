@@ -97,7 +97,7 @@ export function Sidebar() {
       <div className="relative z-10 px-3 py-3">
         <button
           onClick={() => setAIAssistantOpen(true)}
-          className={`group relative w-full overflow-hidden rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 transition-all p-2.5 ${
+          className={`group relative w-full overflow-hidden rounded-xl bg-gradient-to-br from-blue-700 to-blue-900 hover:from-blue-800 hover:to-blue-900 transition-all p-2.5 ${
             collapsed ? 'flex justify-center' : 'flex items-center gap-2.5'
           }`}
         >
@@ -161,12 +161,12 @@ export function Sidebar() {
                         <>
                           <span className="flex-1 text-left truncate">{m.shortTitle}</span>
                           {m.aiPowered && (
-                            <span className="w-1 h-1 rounded-full bg-indigo-500 opacity-50" />
+                            <span className="w-1 h-1 rounded-full bg-orange-500 opacity-50" />
                           )}
                         </>
                       )}
                       {collapsed && m.aiPowered && (
-                        <span className="absolute top-1.5 right-1.5 w-1 h-1 rounded-full bg-indigo-500 opacity-50" />
+                        <span className="absolute top-1.5 right-1.5 w-1 h-1 rounded-full bg-orange-500 opacity-50" />
                       )}
                     </button>
                   )
@@ -185,7 +185,7 @@ export function Sidebar() {
           }`}
         >
           <div
-            className={`relative w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-semibold text-xs flex-shrink-0`}
+            className={`relative w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center text-white font-semibold text-xs flex-shrink-0`}
           >
             {user.name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
             <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white" />

@@ -43,86 +43,86 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* ============ Premium SaaS Theme (Linear/Stripe/Notion inspired) ============ */
+/* ============ Premium Theme: Orange + Dark Blue (no purple) ============ */
 :root {
   --radius: 0.875rem;
 
-  /* Soft cool background — not pure white, not gray */
+  /* Background: soft cool off-white */
   --background: #F8FAFC;
-  --foreground: #0F172A;
+  --foreground: #111827;
   --card: #FFFFFF;
-  --card-foreground: #0F172A;
+  --card-foreground: #111827;
   --popover: #FFFFFF;
-  --popover-foreground: #0F172A;
+  --popover-foreground: #111827;
 
-  /* Primary = deep indigo (Stripe/Linear style) */
-  --primary: #4F46E5;
+  /* Primary = Dark Blue (trust, professional) */
+  --primary: #1E3A8A;
   --primary-foreground: #FFFFFF;
 
-  /* Subtle backgrounds */
-  --secondary: #F1F5F9;
-  --secondary-foreground: #0F172A;
+  /* Secondary = Orange (energy, brand) */
+  --secondary: #FFF7ED;
+  --secondary-foreground: #C2410C;
   --muted: #F1F5F9;
-  --muted-foreground: #64748B;
-  --accent: #EEF2FF;
-  --accent-foreground: #4F46E5;
+  --muted-foreground: #6B7280;
+  --accent: #FFF7ED;
+  --accent-foreground: #F97316;
 
-  --destructive: #DC2626;
+  --destructive: #EF4444;
   --destructive-foreground: #FFFFFF;
-  --border: #E2E8F0;
-  --input: #E2E8F0;
-  --ring: #4F46E5;
+  --border: #E5E7EB;
+  --input: #E5E7EB;
+  --ring: #F97316;
 
-  /* Sophisticated chart colors */
-  --chart-1: #4F46E5;
-  --chart-2: #06B6D4;
-  --chart-3: #8B5CF6;
+  /* Chart colors — orange, blue, green, amber, rose (NO purple) */
+  --chart-1: #1E3A8A;
+  --chart-2: #F97316;
+  --chart-3: #22C55E;
   --chart-4: #F59E0B;
-  --chart-5: #EC4899;
+  --chart-5: #EF4444;
 
-  /* Sidebar = soft premium */
+  /* Sidebar = white with dark blue active */
   --sidebar: #FFFFFF;
-  --sidebar-foreground: #0F172A;
-  --sidebar-primary: #4F46E5;
+  --sidebar-foreground: #111827;
+  --sidebar-primary: #1E3A8A;
   --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #F1F5F9;
-  --sidebar-accent-foreground: #0F172A;
-  --sidebar-border: #E2E8F0;
-  --sidebar-ring: #4F46E5;
+  --sidebar-accent: #F8FAFC;
+  --sidebar-accent-foreground: #1E3A8A;
+  --sidebar-border: #E5E7EB;
+  --sidebar-ring: #1E3A8A;
 }
 
 .dark {
-  --background: #0B1120;
+  --background: #0F172A;
   --foreground: #F1F5F9;
   --card: #1E293B;
   --card-foreground: #F1F5F9;
   --popover: #1E293B;
   --popover-foreground: #F1F5F9;
-  --primary: #818CF8;
-  --primary-foreground: #0B1120;
+  --primary: #3B82F6;
+  --primary-foreground: #0F172A;
   --secondary: #334155;
   --secondary-foreground: #F1F5F9;
   --muted: #334155;
   --muted-foreground: #94A3B8;
-  --accent: #312E81;
+  --accent: #334155;
   --accent-foreground: #F1F5F9;
   --destructive: #F87171;
   --border: #334155;
   --input: #334155;
-  --ring: #818CF8;
-  --chart-1: #818CF8;
-  --chart-2: #22D3EE;
-  --chart-3: #A78BFA;
+  --ring: #3B82F6;
+  --chart-1: #3B82F6;
+  --chart-2: #FB923C;
+  --chart-3: #4ADE80;
   --chart-4: #FBBF24;
-  --chart-5: #F472B6;
-  --sidebar: #0F172A;
+  --chart-5: #F87171;
+  --sidebar: #1E293B;
   --sidebar-foreground: #F1F5F9;
-  --sidebar-primary: #818CF8;
+  --sidebar-primary: #3B82F6;
   --sidebar-primary-foreground: #0F172A;
-  --sidebar-accent: #1E293B;
+  --sidebar-accent: #334155;
   --sidebar-accent-foreground: #F1F5F9;
-  --sidebar-border: #1E293B;
-  --sidebar-ring: #818CF8;
+  --sidebar-border: #334155;
+  --sidebar-ring: #3B82F6;
 }
 
 @layer base {
@@ -145,40 +145,37 @@
 
 /* ============ Premium Design System ============ */
 
-/* Luxury card — clean white with subtle border and shadow */
 .luxury-card {
   background: #FFFFFF;
-  border: 1px solid #E2E8F0;
+  border: 1px solid #E5E7EB;
   border-radius: 16px;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .luxury-card:hover {
-  border-color: #CBD5E1;
+  border-color: #D1D5DB;
   box-shadow: 0 4px 24px rgba(15, 23, 42, 0.06);
   transform: translateY(-2px);
 }
 
-/* Elevated card */
 .elevated-card {
   background: #FFFFFF;
-  border: 1px solid #E2E8F0;
+  border: 1px solid #E5E7EB;
   border-radius: 16px;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .elevated-card:hover {
-  border-color: #CBD5E1;
+  border-color: #D1D5DB;
   box-shadow: 0 8px 32px rgba(15, 23, 42, 0.08);
   transform: translateY(-2px);
 }
 
-/* Module card */
 .module-card {
   position: relative;
   background: #FFFFFF;
-  border: 1px solid #E2E8F0;
+  border: 1px solid #E5E7EB;
   border-radius: 18px;
   padding: 1.25rem;
   overflow: hidden;
@@ -191,14 +188,14 @@
   position: absolute;
   top: 0; left: 0;
   width: 100%; height: 3px;
-  background: var(--card-accent, #4F46E5);
+  background: var(--card-accent, #F97316);
   opacity: 0;
   transition: opacity 0.3s ease;
 }
 
 .module-card:hover {
-  border-color: var(--card-accent, #4F46E5);
-  box-shadow: 0 12px 40px rgba(79, 70, 229, 0.10);
+  border-color: var(--card-accent, #F97316);
+  box-shadow: 0 12px 40px rgba(249, 115, 22, 0.10);
   transform: translateY(-3px);
 }
 
@@ -206,17 +203,16 @@
   opacity: 1;
 }
 
-/* Glass card */
 .glass-card {
   background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(226, 232, 240, 0.6);
+  border: 1px solid rgba(229, 231, 235, 0.6);
 }
 
-/* ============ Premium Sidebar (soft white with indigo accents) ============ */
+/* ============ Sidebar (white with dark blue active) ============ */
 .sidebar-luxury {
   background: #FFFFFF;
-  border-right: 1px solid #E2E8F0;
+  border-right: 1px solid #E5E7EB;
   position: relative;
   overflow: hidden;
 }
@@ -226,16 +222,15 @@
   position: absolute;
   top: 0; left: 0; right: 0;
   height: 180px;
-  background: linear-gradient(180deg, rgba(238, 242, 255, 0.5) 0%, transparent 100%);
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.8) 0%, transparent 100%);
   pointer-events: none;
 }
 
-/* Sidebar item */
 .sidebar-item {
   position: relative;
   padding: 0.5rem 0.75rem;
   border-radius: 10px;
-  color: #475569;
+  color: #4B5563;
   font-size: 13px;
   font-weight: 500;
   display: flex;
@@ -248,32 +243,24 @@
 }
 
 .sidebar-item:hover {
-  background: #F1F5F9;
-  color: #0F172A;
+  background: #F8FAFC;
+  color: #111827;
 }
 
 .sidebar-item.active {
-  background: #EEF2FF;
-  color: #4F46E5;
-  border-color: #C7D2FE;
+  background: #1E3A8A;
+  color: #FFFFFF;
+  border-color: #1E3A8A;
   font-weight: 600;
 }
 
 .sidebar-item.active::before {
-  content: '';
-  position: absolute;
-  left: -10px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 60%;
-  background: #4F46E5;
-  border-radius: 0 4px 4px 0;
+  display: none;
 }
 
 /* ============ Typography ============ */
 .gradient-text {
-  background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+  background: linear-gradient(135deg, #1E3A8A 0%, #F97316 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -282,10 +269,10 @@
 .stat-number {
   font-weight: 700;
   letter-spacing: -0.03em;
-  color: #0F172A;
+  color: #111827;
 }
 
-/* ============ AI badge ============ */
+/* ============ AI badge (orange themed) ============ */
 .ai-badge {
   display: inline-flex;
   align-items: center;
@@ -296,9 +283,9 @@
   font-weight: 600;
   letter-spacing: 0.02em;
   text-transform: uppercase;
-  background: linear-gradient(135deg, #EEF2FF, #F5F3FF);
-  color: #4F46E5;
-  border: 1px solid #C7D2FE;
+  background: #FFF7ED;
+  color: #C2410C;
+  border: 1px solid #FED7AA;
 }
 
 .ai-glow {
@@ -308,27 +295,26 @@
   content: '';
   position: absolute;
   inset: -2px;
-  background: linear-gradient(135deg, #4F46E5, #7C3AED);
+  background: linear-gradient(135deg, #F97316, #1E3A8A);
   border-radius: inherit;
   z-index: -1;
-  opacity: 0.3;
+  opacity: 0.2;
   filter: blur(8px);
 }
 
-/* Dot pulse */
 .dot-pulse {
   display: inline-block;
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #10B981;
-  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+  background: #22C55E;
+  box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4);
   animation: dot-pulse-anim 2s infinite;
 }
 @keyframes dot-pulse-anim {
-  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
-  70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+  70% { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
 }
 
 /* ============ Scrollbar ============ */
@@ -336,47 +322,33 @@
   width: 6px;
   height: 6px;
 }
-.custom-scroll::-webkit-scrollbar-track {
-  background: transparent;
-}
-.custom-scroll::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
-  border-radius: 10px;
-}
-.custom-scroll::-webkit-scrollbar-thumb:hover {
-  background: #94A3B8;
-}
+.custom-scroll::-webkit-scrollbar-track { background: transparent; }
+.custom-scroll::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 10px; }
+.custom-scroll::-webkit-scrollbar-thumb:hover { background: #9CA3AF; }
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
 /* ============ Premium table ============ */
-.premium-table {
-  border-collapse: separate;
-  border-spacing: 0;
-}
+.premium-table { border-collapse: separate; border-spacing: 0; }
 .premium-table th {
   background: #F8FAFC;
-  color: #64748B;
+  color: #6B7280;
   font-weight: 600;
   font-size: 11px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   padding: 12px 16px;
-  border-bottom: 1px solid #E2E8F0;
+  border-bottom: 1px solid #E5E7EB;
 }
 .premium-table td {
   padding: 14px 16px;
   border-bottom: 1px solid #F1F5F9;
   font-size: 13px;
-  color: #0F172A;
+  color: #111827;
 }
-.premium-table tr:hover td {
-  background: #F8FAFC;
-}
-.premium-table tr:last-child td {
-  border-bottom: none;
-}
+.premium-table tr:hover td { background: #F8FAFC; }
+.premium-table tr:last-child td { border-bottom: none; }
 
 /* ============ Status chips ============ */
 .status-chip {
@@ -394,36 +366,32 @@
 .status-warning { background: #FFFBEB; color: #B45309; border: 1px solid #FDE68A; }
 .status-danger  { background: #FEF2F2; color: #B91C1C; border: 1px solid #FECACA; }
 .status-info    { background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; }
-.status-violet  { background: #F5F3FF; color: #6D28D9; border: 1px solid #DDD6FE; }
-.status-neutral { background: #F1F5F9; color: #475569; border: 1px solid #E2E8F0; }
+.status-violet  { background: #FFF7ED; color: #C2410C; border: 1px solid #FED7AA; }
+.status-neutral { background: #F1F5F9; color: #4B5563; border: 1px solid #E5E7EB; }
 
 /* ============ Animations ============ */
 @keyframes page-enter {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
-.animate-page-enter {
-  animation: page-enter 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-}
+.animate-page-enter { animation: page-enter 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
 
 @keyframes card-enter {
   from { opacity: 0; transform: scale(0.97) translateY(8px); }
   to { opacity: 1; transform: scale(1) translateY(0); }
 }
-.animate-card-enter {
-  animation: card-enter 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards;
-}
+.animate-card-enter { animation: card-enter 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
 
 .focus-glow:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.15);
 }
 
 .hero-pattern {
   background-color: #F8FAFC;
   background-image:
-    radial-gradient(circle at 20% 30%, rgba(79, 70, 229, 0.04) 0%, transparent 50%),
-    radial-gradient(circle at 80% 70%, rgba(124, 58, 237, 0.03) 0%, transparent 50%);
+    radial-gradient(circle at 20% 30%, rgba(249, 115, 22, 0.04) 0%, transparent 50%),
+    radial-gradient(circle at 80% 70%, rgba(30, 58, 138, 0.03) 0%, transparent 50%);
 }
 
 .shimmer {
@@ -444,9 +412,9 @@
   pointer-events: none;
 }
 
-/* ============ Rich premium hero header (deep indigo gradient) ============ */
+/* ============ Rich premium hero header (dark blue gradient) ============ */
 .premium-hero {
-  background: linear-gradient(135deg, #312E81 0%, #4F46E5 50%, #6D28D9 100%);
+  background: linear-gradient(135deg, #1E3A8A 0%, #1E40AF 50%, #2563EB 100%);
   position: relative;
   overflow: hidden;
 }
@@ -456,7 +424,7 @@
   position: absolute;
   top: 0; right: 0;
   width: 50%; height: 100%;
-  background: radial-gradient(circle at top right, rgba(255,255,255,0.12), transparent 60%);
+  background: radial-gradient(circle at top right, rgba(249, 115, 22, 0.15), transparent 60%);
   pointer-events: none;
 }
 

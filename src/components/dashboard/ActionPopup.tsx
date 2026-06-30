@@ -384,9 +384,9 @@ function GeneratePopup({ title, moduleKey, accent }: { title: string; moduleKey:
         </div>
       </div>
 
-      <div className="flex items-center gap-2 p-3 rounded-xl bg-indigo-50 border border-indigo-100">
-        <Sparkles className="w-4 h-4 text-indigo-600 flex-shrink-0" />
-        <span className="text-xs text-indigo-900">AI will auto-populate all fields, verify data against existing records, and apply your school's branding.</span>
+      <div className="flex items-center gap-2 p-3 rounded-xl bg-orange-50 border border-orange-100">
+        <Sparkles className="w-4 h-4 text-blue-800 flex-shrink-0" />
+        <span className="text-xs text-blue-900">AI will auto-populate all fields, verify data against existing records, and apply your school's branding.</span>
       </div>
     </div>
   )

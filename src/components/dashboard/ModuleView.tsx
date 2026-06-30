@@ -30,10 +30,10 @@ const MODULE_DATA: Record<string, any> = {
       { label: 'Gate Passes Issued', value: '128', trend: '+8%', icon: FileText },
     ],
     cards: [
-      { title: 'Smart Visitor Check-In', desc: 'AI face capture + OTP verification + auto gate pass', action: 'Start Check-In' },
-      { title: 'Appointment Manager', desc: 'Schedule meetings, sync with staff calendar', action: 'View Schedule' },
-      { title: 'Visitor History', desc: 'Searchable database with AI anomaly flags', action: 'Open History' },
-      { title: 'Gate Pass Generator', desc: 'Auto-fill digital passes with QR codes', action: 'Generate Pass' },
+      { title: 'Smart Visitor Check-In', desc: 'AI face capture + OTP verification + auto gate pass', action: 'Start Check-In', emoji: '🚪', iconBg: '#1E3A8A' },
+      { title: 'Appointment Manager', desc: 'Schedule meetings, sync with staff calendar', action: 'View Schedule', emoji: '📅', iconBg: '#0D9488' },
+      { title: 'Visitor History', desc: 'Searchable database with AI anomaly flags', action: 'Open History', emoji: '📋', iconBg: '#6B7280' },
+      { title: 'Gate Pass Generator', desc: 'Auto-fill digital passes with QR codes', action: 'Generate Pass', emoji: '🎟️', iconBg: '#D97706' },
     ],
     table: [
       { name: 'Rajesh Kumar', purpose: 'Parent Meeting', time: '10:30 AM', status: 'Checked-In', host: 'Mrs. Verma' },
@@ -51,12 +51,12 @@ const MODULE_DATA: Record<string, any> = {
       { label: 'Conversion Rate', value: '68.5%', trend: '+5.2%', icon: TrendingUp },
     ],
     cards: [
-      { title: 'Online Application Form', desc: 'AI-validated multi-step form with document upload', action: 'New Application' },
-      { title: 'AI Prospect Scoring', desc: 'ML model scores prospects on 14 parameters', action: 'View Scores' },
-      { title: 'Document Vault', desc: 'AI OCR auto-categorizes & verifies documents', action: 'Open Vault' },
-      { title: 'Interview Scheduler', desc: 'AI matches slots with panel availability', action: 'Schedule Interview' },
-      { title: 'KG Registration Analytics', desc: 'Trend analysis with demographic insights', action: 'View Analytics' },
-      { title: 'Waitlist Management', desc: 'Auto-promote based on AI priority scoring', action: 'View Waitlist' },
+      { title: 'Online Application Form', desc: 'AI-validated multi-step form with document upload', action: 'New Application', emoji: '📝', iconBg: '#1E3A8A' },
+      { title: 'AI Prospect Scoring', desc: 'ML model scores prospects on 14 parameters', action: 'View Scores', emoji: '🎯', iconBg: '#F97316' },
+      { title: 'Document Vault', desc: 'AI OCR auto-categorizes & verifies documents', action: 'Open Vault', emoji: '🗄️', iconBg: '#0D9488' },
+      { title: 'Interview Scheduler', desc: 'AI matches slots with panel availability', action: 'Schedule Interview', emoji: '🎤', iconBg: '#0EA5E9' },
+      { title: 'KG Registration Analytics', desc: 'Trend analysis with demographic insights', action: 'View Analytics', emoji: '📊', iconBg: '#D97706' },
+      { title: 'Waitlist Management', desc: 'Auto-promote based on AI priority scoring', action: 'View Waitlist', emoji: '⏳', iconBg: '#6B7280' },
     ],
     trend: [
       { month: 'Sep', apps: 820 }, { month: 'Oct', apps: 940 }, { month: 'Nov', apps: 1080 },
@@ -78,18 +78,18 @@ const MODULE_DATA: Record<string, any> = {
       { label: 'On Leave', value: '23', trend: '-5', icon: Calendar },
     ],
     cards: [
-      { title: 'Biometric Attendance', desc: 'Fingerprint scanners across 12 gates', action: 'View Devices' },
-      { title: 'RFID Card System', desc: 'Tap-and-go with auto SMS to parents', action: 'Manage Cards' },
-      { title: 'AI Face Recognition', desc: 'Contactless attendance with anti-spoofing', action: 'View Cameras' },
-      { title: 'Leave Management', desc: 'AI predicts leave patterns & auto-approves routine', action: 'Apply Leave' },
-      { title: 'Anomaly Detection', desc: 'AI flags unusual absence patterns', action: 'View Anomalies' },
-      { title: 'Auto SMS/WhatsApp', desc: 'Instant parent notification for absentees', action: 'Configure' },
+      { title: 'Biometric Attendance', desc: 'Fingerprint scanners across 12 gates', action: 'View Devices', emoji: '🔐', iconBg: '#1E3A8A' },
+      { title: 'RFID Card System', desc: 'Tap-and-go with auto SMS to parents', action: 'Manage Cards', emoji: '💳', iconBg: '#0D9488' },
+      { title: 'AI Face Recognition', desc: 'Contactless attendance with anti-spoofing', action: 'View Cameras', emoji: '📷', iconBg: '#F97316' },
+      { title: 'Leave Management', desc: 'AI predicts leave patterns & auto-approves routine', action: 'Apply Leave', emoji: '🌴', iconBg: '#22C55E' },
+      { title: 'Anomaly Detection', desc: 'AI flags unusual absence patterns', action: 'View Anomalies', emoji: '⚠️', iconBg: '#EF4444' },
+      { title: 'Auto SMS/WhatsApp', desc: 'Instant parent notification for absentees', action: 'Configure', emoji: '💬', iconBg: '#0EA5E9' },
     ],
     breakdown: [
-      { name: 'Biometric', value: 48, color: '#4F46E5' },
-      { name: 'RFID', value: 32, color: '#06B6D4' },
-      { name: 'Face AI', value: 18, color: '#8B5CF6' },
-      { name: 'Manual', value: 2, color: '#CBD5E1' },
+      { name: 'Biometric', value: 48, color: '#1E3A8A' },
+      { name: 'RFID', value: 32, color: '#0D9488' },
+      { name: 'Face AI', value: 18, color: '#F97316' },
+      { name: 'Manual', value: 2, color: '#D1D5DB' },
     ],
     trend: [
       { day: 'Mon', value: 92.1 }, { day: 'Tue', value: 93.4 }, { day: 'Wed', value: 94.2 },
@@ -204,9 +204,9 @@ export function ModuleView({ moduleKey }: { moduleKey: string }) {
 
       {/* AI Insight banner */}
       {aiInsight && (
-        <Card className="p-5 bg-gradient-to-br from-indigo-50 to-violet-50 border-indigo-100 rounded-2xl">
+        <Card className="p-5 bg-gradient-to-br from-orange-50 to-amber-50 border-orange-100 rounded-2xl">
           <div className="flex items-start gap-4">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white flex-shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-700 to-blue-900 flex items-center justify-center text-white flex-shrink-0">
               <Brain className="w-4 h-4" />
             </div>
             <div className="flex-1">
@@ -222,7 +222,7 @@ export function ModuleView({ moduleKey }: { moduleKey: string }) {
             <Button
               size="sm"
               variant="ghost"
-              className="text-xs h-7 text-indigo-600 hover:bg-indigo-50"
+              className="text-xs h-7 text-orange-600 hover:bg-orange-50"
               onClick={() => setAIAssistantOpen(true)}
             >
               Ask more
@@ -430,9 +430,9 @@ export function ModuleView({ moduleKey }: { moduleKey: string }) {
 
       {/* AI Features section */}
       {currentModule.aiPowered && (
-        <Card className="p-6 elevated-card rounded-2xl bg-gradient-to-br from-slate-50 to-indigo-50/30">
+        <Card className="p-6 elevated-card rounded-2xl bg-gradient-to-br from-slate-50 to-orange-50/30">
           <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white flex-shrink-0">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-700 to-blue-900 flex items-center justify-center text-white flex-shrink-0">
               <Bot className="w-6 h-6" />
             </div>
             <div className="flex-1">
@@ -446,7 +446,7 @@ export function ModuleView({ moduleKey }: { moduleKey: string }) {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 {currentModule.features.map((f) => (
                   <div key={f} className="flex items-center gap-2 p-3 rounded-xl bg-white border border-slate-200">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-indigo-500 flex-shrink-0" />
+                    <CheckCircle2 className="w-3.5 h-3.5 text-orange-500 flex-shrink-0" />
                     <span className="text-xs text-slate-700">{f}</span>
                   </div>
                 ))}
@@ -455,7 +455,7 @@ export function ModuleView({ moduleKey }: { moduleKey: string }) {
                 <Button
                   size="sm"
                   onClick={() => setAIAssistantOpen(true)}
-                  className="h-8 text-xs gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg"
+                  className="h-8 text-xs gap-1.5 bg-blue-800 hover:bg-blue-900 text-white rounded-lg"
                 >
                   <Sparkles className="w-3 h-3" />
                   Ask AI about this module
@@ -495,10 +495,10 @@ function SubModuleCard({ card, module, onClick }: { card: any; module: ModuleCon
     >
       <div className="flex items-start justify-between mb-4">
         <div
-          className="w-10 h-10 rounded-xl flex items-center justify-center text-white group-hover:scale-110 transition-transform"
-          style={{ background: module.accent }}
+          className="w-11 h-11 rounded-xl flex items-center justify-center text-xl group-hover:scale-110 transition-transform"
+          style={{ background: (card.iconBg || module.accent) + '15' }}
         >
-          <Activity className="w-5 h-5" />
+          <span className="leading-none">{card.emoji || '⚡'}</span>
         </div>
         {module.aiPowered && (
           <span className="ai-badge">
@@ -521,24 +521,67 @@ function SubModuleCard({ card, module, onClick }: { card: any; module: ModuleCon
 }
 
 function generateGenericData(module: ModuleConfig) {
+  // Emoji picker based on feature keywords
+  const emojiFor = (feature: string): { emoji: string; iconBg: string } => {
+    const f = feature.toLowerCase()
+    const colorPalette = ['#1E3A8A', '#F97316', '#0D9488', '#0EA5E9', '#22C55E', '#D97706', '#E11D48', '#6B7280']
+    const idx = module.features.indexOf(feature) % colorPalette.length
+    const iconBg = colorPalette[idx]
+    if (f.includes('ai') || f.includes('engine') || f.includes('intelligen')) return { emoji: '🤖', iconBg }
+    if (f.includes('payment') || f.includes('fee') || f.includes('salary') || f.includes('payroll')) return { emoji: '💰', iconBg }
+    if (f.includes('sms') || f.includes('notif') || f.includes('alert') || f.includes('message')) return { emoji: '🔔', iconBg }
+    if (f.includes('email') || f.includes('mail')) return { emoji: '📧', iconBg }
+    if (f.includes('document') || f.includes('cert') || f.includes('report')) return { emoji: '📄', iconBg }
+    if (f.includes('calendar') || f.includes('schedule') || f.includes('timetable')) return { emoji: '📅', iconBg }
+    if (f.includes('attendance') || f.includes('present')) return { emoji: '✅', iconBg }
+    if (f.includes('exam') || f.includes('test') || f.includes('question')) return { emoji: '📝', iconBg }
+    if (f.includes('student') || f.includes('admission')) return { emoji: '🎓', iconBg }
+    if (f.includes('teacher') || f.includes('staff') || f.includes('hr')) return { emoji: '👨‍🏫', iconBg }
+    if (f.includes('parent')) return { emoji: '👨‍👩‍👧', iconBg }
+    if (f.includes('transport') || f.includes('bus') || f.includes('vehicle')) return { emoji: '🚌', iconBg }
+    if (f.includes('hostel') || f.includes('room')) return { emoji: '🏨', iconBg }
+    if (f.includes('canteen') || f.includes('mess') || f.includes('food')) return { emoji: '🍽️', iconBg }
+    if (f.includes('library') || f.includes('book')) return { emoji: '📚', iconBg }
+    if (f.includes('sport') || f.includes('game') || f.includes('activity')) return { emoji: '🏆', iconBg }
+    if (f.includes('health') || f.includes('medical') || f.includes('wellness')) return { emoji: '🏥', iconBg }
+    if (f.includes('security') || f.includes('safety') || f.includes('cctv')) return { emoji: '🛡️', iconBg }
+    if (f.includes('biometric') || f.includes('face') || f.includes('rfid')) return { emoji: '🔐', iconBg }
+    if (f.includes('analytics') || f.includes('report') || f.includes('insight')) return { emoji: '📊', iconBg }
+    if (f.includes('workflow') || f.includes('automation')) return { emoji: '⚙️', iconBg }
+    if (f.includes('career') || f.includes('counsel')) return { emoji: '🧭', iconBg }
+    if (f.includes('mock') || f.includes('practice')) return { emoji: '🎯', iconBg }
+    if (f.includes('event')) return { emoji: '🎉', iconBg }
+    if (f.includes('alumni')) return { emoji: '👥', iconBg }
+    if (f.includes('finance') || f.includes('account') || f.includes('budget')) return { emoji: '💼', iconBg }
+    if (f.includes('setting') || f.includes('config')) return { emoji: '⚙️', iconBg }
+    if (f.includes('curriculum') || f.includes('syllabus') || f.includes('lesson')) return { emoji: '📖', iconBg }
+    if (f.includes('substitut')) return { emoji: '🔄', iconBg }
+    return { emoji: '⚡', iconBg }
+  }
+
   return {
     stats: module.stats?.map((s, i) => ({
       ...s,
       icon: [Users, Activity, TrendingUp, Target][i % 4],
     })) || [],
-    cards: module.features.map((f) => ({
-      title: f,
-      desc: `AI-powered ${f.toLowerCase()} with intelligent automation`,
-      action: 'Open',
-    })),
+    cards: module.features.map((f) => {
+      const { emoji, iconBg } = emojiFor(f)
+      return {
+        title: f,
+        desc: `AI-powered ${f.toLowerCase()} with intelligent automation`,
+        action: 'Open',
+        emoji,
+        iconBg,
+      }
+    }),
     trend: [
       { day: 'Mon', value: 82 }, { day: 'Tue', value: 85 }, { day: 'Wed', value: 87 },
       { day: 'Thu', value: 89 }, { day: 'Fri', value: 90 }, { day: 'Sat', value: 91 }, { day: 'Today', value: 92 },
     ],
     breakdown: [
       { name: 'Active', value: 65, color: module.accent },
-      { name: 'Idle', value: 25, color: '#06B6D4' },
-      { name: 'Maintenance', value: 10, color: '#CBD5E1' },
+      { name: 'Idle', value: 25, color: '#0D9488' },
+      { name: 'Maintenance', value: 10, color: '#D1D5DB' },
     ],
     table: [
       { id: 'TXN-001', name: 'AI Auto-Task', status: 'Completed', time: '2 min ago', method: 'AI Engine' },
