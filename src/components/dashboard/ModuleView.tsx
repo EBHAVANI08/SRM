@@ -667,8 +667,8 @@ function getAIWorkflows(moduleKey: string): { name: string; trigger: string }[] 
     'examinations': [
       { name: 'Auto-generate seating arrangements', trigger: 'on schedule' },
       { name: 'AI score verification (detect cheating)', trigger: 'on evaluation' },
-      { name: 'Generate report cards with remarks', trigger: 'on result publish' },
-      { name: 'Predict at-risk students based on scores', trigger: 'on result' },
+      { name: 'Auto-send exam schedule to parents/students via WhatsApp', trigger: 'on schedule' },
+      { name: 'Auto-send results to parents the moment published', trigger: 'on result publish' },
     ],
     'transport': [
       { name: 'Predict bus ETA using live GPS + traffic', trigger: 'real-time' },
@@ -721,14 +721,20 @@ function getAIWorkflows(moduleKey: string): { name: string; trigger: string }[] 
     'report-cards': [
       { name: 'AI-generate holistic remarks', trigger: 'on result' },
       { name: 'Auto-calculate grades & GPA', trigger: 'on evaluation' },
-      { name: 'Detect grade anomalies', trigger: 'on publish' },
-      { name: 'Schedule PTM based on availability', trigger: 'on result' },
+      { name: 'Auto-send report cards to parents via WhatsApp/SMS/Email', trigger: 'on publish' },
+      { name: 'Schedule PTM based on availability + notify parents', trigger: 'on result' },
     ],
     'timetable': [
       { name: 'Generate conflict-free timetables', trigger: 'on request' },
-      { name: 'Auto-allocate substitute teachers', trigger: 'on absence' },
-      { name: 'Optimize room utilization', trigger: 'weekly' },
+      { name: 'Auto-allocate substitute teachers + notify', trigger: 'on absence' },
+      { name: 'Auto-share timetable to students/parents/staff', trigger: 'on generate' },
       { name: 'Balance teacher workload', trigger: 'on generate' },
+    ],
+    'academic': [
+      { name: 'AI suggest lesson plans from curriculum', trigger: 'on topic select' },
+      { name: 'Auto-track syllabus coverage & alert if behind', trigger: 'weekly' },
+      { name: 'Auto-assign & grade homework with AI', trigger: 'on assign' },
+      { name: 'Notify parents of pending assignments via WhatsApp', trigger: 'daily 6 PM' },
     ],
     'documents': [
       { name: 'AI OCR extract text from documents', trigger: 'on upload' },
@@ -739,8 +745,8 @@ function getAIWorkflows(moduleKey: string): { name: string; trigger: string }[] 
     'curriculum': [
       { name: 'Suggest learning outcomes mapping', trigger: 'on create' },
       { name: 'Auto-align with CBSE/ICSE standards', trigger: 'on save' },
-      { name: 'Identify curriculum gaps', trigger: 'weekly' },
-      { name: 'Recommend supplementary content', trigger: 'on demand' },
+      { name: 'Identify curriculum gaps & auto-notify HOD', trigger: 'weekly' },
+      { name: 'Recommend supplementary content to teachers', trigger: 'on demand' },
     ],
     'activities': [
       { name: 'Identify student talents via AI', trigger: 'on participation' },

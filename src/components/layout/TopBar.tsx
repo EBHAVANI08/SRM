@@ -64,22 +64,6 @@ export function TopBar() {
         </kbd>
       </div>
 
-      {/* Live indicators */}
-      <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200">
-        <span className="dot-pulse" />
-        <span className="text-[11px] font-semibold text-emerald-600">All Systems Operational</span>
-      </div>
-
-      {/* AI Assistant */}
-      <Button
-        onClick={() => setAIAssistantOpen(true)}
-        size="sm"
-        className="hidden sm:flex h-9 px-3.5 rounded-xl bg-blue-800 hover:bg-blue-900 text-white font-medium gap-1.5"
-      >
-        <Sparkles className="w-3.5 h-3.5" />
-        <span className="text-xs">Ask AI</span>
-      </Button>
-
       {/* Notifications */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

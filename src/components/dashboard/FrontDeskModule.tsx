@@ -52,6 +52,7 @@ export function FrontDeskModule() {
   const [visitors, setVisitors] = useState<Visitor[]>(INITIAL_VISITORS)
   const [showCheckIn, setShowCheckIn] = useState(false)
   const [showGatePass, setShowGatePass] = useState(false)
+  const [showPreBook, setShowPreBook] = useState(false)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<'all' | 'checked-in' | 'pending' | 'scheduled'>('all')
   const [selectedVisitor, setSelectedVisitor] = useState<Visitor | null>(null)
@@ -165,7 +166,7 @@ export function FrontDeskModule() {
             { emoji: '🚪', label: 'Check-In Visitor', desc: 'Camera + OTP', action: () => setShowCheckIn(true), color: '#1E3A8A' },
             { emoji: '🎟️', label: 'Generate Pass', desc: 'QR + WhatsApp', action: () => setShowGatePass(true), color: '#F97316' },
             { emoji: '📤', label: 'Check-Out', desc: 'Quick exit', action: () => toast.info('Select a visitor to check out'), color: '#22C55E' },
-            { emoji: '📅', label: 'Pre-Book', desc: 'Schedule visit', action: () => toast.info('Opening scheduler...'), color: '#0D9488' },
+            { emoji: '📅', label: 'Pre-Book', desc: 'Schedule visit', action: () => setShowPreBook(true), color: '#0D9488' },
             { emoji: '🚨', label: 'SOS Alert', desc: 'Emergency', action: () => toast.error('SOS sent to security!'), color: '#E11D48' },
             { emoji: '📊', label: 'Analytics', desc: 'Visitor insights', action: () => toast.info('Loading analytics...'), color: '#6B7280' },
           ].map((qa, i) => (
@@ -262,6 +263,16 @@ export function FrontDeskModule() {
               toast.success(`Gate pass sent via ${method.toUpperCase()}!`)
               setShowGatePass(false)
               setSelectedVisitor(null)
+            }}
+          />
+        )}
+        {showPreBook && (
+          <PreBookModal
+            onClose={() => setShowPreBook(false)}
+            onComplete={(visitor) => {
+              setVisitors((vs) => [visitor, ...vs])
+              setShowPreBook(false)
+              toast.success(`${visitor.name} pre-booked for ${visitor.checkInTime}. Confirmation sent via WhatsApp & SMS.`)
             }}
           />
         )}
@@ -396,16 +407,33 @@ function VisitorCheckInModal({ onClose, onComplete }: {
 
   const startCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
+      // Check if mediaDevices is available (requires HTTPS or localhost)
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        toast.warning('Camera not available in this environment. Using simulation mode.')
+        setPhotoCaptured('avatar')
+        return
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
+      })
       streamRef.current = stream
       if (videoRef.current) {
         videoRef.current.srcObject = stream
-        videoRef.current.play()
+        // Ensure autoplay works
+        videoRef.current.setAttribute('playsinline', 'true')
+        videoRef.current.muted = true
+        await videoRef.current.play().catch(() => {})
       }
       setCameraActive(true)
-    } catch (err) {
-      toast.error('Camera access denied. Please allow camera permissions.')
-      // Fallback: simulate with avatar
+      toast.success('Camera started. Position face within the frame.')
+    } catch (err: any) {
+      const errMsg = err?.name === 'NotAllowedError'
+        ? 'Camera permission denied. Please allow camera access in your browser settings.'
+        : err?.name === 'NotFoundError'
+        ? 'No camera found on this device. Using simulation mode.'
+        : 'Camera unavailable. Using simulation mode.'
+      toast.error(errMsg)
+      // Fallback: simulate with avatar (still lets user continue the flow)
       setPhotoCaptured('avatar')
     }
   }
@@ -550,14 +578,27 @@ function VisitorCheckInModal({ onClose, onComplete }: {
                 {!cameraActive && !photoCaptured && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center text-white/60">
                     <Camera className="w-12 h-12 mb-2" />
-                    <p className="text-xs">Camera is off</p>
-                    <Button
-                      size="sm"
-                      onClick={startCamera}
-                      className="mt-3 h-8 text-xs bg-blue-600 hover:bg-blue-700"
-                    >
-                      <Camera className="w-3 h-3 mr-1" /> Start Camera
-                    </Button>
+                    <p className="text-xs mb-1">Camera is off</p>
+                    <p className="text-[10px] text-white/40 mb-3 text-center max-w-xs px-4">
+                      Click below to start camera for AI face capture. If camera is unavailable, you can skip and continue manually.
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={startCamera}
+                        className="h-8 text-xs bg-blue-600 hover:bg-blue-700"
+                      >
+                        <Camera className="w-3 h-3 mr-1" /> Start Camera
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setPhotoCaptured('avatar')}
+                        className="h-8 text-xs border-white/20 text-white hover:bg-white/10"
+                      >
+                        Skip & Continue
+                      </Button>
+                    </div>
                   </div>
                 )}
 
@@ -1085,6 +1126,190 @@ function VisitorDetailModal({ visitor, onClose }: {
           <Button onClick={onClose} className="w-full h-10 bg-blue-800 hover:bg-blue-900">
             Close
           </Button>
+        </div>
+      </motion.div>
+    </motion.div>
+  )
+}
+
+// ============ Pre-Book Visit Modal ============
+function PreBookModal({ onClose, onComplete }: {
+  onClose: () => void
+  onComplete: (visitor: Visitor) => void
+}) {
+  const [form, setForm] = useState({
+    name: '', phone: '', email: '', purpose: 'Parent Meeting',
+    host: 'Mrs. Verma (Grade 7-A)', date: '', time: '', duration: '30 min',
+    notifyVia: 'whatsapp',
+  })
+  const [submitting, setSubmitting] = useState(false)
+
+  const handleSubmit = () => {
+    if (!form.name || !form.phone || !form.date || !form.time) {
+      toast.error('Please fill all required fields')
+      return
+    }
+    setSubmitting(true)
+    setTimeout(() => {
+      const initials = form.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
+      const newVisitor: Visitor = {
+        id: 'V' + Date.now().toString().slice(-6),
+        name: form.name,
+        phone: form.phone,
+        email: form.email,
+        purpose: form.purpose,
+        host: form.host,
+        checkInTime: `${form.date} ${form.time}`,
+        status: 'scheduled',
+        passSent: form.notifyVia as any,
+        avatarColor: AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)],
+        initials,
+      }
+      onComplete(newVisitor)
+    }, 1200)
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.95, opacity: 0 }}
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col"
+        style={{ borderTop: '4px solid #0D9488' }}
+      >
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-9 h-9 rounded-xl bg-teal-600 flex items-center justify-center text-white">
+              <Calendar className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-base font-semibold text-slate-900">Pre-Book Visitor Appointment</h3>
+              <p className="text-[11px] text-slate-500">Schedule a visit & auto-send confirmation</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100">
+            <X className="w-5 h-5 text-slate-500" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto custom-scroll p-6 space-y-4">
+          <div className="p-3 rounded-xl bg-teal-50 border border-teal-100 flex items-start gap-2">
+            <Sparkles className="w-3.5 h-3.5 text-teal-600 flex-shrink-0 mt-0.5" />
+            <p className="text-[11px] text-slate-700">
+              <span className="font-semibold">AI Auto-Confirm:</span> Once booked, the system will automatically send a confirmation with QR gate pass to the visitor via their preferred channel, and sync the appointment to the host's calendar.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs font-semibold text-slate-700 mb-1.5 block">Full Name *</Label>
+              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Rajesh Kumar" className="h-10 rounded-lg" />
+            </div>
+            <div>
+              <Label className="text-xs font-semibold text-slate-700 mb-1.5 block">Phone *</Label>
+              <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+91 98765 43210" className="h-10 rounded-lg" />
+            </div>
+          </div>
+          <div>
+            <Label className="text-xs font-semibold text-slate-700 mb-1.5 block">Email</Label>
+            <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="visitor@email.com" className="h-10 rounded-lg" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs font-semibold text-slate-700 mb-1.5 block">Visit Date *</Label>
+              <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="h-10 rounded-lg" />
+            </div>
+            <div>
+              <Label className="text-xs font-semibold text-slate-700 mb-1.5 block">Visit Time *</Label>
+              <Input type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} className="h-10 rounded-lg" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs font-semibold text-slate-700 mb-1.5 block">Purpose</Label>
+              <Select value={form.purpose} onValueChange={(v) => setForm({ ...form, purpose: v })}>
+                <SelectTrigger className="h-10 rounded-lg"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {['Parent Meeting', 'Official Business', 'Delivery', 'Admission Enquiry', 'Vendor Meeting', 'Audit/Inspection'].map((p) => (
+                    <SelectItem key={p} value={p}>{p}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs font-semibold text-slate-700 mb-1.5 block">Duration</Label>
+              <Select value={form.duration} onValueChange={(v) => setForm({ ...form, duration: v })}>
+                <SelectTrigger className="h-10 rounded-lg"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {['15 min', '30 min', '1 hour', '2 hours', 'Half day'].map((d) => (
+                    <SelectItem key={d} value={d}>{d}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div>
+            <Label className="text-xs font-semibold text-slate-700 mb-1.5 block">Host</Label>
+            <Select value={form.host} onValueChange={(v) => setForm({ ...form, host: v })}>
+              <SelectTrigger className="h-10 rounded-lg"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {['Dr. Priya Sharma (Principal)', 'Mrs. Verma (Grade 7-A)', 'Mr. Kumar (Admin)', 'IT Department', 'Reception'].map((h) => (
+                  <SelectItem key={h} value={h}>{h}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-xs font-semibold text-slate-700 mb-2 block">Send Confirmation Via</Label>
+            <div className="grid grid-cols-4 gap-2">
+              {[
+                { id: 'whatsapp', label: 'WhatsApp', emoji: '💬' },
+                { id: 'sms', label: 'SMS', emoji: '📱' },
+                { id: 'email', label: 'Email', emoji: '📧' },
+                { id: 'all', label: 'All', emoji: '⚡' },
+              ].map((m) => (
+                <button
+                  key={m.id}
+                  onClick={() => setForm({ ...form, notifyVia: m.id })}
+                  className={`p-2.5 rounded-xl border text-center transition-all ${
+                    form.notifyVia === m.id ? 'border-teal-600 bg-teal-50' : 'border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  <div className="text-lg mb-0.5">{m.emoji}</div>
+                  <div className={`text-[10px] font-semibold ${form.notifyVia === m.id ? 'text-teal-700' : 'text-slate-600'}`}>{m.label}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-xs text-slate-500">
+            <Shield className="w-3.5 h-3.5" />
+            <span>Auto QR pass · Calendar sync · Reminders</span>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={onClose} className="h-9 rounded-lg">Cancel</Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={submitting}
+              className="h-9 rounded-lg bg-teal-600 hover:bg-teal-700 text-white gap-1.5"
+            >
+              {submitting ? (
+                <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Booking...</>
+              ) : (
+                <><CheckCircle2 className="w-3.5 h-3.5" /> Book & Send Confirmation</>
+              )}
+            </Button>
+          </div>
         </div>
       </motion.div>
     </motion.div>

@@ -8,6 +8,10 @@ import { DashboardHome } from '@/components/dashboard/DashboardHome'
 import { ModuleView } from '@/components/dashboard/ModuleView'
 import { AIPoweredModule } from '@/components/dashboard/AIPoweredModule'
 import { FrontDeskModule } from '@/components/dashboard/FrontDeskModule'
+import { SecurityModule } from '@/components/dashboard/SecurityModule'
+import { AttendanceModule } from '@/components/dashboard/AttendanceModule'
+import { FeesModule } from '@/components/dashboard/FeesModule'
+import { AdmissionsModule } from '@/components/dashboard/AdmissionsModule'
 
 const AI_MODULE_KEYS = [
   'ai-question-paper',
@@ -39,6 +43,14 @@ export function AppShell() {
             <AIPoweredModule moduleKey={currentView} />
           ) : currentView === 'front-desk' ? (
             <FrontDeskModule />
+          ) : currentView === 'security' ? (
+            <SecurityModule />
+          ) : currentView === 'attendance' ? (
+            <AttendanceModule />
+          ) : currentView === 'fees' ? (
+            <FeesModule />
+          ) : currentView === 'admissions' ? (
+            <AdmissionsModule />
           ) : (
             <ModuleView moduleKey={currentView} />
           )}
