@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
+import { SectionHeader } from './SectionHeader'
 import {
   AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid,
   BarChart, Bar, PieChart, Pie, Cell, RadialBarChart, RadialBar
@@ -117,42 +118,20 @@ export function DashboardHome() {
 
   return (
     <div className="p-4 lg:p-8 space-y-6 animate-page-enter max-w-[1600px] mx-auto">
-      {/* Hero header — Apple style: clean white card with subtle accent */}
-      <div className="relative overflow-hidden rounded-2xl bg-white border border-slate-200 p-6 lg:p-8">
-        <div className="absolute top-0 left-0 w-1 h-full bg-blue-800" />
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div className="flex-1">
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 mb-3">
-              <Sparkles className="w-3 h-3 text-slate-900" />
-              <span className="text-[11px] font-semibold text-slate-900">AI Command Center</span>
-              <span className="dot-pulse" />
-            </div>
-            <h2 className="text-2xl lg:text-3xl font-semibold text-slate-900 mb-2 tracking-tight">
-              {greeting}, {user?.name?.split(' ')[0]}!
-            </h2>
-            <p className="text-slate-500 text-sm lg:text-base max-w-2xl leading-relaxed">
-              Your AI co-pilot is monitoring 30+ modules. Today's operations are running at 94.2% efficiency with 3 AI insights ready for review.
-            </p>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-2">
-            <Button
-              onClick={() => setAIAssistantOpen(true)}
-              className="bg-blue-800 hover:bg-blue-900 text-white font-medium gap-1.5 h-10 rounded-xl"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              Ask LearnX AI
-            </Button>
-            <Button
-              variant="outline"
-              className="border-slate-200 hover:bg-slate-100 text-slate-900 font-medium gap-1.5 h-10 rounded-xl"
-              onClick={() => setView('ai-academic')}
-            >
-              <BrainCircuit className="w-3.5 h-3.5" />
-              AI Insights
-            </Button>
-          </div>
-        </div>
-      </div>
+      {/* Section Header — clean white matching reference */}
+      <SectionHeader
+        emoji="🏠"
+        title={`${greeting}, ${user?.name?.split(' ')[0]}!`}
+        subtitle="Powered by LearnX Intelligence · 30+ AI modules active"
+        accent="#1E3A8A"
+        onNew={() => setAIAssistantOpen(true)}
+        newLabel="Ask AI"
+        aiActions={[
+          { label: 'AI tasks automated today', count: 247 },
+          { label: 'smart predictions', count: 84 },
+          { label: 'alerts sent', count: 12 },
+        ]}
+      />
 
       {/* Module grid */}
       <div>
@@ -403,15 +382,6 @@ export function DashboardHome() {
 
 function ModuleCard({ module, index, onClick }: { module: typeof MODULES[0]; index: number; onClick: () => void }) {
   const [showPopup, setShowPopup] = useState(false)
-  const ICONS: Record<string, any> = {
-    LayoutDashboard, ConciergeBell, UserPlus, Fingerprint, Wallet, BookOpen,
-    FileText, BrainCircuit, UtensilsCrossed, Bus, ScanFace, MessageSquare,
-    CalendarDays, Trophy, Award, FolderLock, ShieldCheck, Cog, Brain, Users,
-    CalendarClock, Library, HeartPulse, Building2, GraduationCap, UserCog,
-    Landmark, CalendarRange, FileQuestion, Compass, Siren, Target, Database,
-    Settings,
-  }
-  const Icon = ICONS[module.icon] || Activity
 
   return (
     <motion.div
@@ -419,15 +389,18 @@ function ModuleCard({ module, index, onClick }: { module: typeof MODULES[0]; ind
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.03 }}
       className="module-card group"
-      style={{ ['--card-accent' as any]: '#4F46E5' }}
+      style={{ ['--card-accent' as any]: module.accent }}
       onMouseEnter={() => setShowPopup(true)}
       onMouseLeave={() => setShowPopup(false)}
       onClick={onClick}
     >
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
-        <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-900 group-hover:bg-blue-800 group-hover:text-white transition-colors">
-          <Icon className="w-5 h-5" />
+        <div
+          className="w-11 h-11 rounded-xl flex items-center justify-center text-xl group-hover:scale-110 transition-transform"
+          style={{ background: module.accent + '15' }}
+        >
+          <span className="leading-none">{module.emoji}</span>
         </div>
         {module.aiPowered && (
           <span className="ai-badge">
@@ -455,7 +428,7 @@ function ModuleCard({ module, index, onClick }: { module: typeof MODULES[0]; ind
 
       {/* Footer */}
       <div className="flex items-center justify-between text-[10px]">
-        <div className="flex items-center gap-1 text-slate-900 font-medium">
+        <div className="flex items-center gap-1 font-semibold" style={{ color: module.accent }}>
           <span>Open module</span>
           <ArrowUpRight className="w-3 h-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
         </div>

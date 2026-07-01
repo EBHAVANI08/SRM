@@ -156,7 +156,7 @@ export function Sidebar() {
                       }`}
                       title={collapsed ? m.title : undefined}
                     >
-                      <Icon className="w-4 h-4 flex-shrink-0" />
+                      <span className="text-base flex-shrink-0 leading-none">{m.emoji}</span>
                       {!collapsed && (
                         <>
                           <span className="flex-1 text-left truncate">{m.shortTitle}</span>

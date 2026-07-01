@@ -1015,30 +1015,66 @@ function BehaviorTracker() {
 // ============ Shared Header ============
 function ModuleHeroHeader({ title, description, color, aiBadge }: { title: string; description: string; color: string; aiBadge?: boolean }) {
   const setAIAssistantOpen = useAppStore((s) => s.setAIAssistantOpen)
+  // Pick emoji based on title
+  const emojiFor = (t: string): string => {
+    const tl = t.toLowerCase()
+    if (tl.includes('question paper')) return '❓'
+    if (tl.includes('career')) return '🧭'
+    if (tl.includes('mock')) return '🎯'
+    if (tl.includes('safety')) return '🚨'
+    if (tl.includes('substitution') || tl.includes('calendar')) return '📆'
+    if (tl.includes('academic intelligence') || tl.includes('behavior')) return '🧠'
+    return '🤖'
+  }
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-white border border-slate-200 p-6 lg:p-8">
-      <div className="absolute top-0 left-0 w-1 h-full bg-blue-800" />
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-3">
-            {aiBadge && (
-              <span className="ai-badge">
-                <Sparkles className="w-2.5 h-2.5 mr-0.5" />
-                AI Powered
-              </span>
-            )}
+    <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+        <div className="flex items-center gap-3 min-w-0">
+          <div
+            className="w-11 h-11 rounded-full flex items-center justify-center text-xl flex-shrink-0"
+            style={{ background: '#1E3A8A12' }}
+          >
+            <span className="leading-none">{emojiFor(title)}</span>
           </div>
-          <h2 className="text-2xl lg:text-3xl font-semibold text-slate-900 mb-2 tracking-tight">{title}</h2>
-          <p className="text-slate-500 text-sm lg:text-base max-w-2xl leading-relaxed">{description}</p>
+          <div className="min-w-0">
+            <h2 className="text-lg font-semibold text-slate-900 tracking-tight truncate">{title}</h2>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <Sparkles className="w-3 h-3 text-amber-500" />
+              <span className="text-[11px] text-slate-500 font-medium">Powered by LearnX Intelligence</span>
+            </div>
+          </div>
         </div>
-        <Button
-          onClick={() => setAIAssistantOpen(true)}
-          variant="outline"
-          className="h-10 px-4 rounded-xl border-slate-200 hover:bg-slate-100 text-slate-900 font-medium gap-1.5"
-        >
-          <Sparkles className="w-3.5 h-3.5" />
-          Ask AI
-        </Button>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 px-3 rounded-lg border-slate-200 text-slate-700 hover:bg-slate-50 gap-1.5 text-xs font-medium"
+          >
+            Export
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => setAIAssistantOpen(true)}
+            className="h-9 px-3 rounded-lg bg-blue-800 hover:bg-blue-900 text-white gap-1.5 text-xs font-medium"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            Ask AI
+          </Button>
+        </div>
+      </div>
+      <div className="px-5 py-2.5 bg-slate-50/50 border-b border-slate-100 flex items-center gap-4 flex-wrap">
+        <div className="flex items-center gap-1.5">
+          <span className="dot-pulse" />
+          <span className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider">AI Automation Active</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <Zap className="w-3 h-3 text-orange-500" />
+          <span className="text-[11px] text-slate-600"><span className="font-semibold text-slate-900">24/7</span> auto-monitoring</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <Zap className="w-3 h-3 text-orange-500" />
+          <span className="text-[11px] text-slate-600"><span className="font-semibold text-slate-900">Real-time</span> predictions</span>
+        </div>
       </div>
     </div>
   )

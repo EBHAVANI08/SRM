@@ -20,6 +20,7 @@ import {
   BarChart, Bar, PieChart, Pie, Cell, LineChart, Line, RadialBarChart, RadialBar, Legend
 } from 'recharts'
 import { ActionPopup } from './ActionPopup'
+import { SectionHeader } from './SectionHeader'
 
 const MODULE_DATA: Record<string, any> = {
   'front-desk': {
@@ -136,46 +137,21 @@ export function ModuleView({ moduleKey }: { moduleKey: string }) {
 
   return (
     <div className="p-4 lg:p-8 space-y-6 animate-page-enter max-w-[1600px] mx-auto">
-      {/* Module hero header — RICH PREMIUM GRADIENT */}
-      <div className="premium-hero rounded-2xl p-6 lg:p-8 text-white relative">
-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-3">
-              {currentModule.aiPowered && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/15 backdrop-blur-sm border border-white/20 text-[10px] font-semibold uppercase tracking-wide">
-                  <Sparkles className="w-2.5 h-2.5" />
-                  AI Powered
-                </span>
-              )}
-              <span className="text-[11px] font-medium text-white/70 uppercase tracking-wider capitalize">
-                {currentModule.category}
-              </span>
-            </div>
-            <h2 className="text-2xl lg:text-3xl font-semibold mb-2 tracking-tight">
-              {currentModule.title}
-            </h2>
-            <p className="text-white/80 text-sm lg:text-base max-w-2xl leading-relaxed">
-              {currentModule.description}
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              onClick={() => setAIAssistantOpen(true)}
-              variant="outline"
-              className="h-10 px-4 rounded-xl bg-white/10 border-white/20 text-white hover:bg-white/20 backdrop-blur-sm font-medium gap-1.5"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              Ask AI
-            </Button>
-            <Button
-              className="h-10 px-4 rounded-xl bg-white text-slate-900 hover:bg-white/90 font-medium gap-1.5"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              New
-            </Button>
-          </div>
-        </div>
-      </div>
+      {/* Section Header — clean white matching reference */}
+      <SectionHeader
+        emoji={currentModule.emoji}
+        title={currentModule.title}
+        subtitle="Powered by LearnX Intelligence"
+        accent={currentModule.accent}
+        onNew={() => setSelectedCard({ title: `New ${currentModule.shortTitle} Entry`, desc: currentModule.description })}
+        onExport={() => {}}
+        newLabel="New Entry"
+        aiActions={[
+          { label: 'auto-tasks today', count: Math.floor(Math.random() * 30) + 10 },
+          { label: 'AI predictions', count: Math.floor(Math.random() * 15) + 5 },
+          { label: 'smart alerts sent', count: Math.floor(Math.random() * 20) + 3 },
+        ]}
+      />
 
       {/* SUB-MODULES & ACTIONS — FIRST (as requested) */}
       {data.cards && (
@@ -201,6 +177,57 @@ export function ModuleView({ moduleKey }: { moduleKey: string }) {
           </div>
         </div>
       )}
+
+      {/* AI Automation Panel — shows what AI is doing automatically */}
+      <Card className="p-5 elevated-card rounded-2xl bg-gradient-to-br from-blue-50/50 to-orange-50/30 border-blue-100">
+        <div className="flex items-start gap-4">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-700 to-blue-900 flex items-center justify-center text-white flex-shrink-0">
+            <Bot className="w-5 h-5" />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-3">
+              <h3 className="text-sm font-semibold text-slate-900">AI Automation Engine</h3>
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-semibold border border-emerald-200">
+                <span className="dot-pulse" />
+                Running 24/7
+              </span>
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+              <div className="p-2.5 rounded-lg bg-white border border-slate-200">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Zap className="w-3 h-3 text-orange-500" />
+                  <span className="text-[10px] font-semibold text-slate-600 uppercase">Auto-Tasks</span>
+                </div>
+                <div className="text-sm font-bold text-slate-900">247 today</div>
+              </div>
+              <div className="p-2.5 rounded-lg bg-white border border-slate-200">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Brain className="w-3 h-3 text-blue-700" />
+                  <span className="text-[10px] font-semibold text-slate-600 uppercase">Predictions</span>
+                </div>
+                <div className="text-sm font-bold text-slate-900">84 today</div>
+              </div>
+              <div className="p-2.5 rounded-lg bg-white border border-slate-200">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Bell className="w-3 h-3 text-rose-500" />
+                  <span className="text-[10px] font-semibold text-slate-600 uppercase">Smart Alerts</span>
+                </div>
+                <div className="text-sm font-bold text-slate-900">12 sent</div>
+              </div>
+              <div className="p-2.5 rounded-lg bg-white border border-slate-200">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                  <span className="text-[10px] font-semibold text-slate-600 uppercase">Auto-Approved</span>
+                </div>
+                <div className="text-sm font-bold text-slate-900">94%</div>
+              </div>
+            </div>
+            <p className="text-[11px] text-slate-500 mt-3 leading-relaxed">
+              AI is automatically handling routine tasks, predicting issues before they occur, sending smart alerts, and auto-approving 94% of routine requests — reducing manual work by <span className="font-semibold text-slate-900">82%</span>.
+            </p>
+          </div>
+        </div>
+      </Card>
 
       {/* AI Insight banner */}
       {aiInsight && (
