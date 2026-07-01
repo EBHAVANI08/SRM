@@ -93,28 +93,6 @@ export function Sidebar() {
         )}
       </div>
 
-      {/* AI Assistant Button — elegant graphite */}
-      <div className="relative z-10 px-3 py-3">
-        <button
-          onClick={() => setAIAssistantOpen(true)}
-          className={`group relative w-full overflow-hidden rounded-xl bg-gradient-to-br from-blue-700 to-blue-900 hover:from-blue-800 hover:to-blue-900 transition-all p-2.5 ${
-            collapsed ? 'flex justify-center' : 'flex items-center gap-2.5'
-          }`}
-        >
-          <div className="relative flex-shrink-0">
-            <Sparkles className="w-4 h-4 text-white" />
-            <span className="absolute -top-1 -right-1 w-1.5 h-1.5 bg-emerald-500 rounded-full" />
-          </div>
-          {!collapsed && (
-            <div className="flex-1 text-left">
-              <div className="text-[12px] font-semibold text-white leading-tight">Ask LearnX AI</div>
-              <div className="text-[10px] text-white/60 leading-tight">RAG-powered · 30+ modules</div>
-            </div>
-          )}
-          {!collapsed && <Zap className="w-3 h-3 text-white/40" />}
-        </button>
-      </div>
-
       {/* Search */}
       {!collapsed && (
         <div className="relative z-10 px-3 pb-2">
@@ -175,6 +153,28 @@ export function Sidebar() {
             </div>
           )
         })}
+      </div>
+
+      {/* AI Assistant Button — at bottom, above user card */}
+      <div className="relative z-10 px-3 pb-2">
+        <button
+          onClick={() => setAIAssistantOpen(true)}
+          className={`group relative w-full overflow-hidden rounded-xl bg-gradient-to-br from-blue-700 to-blue-900 hover:from-blue-800 hover:to-blue-900 transition-all p-2.5 ${
+            collapsed ? 'flex justify-center' : 'flex items-center gap-2.5'
+          }`}
+        >
+          <div className="relative flex-shrink-0">
+            <Sparkles className="w-4 h-4 text-white" />
+            <span className="absolute -top-1 -right-1 w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+          </div>
+          {!collapsed && (
+            <div className="flex-1 text-left">
+              <div className="text-[12px] font-semibold text-white leading-tight">Ask LearnX AI</div>
+              <div className="text-[10px] text-white/60 leading-tight">RAG-powered · 30+ modules</div>
+            </div>
+          )}
+          {!collapsed && <Zap className="w-3 h-3 text-white/40" />}
+        </button>
       </div>
 
       {/* User card — elegant */}
