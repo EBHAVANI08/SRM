@@ -42,19 +42,8 @@ export function TopBar() {
         <Menu className="w-5 h-5 text-slate-900" />
       </button>
 
-      {/* Breadcrumb / module title */}
+      {/* Module title */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 text-xs text-slate-400 mb-0.5">
-          <span>LearnX AI</span>
-          <span className="text-[#D2D2D7]">/</span>
-          <span className="capitalize">{currentModule?.category || 'operations'}</span>
-          {currentModule?.aiPowered && (
-            <span className="ai-badge ml-1">
-              <Sparkles className="w-2.5 h-2.5 mr-0.5" />
-              AI
-            </span>
-          )}
-        </div>
         <h1 className="text-base lg:text-lg font-semibold text-slate-900 truncate tracking-tight">
           {currentModule?.title || 'Dashboard'}
         </h1>

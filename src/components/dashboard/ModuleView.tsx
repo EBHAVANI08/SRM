@@ -191,14 +191,17 @@ export function ModuleView({ moduleKey }: { moduleKey: string }) {
                 <span className="dot-pulse" />
                 Running 24/7
               </span>
+              <span className="text-[10px] text-slate-400">·</span>
+              <span className="text-[10px] text-slate-500 font-medium">Learning from 14,847 records</span>
             </div>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-3">
               <div className="p-2.5 rounded-lg bg-white border border-slate-200">
                 <div className="flex items-center gap-1.5 mb-1">
                   <Zap className="w-3 h-3 text-orange-500" />
                   <span className="text-[10px] font-semibold text-slate-600 uppercase">Auto-Tasks</span>
                 </div>
                 <div className="text-sm font-bold text-slate-900">247 today</div>
+                <div className="text-[9px] text-emerald-600 font-semibold mt-0.5">↑ 18% vs avg</div>
               </div>
               <div className="p-2.5 rounded-lg bg-white border border-slate-200">
                 <div className="flex items-center gap-1.5 mb-1">
@@ -206,6 +209,7 @@ export function ModuleView({ moduleKey }: { moduleKey: string }) {
                   <span className="text-[10px] font-semibold text-slate-600 uppercase">Predictions</span>
                 </div>
                 <div className="text-sm font-bold text-slate-900">84 today</div>
+                <div className="text-[9px] text-emerald-600 font-semibold mt-0.5">91.4% accurate</div>
               </div>
               <div className="p-2.5 rounded-lg bg-white border border-slate-200">
                 <div className="flex items-center gap-1.5 mb-1">
@@ -213,6 +217,7 @@ export function ModuleView({ moduleKey }: { moduleKey: string }) {
                   <span className="text-[10px] font-semibold text-slate-600 uppercase">Smart Alerts</span>
                 </div>
                 <div className="text-sm font-bold text-slate-900">12 sent</div>
+                <div className="text-[9px] text-slate-500 font-semibold mt-0.5">0 false positives</div>
               </div>
               <div className="p-2.5 rounded-lg bg-white border border-slate-200">
                 <div className="flex items-center gap-1.5 mb-1">
@@ -220,10 +225,28 @@ export function ModuleView({ moduleKey }: { moduleKey: string }) {
                   <span className="text-[10px] font-semibold text-slate-600 uppercase">Auto-Approved</span>
                 </div>
                 <div className="text-sm font-bold text-slate-900">94%</div>
+                <div className="text-[9px] text-emerald-600 font-semibold mt-0.5">6% human review</div>
               </div>
             </div>
+
+            {/* Active AI workflows */}
+            <div className="space-y-1.5">
+              <div className="text-[10px] font-semibold text-slate-600 uppercase tracking-wider mb-1">Active AI Workflows</div>
+              {getAIWorkflows(moduleKey).map((wf, i) => (
+                <div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-100">
+                  <div className="w-6 h-6 rounded-md bg-emerald-50 flex items-center justify-center flex-shrink-0">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-[11px] font-medium text-slate-700">{wf.name}</span>
+                  </div>
+                  <span className="text-[9px] text-slate-400 font-mono">{wf.trigger}</span>
+                </div>
+              ))}
+            </div>
+
             <p className="text-[11px] text-slate-500 mt-3 leading-relaxed">
-              AI is automatically handling routine tasks, predicting issues before they occur, sending smart alerts, and auto-approving 94% of routine requests — reducing manual work by <span className="font-semibold text-slate-900">82%</span>.
+              AI is automatically handling routine tasks, predicting issues before they occur, sending smart alerts, and auto-approving 94% of routine requests — reducing manual work by <span className="font-semibold text-slate-900">82%</span>. The engine continuously learns from every interaction to improve accuracy.
             </p>
           </div>
         </div>
@@ -618,4 +641,148 @@ function generateGenericData(module: ModuleConfig) {
       { id: 'TXN-005', name: 'Smart Alert', status: 'Sent', time: '15 min ago', method: 'AI Engine' },
     ],
   }
+}
+
+// Module-specific AI workflows for the automation panel
+function getAIWorkflows(moduleKey: string): { name: string; trigger: string }[] {
+  const workflows: Record<string, { name: string; trigger: string }[]> = {
+    'admissions': [
+      { name: 'Auto-score prospects using ML model', trigger: 'on application' },
+      { name: 'Verify documents via AI OCR', trigger: 'on upload' },
+      { name: 'Send personalized offer letters', trigger: 'on approval' },
+      { name: 'Predict conversion likelihood', trigger: 'daily 6 AM' },
+    ],
+    'attendance': [
+      { name: 'Auto-mark attendance via face recognition', trigger: 'on entry' },
+      { name: 'Send SMS to parents of absentees', trigger: '5 min after assembly' },
+      { name: 'Detect absence anomalies', trigger: 'real-time' },
+      { name: 'Auto-approve routine leave requests', trigger: 'on application' },
+    ],
+    'fees': [
+      { name: 'Predict defaulters 14 days before due', trigger: 'daily 8 AM' },
+      { name: 'Send reminders via SMS/WhatsApp/Email', trigger: '7/3/1 days before' },
+      { name: 'Auto-generate receipts & invoices', trigger: 'on payment' },
+      { name: 'Recommend scholarships for eligible students', trigger: 'weekly' },
+    ],
+    'examinations': [
+      { name: 'Auto-generate seating arrangements', trigger: 'on schedule' },
+      { name: 'AI score verification (detect cheating)', trigger: 'on evaluation' },
+      { name: 'Generate report cards with remarks', trigger: 'on result publish' },
+      { name: 'Predict at-risk students based on scores', trigger: 'on result' },
+    ],
+    'transport': [
+      { name: 'Predict bus ETA using live GPS + traffic', trigger: 'real-time' },
+      { name: 'Alert parents on pickup/drop', trigger: 'on boarding' },
+      { name: 'Detect route deviations', trigger: 'real-time' },
+      { name: 'Optimize routes for fuel efficiency', trigger: 'weekly' },
+    ],
+    'hrms': [
+      { name: 'Predict staff attrition risk', trigger: 'monthly' },
+      { name: 'Auto-process payroll with PF/ESI', trigger: 'monthly 1st' },
+      { name: 'Flag unusual leave patterns', trigger: 'real-time' },
+      { name: 'Auto-approve routine leave requests', trigger: 'on application' },
+    ],
+    'hostel': [
+      { name: 'Optimize room allocation by compatibility', trigger: 'on admission' },
+      { name: 'Auto-track mess attendance', trigger: 'on meal' },
+      { name: 'Predict maintenance needs', trigger: 'weekly' },
+      { name: 'Alert warden on late returns', trigger: 'after curfew' },
+    ],
+    'canteen': [
+      { name: 'Optimize menu based on demand prediction', trigger: 'daily 6 AM' },
+      { name: 'Auto-reorder inventory when low', trigger: 'on threshold' },
+      { name: 'Track food waste & suggest portions', trigger: 'daily' },
+      { name: 'Personalized meal recommendations', trigger: 'on order' },
+    ],
+    'health': [
+      { name: 'Flag students with abnormal BMI/vitals', trigger: 'on checkup' },
+      { name: 'Send vaccination reminders', trigger: 'on schedule' },
+      { name: 'Mental wellness early warning', trigger: 'on survey' },
+      { name: 'Auto-schedule follow-up checkups', trigger: 'on diagnosis' },
+    ],
+    'security': [
+      { name: 'AI CCTV analytics for intrusions', trigger: 'real-time' },
+      { name: 'Auto-escalate critical alerts', trigger: 'on detection' },
+      { name: 'Detect fire/smoke via vision AI', trigger: 'real-time' },
+      { name: 'Compliance audit auto-generation', trigger: 'monthly' },
+    ],
+    'communication': [
+      { name: 'Personalize messages using AI', trigger: 'on send' },
+      { name: 'Auto-translate to regional languages', trigger: 'on send' },
+      { name: 'Schedule optimal send times', trigger: 'AI optimized' },
+      { name: 'Track delivery & read rates', trigger: 'real-time' },
+    ],
+    'events': [
+      { name: 'Detect scheduling conflicts', trigger: 'on create' },
+      { name: 'Auto-send invitations & reminders', trigger: 'on schedule' },
+      { name: 'Track RSVP & attendance', trigger: 'real-time' },
+      { name: 'Suggest optimal venue based on headcount', trigger: 'on create' },
+    ],
+    'report-cards': [
+      { name: 'AI-generate holistic remarks', trigger: 'on result' },
+      { name: 'Auto-calculate grades & GPA', trigger: 'on evaluation' },
+      { name: 'Detect grade anomalies', trigger: 'on publish' },
+      { name: 'Schedule PTM based on availability', trigger: 'on result' },
+    ],
+    'timetable': [
+      { name: 'Generate conflict-free timetables', trigger: 'on request' },
+      { name: 'Auto-allocate substitute teachers', trigger: 'on absence' },
+      { name: 'Optimize room utilization', trigger: 'weekly' },
+      { name: 'Balance teacher workload', trigger: 'on generate' },
+    ],
+    'documents': [
+      { name: 'AI OCR extract text from documents', trigger: 'on upload' },
+      { name: 'Auto-categorize & tag documents', trigger: 'on upload' },
+      { name: 'Verify document authenticity', trigger: 'on upload' },
+      { name: 'Flag expiring documents', trigger: 'daily' },
+    ],
+    'curriculum': [
+      { name: 'Suggest learning outcomes mapping', trigger: 'on create' },
+      { name: 'Auto-align with CBSE/ICSE standards', trigger: 'on save' },
+      { name: 'Identify curriculum gaps', trigger: 'weekly' },
+      { name: 'Recommend supplementary content', trigger: 'on demand' },
+    ],
+    'activities': [
+      { name: 'Identify student talents via AI', trigger: 'on participation' },
+      { name: 'Recommend activities by interest', trigger: 'on enrolment' },
+      { name: 'Track performance & skill growth', trigger: 'on event' },
+      { name: 'Auto-schedule practice sessions', trigger: 'weekly' },
+    ],
+    'alumni': [
+      { name: 'Match alumni mentors with students', trigger: 'on request' },
+      { name: 'Auto-send reunion invitations', trigger: 'on schedule' },
+      { name: 'Track donation drives & follow-ups', trigger: 'on campaign' },
+      { name: 'Suggest networking connections', trigger: 'on profile view' },
+    ],
+    'finance': [
+      { name: 'Auto-categorize transactions', trigger: 'on entry' },
+      { name: 'Predict cash flow 90 days ahead', trigger: 'daily' },
+      { name: 'Flag unusual expenses', trigger: 'real-time' },
+      { name: 'Auto-generate GST returns', trigger: 'monthly' },
+    ],
+    'parent-portal': [
+      { name: 'Auto-summarize child progress weekly', trigger: 'every Friday' },
+      { name: 'Send personalized insights to parents', trigger: 'on event' },
+      { name: 'Predict academic concerns early', trigger: 'on trend' },
+      { name: 'Auto-schedule PTM bookings', trigger: 'on request' },
+    ],
+    'biometric': [
+      { name: 'Anti-spoofing face verification', trigger: 'on scan' },
+      { name: 'Sync devices in real-time', trigger: 'continuous' },
+      { name: 'Detect device tampering', trigger: 'real-time' },
+      { name: 'Auto-fallback to manual on failure', trigger: 'on error' },
+    ],
+    'admin-engine': [
+      { name: 'Execute scheduled workflows', trigger: 'on schedule' },
+      { name: 'Trigger webhooks on events', trigger: 'on event' },
+      { name: 'Auto-retry failed tasks', trigger: 'on failure' },
+      { name: 'Generate audit trail entries', trigger: 'on action' },
+    ],
+  }
+  return workflows[moduleKey] || [
+    { name: 'Auto-monitor operations 24/7', trigger: 'real-time' },
+    { name: 'Predict issues before they occur', trigger: 'continuous' },
+    { name: 'Send smart contextual alerts', trigger: 'on threshold' },
+    { name: 'Auto-approve routine requests', trigger: 'on submit' },
+  ]
 }
