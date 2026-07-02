@@ -263,7 +263,7 @@ Example: {"Source Name": "firstName", "Phone": "guardianPhone", "Extra Column": 
 }
 
 // ============ Agent Invocation Logger (§8.6 cost observability) ============
-async function logAgentInvocation(params: {
+export async function logAgentInvocation(params: {
   schoolId: string
   agentType: string
   modelUsed: string
