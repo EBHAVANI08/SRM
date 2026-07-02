@@ -18,6 +18,7 @@
  */
 
 import { db } from './db'
+import { processEvent } from './rulesEngine'
 
 export interface EventInput {
   type: string
@@ -93,6 +94,18 @@ export async function relayOutbox(limit = 50): Promise<number> {
           publishedAt: new Date(),
           attempts: { increment: 1 },
         },
+      })
+
+      // Process through rules engine
+      await processEvent({
+        type: entry.type,
+        entityType: entry.entityType,
+        entityId: entry.entityId,
+        payload: JSON.parse(entry.payload),
+        actorType: entry.actorType,
+        actorId: entry.actorId || undefined,
+        eventLogId: ulid,
+        schoolId: entry.schoolId,
       })
 
       processed++
