@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import {
   Bell, Search, Sparkles, Menu, ChevronDown, Sun, Moon,
   Globe, HelpCircle, Settings, Maximize2, Wifi, Battery, Activity
 } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
 import { MODULES, ROLE_INFO } from '@/lib/modules'
+import { searchPeople, type SearchResult } from '@/lib/school-data'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
@@ -14,6 +15,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Badge } from '@/components/ui/badge'
 import { formatDistanceToNow } from 'date-fns'
+import { PersonDetailModal } from '@/components/dashboard/PersonDetailModal'
 
 export function TopBar() {
   const user = useAppStore((s) => s.user)
@@ -25,12 +27,22 @@ export function TopBar() {
   const toggleSidebar = useAppStore((s) => s.toggleSidebar)
 
   const [search, setSearch] = useState('')
+  const [showResults, setShowResults] = useState(false)
+  const [selectedPerson, setSelectedPerson] = useState<{ person: any; type: 'student' | 'teacher' | 'staff' } | null>(null)
+
+  const searchResults = useMemo(() => searchPeople(search), [search])
 
   if (!user) return null
 
   const currentModule = MODULES.find((m) => m.key === currentView)
   const unread = notifications.filter((n) => !n.read).length
   const now = new Date()
+
+  const handleResultClick = (result: SearchResult) => {
+    setSelectedPerson({ person: result.data, type: result.type })
+    setSearch('')
+    setShowResults(false)
+  }
 
   return (
     <header className="sticky top-0 z-30 h-16 bg-white/80 backdrop-blur-xl border-b border-slate-200 px-4 lg:px-8 flex items-center gap-3 lg:gap-5">
@@ -49,19 +61,69 @@ export function TopBar() {
         </h1>
       </div>
 
-      {/* Search */}
-      <div className="hidden md:flex relative w-64 lg:w-80">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+      {/* Search with dropdown results */}
+      <div className="hidden md:flex relative w-64 lg:w-96">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 z-10" />
         <input
           type="text"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search students, staff, modules..."
+          onChange={(e) => {
+            setSearch(e.target.value)
+            setShowResults(true)
+          }}
+          onFocus={() => setShowResults(true)}
+          onBlur={() => setTimeout(() => setShowResults(false), 200)}
+          placeholder="Search students, teachers, staff..."
           className="w-full pl-10 pr-12 py-2 text-xs rounded-xl bg-slate-100 border border-transparent focus:bg-white focus:border-slate-200 transition-all text-slate-900 placeholder:text-slate-400 focus:outline-none"
         />
         <kbd className="absolute right-2 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[9px] font-mono text-slate-400 bg-white border border-slate-200 rounded">
           ⌘K
         </kbd>
+
+        {/* Search results dropdown */}
+        {showResults && search.trim().length > 0 && (
+          <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-2xl border border-slate-200 max-h-96 overflow-y-auto custom-scroll z-50">
+            {searchResults.length === 0 ? (
+              <div className="p-6 text-center text-xs text-slate-400">
+                No results found for "{search}"
+              </div>
+            ) : (
+              <>
+                <div className="px-3 py-2 border-b border-slate-100 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+                  {searchResults.length} Results Found
+                </div>
+                {searchResults.map((result) => (
+                  <button
+                    key={`${result.type}-${result.id}`}
+                    onClick={() => handleResultClick(result)}
+                    className="w-full flex items-center gap-3 p-3 hover:bg-slate-50 transition-colors border-b border-slate-50 text-left"
+                  >
+                    <div className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center text-lg flex-shrink-0">
+                      {result.photo}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-slate-900 truncate">{result.name}</span>
+                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${
+                          result.type === 'student' ? 'bg-blue-100 text-blue-700' :
+                          result.type === 'teacher' ? 'bg-teal-100 text-teal-700' :
+                          'bg-orange-100 text-orange-700'
+                        }`}>
+                          {result.type}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 truncate">{result.subtitle}</div>
+                    </div>
+                    <ChevronDown className="w-3.5 h-3.5 text-slate-300 -rotate-90" />
+                  </button>
+                ))}
+                <div className="p-2 text-center text-[10px] text-slate-400 border-t border-slate-100">
+                  Click any result to view full biodata with all linked records
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Notifications */}
@@ -156,6 +218,13 @@ export function TopBar() {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      {/* Person Detail Modal */}
+      <PersonDetailModal
+        person={selectedPerson?.person || null}
+        type={selectedPerson?.type || null}
+        onClose={() => setSelectedPerson(null)}
+      />
     </header>
   )
 }

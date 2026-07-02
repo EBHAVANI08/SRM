@@ -71,7 +71,7 @@ export function Sidebar() {
             <img
               src="/logo.png"
               alt="LearnX"
-              className={`transition-all ${collapsed ? 'w-9' : 'w-28'}`}
+              className={`transition-all ${collapsed ? 'w-12' : 'w-40'}`}
             />
           </div>
           {!collapsed && (
@@ -155,25 +155,31 @@ export function Sidebar() {
         })}
       </div>
 
-      {/* AI Assistant Button — at bottom, above user card */}
+      {/* AI Assistant Section — as a section under modules */}
       <div className="relative z-10 px-3 pb-2">
+        {!collapsed && (
+          <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-2 mb-1.5">
+            AI Assistant
+          </div>
+        )}
         <button
           onClick={() => setAIAssistantOpen(true)}
-          className={`group relative w-full overflow-hidden rounded-xl bg-gradient-to-br from-blue-700 to-blue-900 hover:from-blue-800 hover:to-blue-900 transition-all p-2.5 ${
-            collapsed ? 'flex justify-center' : 'flex items-center gap-2.5'
-          }`}
+          className={`sidebar-item w-full ${collapsed ? 'justify-center' : ''}`}
+          style={{
+            background: 'linear-gradient(135deg, #1E3A8A, #2563EB)',
+            color: '#FFFFFF',
+            borderColor: '#1E3A8A',
+            fontWeight: 600,
+          }}
+          title={collapsed ? 'Ask LearnX AI' : undefined}
         >
-          <div className="relative flex-shrink-0">
-            <Sparkles className="w-4 h-4 text-white" />
-            <span className="absolute -top-1 -right-1 w-1.5 h-1.5 bg-emerald-500 rounded-full" />
-          </div>
+          <Sparkles className="w-4 h-4 flex-shrink-0" />
           {!collapsed && (
-            <div className="flex-1 text-left">
-              <div className="text-[12px] font-semibold text-white leading-tight">Ask LearnX AI</div>
-              <div className="text-[10px] text-white/60 leading-tight">RAG-powered · 30+ modules</div>
-            </div>
+            <>
+              <span className="flex-1 text-left truncate">Ask LearnX AI</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+            </>
           )}
-          {!collapsed && <Zap className="w-3 h-3 text-white/40" />}
         </button>
       </div>
 
