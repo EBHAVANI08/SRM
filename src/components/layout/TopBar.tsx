@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import {
   Bell, Search, Sparkles, Menu, ChevronDown, Sun, Moon,
-  Globe, HelpCircle, Settings, Maximize2, Wifi, Battery, Activity
+  Globe, HelpCircle, Settings, Maximize2, Wifi, Battery, Activity, X
 } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
 import { MODULES, ROLE_INFO } from '@/lib/modules'
@@ -80,55 +81,55 @@ export function TopBar() {
         </kbd>
       </div>
 
-      {/* Search results popup — fixed centered with backdrop */}
-      {showResults && search.trim().length > 0 && (
+      {/* Search results popup — rendered via portal to escape header constraints */}
+      {showResults && search.trim().length > 0 && typeof window !== 'undefined' && createPortal(
         <>
-          {/* Backdrop */}
+          {/* Backdrop — covers entire screen */}
           <div
-            className="fixed inset-0 z-[55] bg-slate-900/20 backdrop-blur-sm"
+            className="fixed inset-0 z-[55] bg-slate-900/40 backdrop-blur-sm"
             onClick={() => setShowResults(false)}
           />
-          {/* Centered popup */}
-          <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[56] w-full max-w-lg px-4">
-            <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-h-[70vh] overflow-hidden flex flex-col">
+          {/* Centered popup — flexbox centering, properly positioned */}
+          <div className="fixed inset-0 z-[56] flex items-start justify-center pt-20 px-4 pointer-events-none">
+            <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg max-h-[70vh] overflow-hidden flex flex-col pointer-events-auto">
               {/* Header */}
-              <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+              <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between flex-shrink-0">
                 <div className="flex items-center gap-2">
                   <Search className="w-4 h-4 text-slate-400" />
                   <span className="text-sm font-semibold text-slate-900">
-                    {searchResults.length > 0 ? `${searchResults.length} Results` : 'Search'}
+                    {searchResults.length > 0 ? `${searchResults.length} Result${searchResults.length > 1 ? 's' : ''}` : 'Search'}
                   </span>
                   <span className="text-xs text-slate-400">for "{search}"</span>
                 </div>
                 <button
                   onClick={() => setShowResults(false)}
-                  className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700"
+                  className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
                 >
-                  <ChevronDown className="w-4 h-4" />
+                  <X className="w-4 h-4" />
                 </button>
               </div>
-              {/* Results */}
+              {/* Results — scrollable */}
               <div className="overflow-y-auto custom-scroll flex-1">
                 {searchResults.length === 0 ? (
-                  <div className="p-8 text-center">
-                    <div className="text-3xl mb-2">🔍</div>
-                    <p className="text-sm text-slate-500">No results found for "{search}"</p>
-                    <p className="text-[11px] text-slate-400 mt-1">Try searching by name, ID, phone, or class</p>
+                  <div className="p-10 text-center">
+                    <div className="text-4xl mb-3">🔍</div>
+                    <p className="text-sm text-slate-500 font-medium">No results found for "{search}"</p>
+                    <p className="text-xs text-slate-400 mt-1">Try searching by name, ID, phone, or class</p>
                   </div>
                 ) : (
                   searchResults.map((result) => (
                     <button
                       key={`${result.type}-${result.id}`}
                       onClick={() => handleResultClick(result)}
-                      className="w-full flex items-center gap-3 p-3.5 hover:bg-blue-50 transition-colors border-b border-slate-50 text-left"
+                      className="w-full flex items-center gap-3 p-4 hover:bg-blue-50 transition-colors border-b border-slate-50 text-left last:border-b-0"
                     >
-                      <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-xl flex-shrink-0">
+                      <div className="w-11 h-11 rounded-xl bg-slate-100 flex items-center justify-center text-xl flex-shrink-0">
                         {result.photo}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-semibold text-slate-900 truncate">{result.name}</span>
-                          <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${
+                          <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase flex-shrink-0 ${
                             result.type === 'student' ? 'bg-blue-100 text-blue-700' :
                             result.type === 'teacher' ? 'bg-teal-100 text-teal-700' :
                             'bg-orange-100 text-orange-700'
@@ -136,7 +137,7 @@ export function TopBar() {
                             {result.type}
                           </span>
                         </div>
-                        <div className="text-[11px] text-slate-500 truncate">{result.subtitle}</div>
+                        <div className="text-xs text-slate-500 truncate mt-0.5">{result.subtitle}</div>
                       </div>
                       <ChevronDown className="w-4 h-4 text-slate-300 -rotate-90 flex-shrink-0" />
                     </button>
@@ -145,13 +146,14 @@ export function TopBar() {
               </div>
               {/* Footer */}
               {searchResults.length > 0 && (
-                <div className="px-4 py-2.5 bg-slate-50 border-t border-slate-100 text-center">
-                  <span className="text-[10px] text-slate-400">Click any result to view complete biodata with all linked records</span>
+                <div className="px-5 py-2.5 bg-slate-50 border-t border-slate-100 text-center flex-shrink-0">
+                  <span className="text-[11px] text-slate-400">Click any result to view complete biodata with all linked records</span>
                 </div>
               )}
             </div>
           </div>
-        </>
+        </>,
+        document.body
       )}
 
       {/* Notifications */}
