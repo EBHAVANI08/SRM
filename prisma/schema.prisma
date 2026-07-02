@@ -171,6 +171,10 @@ model Student {
   ptmMeetings     PTMMeeting[]   @relation("StudentPTM")
   careerSessions  CareerCounselling[]
   safetyAlerts    SafetyAlert[]  @relation("StudentSafetyAlerts")
+
+  // Phase 1: Household link
+  household       Household? @relation(fields: [householdId], references: [id])
+  householdId     String?
 }
 
 model Parent {
@@ -852,4 +856,370 @@ model MockTest {
   score       Float?
   aiAnalysis  String?
   createdAt   DateTime @default(now())
+}
+
+// ============================================================
+// PHASE 1 — CANONICAL ENTITY GRAPH & EVENT BACKBONE
+// ============================================================
+
+// ============ HOUSEHOLD (family unit for sibling logic, shared fee ledger) ============
+model Household {
+  id              String   @id @default(cuid())
+  schoolId        String   @default("school_default")
+  familyName      String
+  primaryAddress  String?
+  primaryPhone    String?
+  primaryEmail    String?
+  annualIncome    Float?
+  feeLedgerId     String?  // shared fee ledger reference
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  members         PersonRelationship[]
+  students        Student[]
+}
+
+// ============ PERSON RELATIONSHIPS (guardian_of, sibling_of, emergency_contact_of, authorized_pickup_of) ============
+model PersonRelationship {
+  id              String   @id @default(cuid())
+  schoolId        String   @default("school_default")
+  fromPersonType  String   // STUDENT, STAFF, GUARDIAN
+  fromPersonId    String
+  toPersonType    String   // STUDENT, STAFF, GUARDIAN
+  toPersonId      String
+  relationType    String   // guardian_of, sibling_of, emergency_contact_of, authorized_pickup_of, parent_of
+  isPrimary       Boolean  @default(false)
+  metadata        String?  // JSON: custody %, pickup auth, etc.
+  createdAt       DateTime @default(now())
+
+  household       Household? @relation(fields: [householdId], references: [id])
+  householdId     String?
+}
+
+// ============ POLICY (school rules as versioned data) ============
+model Policy {
+  id              String   @id @default(cuid())
+  schoolId        String   @default("school_default")
+  name            String   // e.g., "grading_bands", "fine_rules", "numbering_scheme"
+  category        String   // ACADEMIC, FINANCIAL, OPERATIONAL, SAFETY
+  version         Int      @default(1)
+  data            String   // JSON: the actual policy rules
+  isActive        Boolean  @default(true)
+  effectiveFrom   DateTime @default(now())
+  effectiveTo     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ============ EVENT LOG (the bloodstream — §1.2) ============
+model EventLog {
+  id              String   @id @default(cuid())
+  ulid            String   @unique // ULID for ordering
+  schoolId        String   @default("school_default")
+  type            String   // e.g., student.admitted, attendance.marked, fee.paid
+  entityType      String   // STUDENT, STAFF, FEE, etc.
+  entityId        String
+  payload         String   // JSON: event-specific data
+  actorType       String   // human, ai, system
+  actorId         String?
+  causationId     String?  // links to parent event (why did this happen)
+  correlationId   String?  // links related events in same workflow
+  occurredAt      DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  @@index([schoolId, type])
+  @@index([entityType, entityId])
+  @@index([causationId])
+  @@index([correlationId])
+}
+
+// ============ EVENT CONSUMER LEDGER (idempotency) ============
+model EventConsumerLedger {
+  id              String   @id @default(cuid())
+  eventLogId      String
+  consumerName    String   // e.g., "notification-service", "rag-indexer"
+  processedAt     DateTime @default(now())
+  result          String   // SUCCESS, FAILED, DLQ
+  error           String?
+
+  @@unique([eventLogId, consumerName])
+  @@index([consumerName, result])
+}
+
+// ============ EVENT OUTBOX (transactional outbox pattern) ============
+model EventOutbox {
+  id              String   @id @default(cuid())
+  schoolId        String   @default("school_default")
+  type            String
+  entityType      String
+  entityId        String
+  payload         String   // JSON
+  actorType       String
+  actorId         String?
+  causationId     String?
+  correlationId   String?
+  status          String   @default("PENDING") // PENDING, PUBLISHED, FAILED
+  attempts        Int      @default(0)
+  lastAttemptAt   DateTime?
+  publishedAt     DateTime?
+  createdAt       DateTime @default(now())
+
+  @@index([status, createdAt])
+}
+
+// ============ TASK (system-generated, SLA-tracked) ============
+model Task {
+  id              String   @id @default(cuid())
+  schoolId        String   @default("school_default")
+  title           String
+  description     String?
+  assigneeRole    String   // TEACHER, ADMIN, PRINCIPAL, etc.
+  assigneeId      String?
+  entityType      String   // STUDENT, FEE, etc.
+  entityId        String?
+  priority        String   @default("NORMAL") // LOW, NORMAL, HIGH, URGENT
+  status          String   @default("OPEN") // OPEN, IN_PROGRESS, COMPLETED, ESCALATED, CANCELLED
+  slaDeadline     DateTime?
+  workflowInstanceId String?
+  metadata        String?  // JSON
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  completedAt     DateTime?
+
+  @@index([assigneeRole, status])
+  @@index([entityType, entityId])
+}
+
+// ============ COMMUNICATION LOG (channel, language, delivery/read tracking) ============
+model CommunicationLog {
+  id              String   @id @default(cuid())
+  schoolId        String   @default("school_default")
+  channel         String   // SMS, WHATSAPP, EMAIL, PUSH, IN_APP
+  recipientType   String   // STUDENT, PARENT, STAFF
+  recipientId     String
+  recipientContact String  // phone or email
+  templateName    String?
+  subject         String?
+  body            String
+  language        String   @default("en")
+  status          String   @default("PENDING") // PENDING, SENT, DELIVERED, READ, FAILED
+  sentAt          DateTime?
+  deliveredAt     DateTime?
+  readAt          DateTime?
+  errorMessage    String?
+  metadata        String?  // JSON
+  createdAt       DateTime @default(now())
+
+  @@index([recipientType, recipientId])
+  @@index([status])
+}
+
+// ============ DEDUPE CANDIDATE (fuzzy-match duplicate detection) ============
+model DedupeCandidate {
+  id              String   @id @default(cuid())
+  schoolId        String   @default("school_default")
+  personType      String   // STUDENT, STAFF
+  personId1       String
+  personId2       String
+  similarityScore Float    // 0.0 to 1.0
+  matchFields     String   // JSON: which fields matched
+  status          String   @default("PENDING") // PENDING, MERGED, REJECTED
+  mergedIntoId    String?  // which record was kept
+  createdAt       DateTime @default(now())
+  resolvedAt      DateTime?
+  resolvedBy      String?
+
+  @@index([status])
+}
+
+// ============ PROFILE COMPLETENESS (per-entity computed) ============
+model ProfileCompleteness {
+  id              String   @id @default(cuid())
+  schoolId        String   @default("school_default")
+  entityType      String   // STUDENT, STAFF
+  entityId        String
+  completenessPct Float    @default(0)
+  missingFields   String   // JSON array of field names
+  staleFields     String   // JSON array of field names needing refresh
+  lastComputedAt  DateTime @default(now())
+
+  @@unique([entityType, entityId])
+}
+
+// ============ AT-RISK SCORE (versioned, explainable) ============
+model AtRiskScore {
+  id              String   @id @default(cuid())
+  schoolId        String   @default("school_default")
+  studentId       String
+  score           Float    // 0-100, higher = more at risk
+  factors         String   // JSON: { attendance: 0.3, grades: 0.4, incidents: 0.2, engagement: 0.1 }
+  version         Int      @default(1)
+  computedAt      DateTime @default(now())
+
+  @@index([studentId, computedAt])
+}
+
+// ============ FEATURE FLAG (per-school capability toggles) ============
+model FeatureFlag {
+  id              String   @id @default(cuid())
+  schoolId        String   @default("school_default")
+  flagKey         String   // e.g., "ai_extraction", "simulation_mode", "auto_payroll"
+  enabled         Boolean  @default(false)
+  config          String?  // JSON: flag-specific configuration
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([schoolId, flagKey])
+}
+
+// ============ AI ACTION PLAN (two-phase protocol: prepare → confirm) ============
+model AiActionPlan {
+  id              String   @id @default(cuid())
+  schoolId        String   @default("school_default")
+  planId          String   @unique // external ID for API
+  agentType       String   // IntakeAgent, OpsAgent, FinanceAgent, etc.
+  actionType      String   // e.g., "bulk_reminder", "substitution_plan"
+  summary         String   // human-readable summary
+  diffs           String   // JSON: exact record diffs
+  affectedCount   Int      // number of people/records affected
+  tier            String   // A, B, C
+  status          String   @default("PREPARED") // PREPARED, CONFIRMED, REJECTED, EXPIRED, EXECUTED
+  contextHash     String   // hash of context at prepare time (for staleness check)
+  requestedBy     String   // user ID
+  approvedBy      String?
+  expiresAt       DateTime // 15 min from prepare
+  executedAt      DateTime?
+  createdAt       DateTime @default(now())
+
+  @@index([status, expiresAt])
+  @@index([requestedBy])
+}
+
+// ============ AGENT INVOCATION (cost observability) ============
+model AgentInvocation {
+  id              String   @id @default(cuid())
+  schoolId        String   @default("school_default")
+  agentType       String   // IntakeAgent, OpsAgent, etc.
+  modelUsed       String   // e.g., "glm-4", "glm-4.6v"
+  purpose         String   // e.g., "extract_admission_form", "draft_reminder"
+  inputTokens     Int      @default(0)
+  outputTokens    Int      @default(0)
+  latencyMs       Int      @default(0)
+  costUsd         Float    @default(0)
+  success         Boolean  @default(true)
+  errorMessage    String?
+  actionPlanId    String?
+  createdAt       DateTime @default(now())
+
+  @@index([agentType, createdAt])
+}
+
+// ============ INSIGHT CARD (role-specific insight feed) ============
+model InsightCard {
+  id              String   @id @default(cuid())
+  schoolId        String   @default("school_default")
+  targetRole      String   // PRINCIPAL, ADMIN, TEACHER, etc.
+  targetType      String   // INDIVIDUAL, CLASS, SCHOOL
+  targetId        String?  // specific entity if INDIVIDUAL
+  category        String   // ATTENDANCE, ACADEMIC, FINANCIAL, SAFETY, ENGAGEMENT
+  severity        String   @default("INFO") // INFO, WARNING, CRITICAL, POSITIVE
+  title           String
+  body            String
+  actionLabel     String?
+  actionUrl       String?
+  metadata        String?  // JSON
+  isRead          Boolean  @default(false)
+  generatedAt     DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  @@index([targetRole, isRead])
+}
+
+// ============ WORKFLOW DEFINITION (versioned JSON DSL for sagas) ============
+model WorkflowDefinition {
+  id              String   @id @default(cuid())
+  schoolId        String   @default("school_default")
+  name            String   // e.g., "admission_cascade", "exit_cascade"
+  version         Int      @default(1)
+  steps           String   // JSON: step definitions
+  compensations   String   // JSON: compensating actions per step
+  humanGates      String   // JSON: which steps need human approval
+  timeouts        String   // JSON: per-step timeout config
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  instances       WorkflowInstance[]
+}
+model WorkflowInstance {
+  id              String   @id @default(cuid())
+  schoolId        String   @default("school_default")
+  definitionId    String
+  definition      WorkflowDefinition @relation(fields: [definitionId], references: [id])
+  definitionVersion Int
+  status          String   @default("PENDING") // PENDING, RUNNING, PAUSED, COMPLETED, FAILED, COMPENSATING
+  stepCursor      Int      @default(0)
+  context         String   // JSON: saga context data
+  triggerEventId  String?  // event that started this saga
+  startedAt       DateTime @default(now())
+  completedAt     DateTime?
+  errorMessage    String?
+
+  stepLogs        WorkflowStepLog[]
+
+  @@index([status])
+}
+
+// ============ WORKFLOW STEP LOG (per-step execution — resumable) ============
+model WorkflowStepLog {
+  id              String   @id @default(cuid())
+  instanceId      String
+  instance        WorkflowInstance @relation(fields: [instanceId], references: [id])
+  stepIndex       Int
+  stepName        String
+  status          String   // PENDING, RUNNING, COMPLETED, FAILED, SKIPPED, COMPENSATED
+  startedAt       DateTime?
+  completedAt     DateTime?
+  result          String?  // JSON
+  errorMessage    String?
+
+  @@index([instanceId, stepIndex])
+}
+
+// ============ AUTOMATION RULE (trigger → conditions → actions) ============
+model AutomationRule {
+  id              String   @id @default(cuid())
+  schoolId        String   @default("school_default")
+  name            String
+  description     String?
+  triggerEvent    String   // event type that triggers this rule
+  conditions      String   // JSON: AST conditions
+  actions         String   // JSON: array of actions
+  tier            String   @default("A") // A (auto), B (one-click), C (senior approval)
+  simulationMode  Boolean  @default(false)
+  enabled         Boolean  @default(true)
+  version         Int      @default(1)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  runs            RuleRun[]
+
+  @@index([schoolId, triggerEvent, enabled])
+}
+
+// ============ RULE RUN (every rule execution logged) ============
+model RuleRun {
+  id              String   @id @default(cuid())
+  ruleId          String
+  rule            AutomationRule @relation(fields: [ruleId], references: [id])
+  triggerEventId  String
+  matched         Boolean  @default(false)
+  intendedActions String   // JSON: what WOULD be done (for simulation mode)
+  executedActions String   // JSON: what WAS done
+  simulationMode  Boolean  @default(false)
+  success         Boolean  @default(true)
+  errorMessage    String?
+  executedAt      DateTime @default(now())
+
+  @@index([ruleId, executedAt])
 }
