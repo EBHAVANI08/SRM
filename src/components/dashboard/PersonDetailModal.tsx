@@ -1,6 +1,7 @@
 'use client'
 
 import { motion, AnimatePresence } from 'framer-motion'
+import { createPortal } from 'react-dom'
 import {
   X, Phone, Mail, MapPin, Calendar, User, Users, FileText, CheckCircle2,
   AlertTriangle, TrendingUp, Award, Heart, Bus, BedDouble, Trophy,
@@ -19,15 +20,15 @@ interface PersonDetailModalProps {
 }
 
 export function PersonDetailModal({ person, type, onClose }: PersonDetailModalProps) {
-  if (!person || !type) return null
+  if (!person || !type || typeof window === 'undefined') return null
 
-  return (
+  return createPortal(
     <AnimatePresence>
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm"
+        className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md"
         onClick={onClose}
       >
         <motion.div
@@ -36,7 +37,7 @@ export function PersonDetailModal({ person, type, onClose }: PersonDetailModalPr
           exit={{ scale: 0.95, opacity: 0, y: 20 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
           onClick={(e) => e.stopPropagation()}
-          className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[92vh] overflow-hidden flex flex-col"
+          className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
         >
           {/* Header with gradient */}
           <div className="relative bg-gradient-to-br from-blue-800 to-blue-900 p-6 text-white overflow-hidden">
@@ -94,7 +95,8 @@ export function PersonDetailModal({ person, type, onClose }: PersonDetailModalPr
           </div>
         </motion.div>
       </motion.div>
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   )
 }
 
