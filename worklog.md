@@ -53,3 +53,39 @@ Stage Summary:
   - Phase 6 (School Day Autopilot) ✅ — checkpoint loop + manual trigger
   - Phase 7 (Concierge/Orchestrator polish) — IN PROGRESS (already had AIAssistant; scope-aware refinement is the next iteration)
 - 8 new lib files, 11 new API routes, 1 new UI component (1047 lines), 7 new ViewKeys, 7 new module configs, 4 new Prisma models — all linted, built, and dev-server-verified.
+
+---
+Task ID: phase-7-impl
+Agent: main (continuation session)
+Task: Implement Phase 7 — Concierge/Orchestrator polish. Make the AI Assistant scope-aware, add a multi-agent orchestrator with 10 named agents, gate suggested actions by roleScope, auto-flag at-risk students, and surface scope notes/redaction explanations.
+
+Work Log:
+- Phase 7a — Created `src/lib/agents/orchestrator.ts` (~370 lines): 10 Named Agent registry (ConciergeAgent, IntakeAgent, AdmissionsAgent, AttendanceAgent, FinanceAgent, InsightAgent, BriefingAgent, DiscoveryAgent, DigitalTwinAgent, OpsAgent). Each agent has keywords, reads/writes resources, minRole, tier. `routeQuery()` picks best agent by keyword match × tier boost. `gateActions()` filters suggested actions through `roleScope.can()`. `orchestrate()` is the main entry: routes → dispatches → gates actions → falls back to ConciergeAgent on error → logs every invocation. `buildScopeNote()` returns a human-readable note when the agent's reads are blocked by role.
+- Phase 7b — Created `src/lib/agents/conciergeAgent.ts` (~340 lines): role-personalized first-open greeting. `buildConciergeGreeting()` returns headline + live counts (per-role DB queries: students/overdue tasks/proposals for SCHOOL_HEAD; my-tasks for TEACHER; my-attendance for STUDENT; failed rule runs for IT_TEAM). 15 QUICK_ACTIONS templates with bestForRoles, gated by roleScope. `getExamplePrompts()` returns 5-6 role-tailored example queries. Scope disclaimer surfaced from ROLE_INFO.neverSees.
+- Phase 7c — Upgraded `src/lib/agents/assistantAgent.ts` to be scope-aware: ACTION_REGISTRY entries now carry `resource` + `action` (Phase 7 permission metadata). `processMessage()` now: (1) generates a scopeNote when ContextEngine redacted fields; (2) auto-flags academicRiskFlag when at-risk score ≥60 AND role can view behaviour; (3) maps ACTION_REGISTRY entries through `roleScope.can()` and surfaces denial reason instead of silently dropping. New `SuggestedAction` type includes `tier`, `allowed`, `denialReason`.
+- Phase 7d — Created `src/app/api/ai/orchestrate/route.ts`: POST endpoint, reads user identity from JWT-set middleware headers, calls `orchestrate()`, returns reply + sources + gatedActions + routing metadata + scopeNote + agentName/Label/Emoji. On any error, returns a graceful fallback response with ConciergeAgent routing.
+- Phase 7e — Created `src/app/api/ai/concierge/route.ts`: GET endpoint, calls `buildConciergeGreeting()` + `getExamplePrompts()` in parallel, returns `{greeting, examplePrompts}`.
+- Phase 7f — Rebuilt `src/components/dashboard/AIAssistant.tsx` (~440 lines): now calls `/api/ai/orchestrate` instead of `/api/ai/chat`. On panel open, fetches `/api/ai/concierge` for the role-personalized first message. Each assistant message now displays: (1) agent routing badge (emoji + label + match-confidence %); (2) RAG-context-used indicator; (3) scope note in a slate-tinted card with Lock icon; (4) academic risk flag in a red-tinted card with ShieldAlert icon + reasons; (5) expandable "N suggested actions" section with role-gated action chips — ALLOWED actions show a "Run" button (calls /api/ai/actions/prepare), DENIED actions show a Lock icon + denial reason. Header updated to "10 AGENTS" badge + "Orchestrator + RAG" tagline. Scope disclaimer banner (amber) shown above messages when role has restricted scope.
+- Phase 7g — Fixed roleScope.ts inconsistency: SUPER_ADMIN, SCHOOL_HEAD, and ADMIN were missing the `broadcast` action on `communication_log` (canBroadcast() returned true but PERMISSION_MATRIX didn't grant it). Added `broadcast` to all three roles on communication_log. ADMIN's `student` resource also gained `broadcast` for parent-broadcast use cases.
+- Verification: `bun run lint` → 0 errors / 0 warnings. `bun run build` → success, 43 API routes (was 41). Live-tested with JWT auth:
+  - Principal asking "prepare fee reminders for defaulting parents" → routed to FinanceAgent 💰 (100% confidence, keywords: fee/default/reminder), action ALLOWED ✓
+  - Teacher asking the same query → routed to FinanceAgent 💰, action DENIED with reason "Your role (TEACHER) cannot broadcast on communication_log." + scope note explaining fee/transaction are filtered out
+  - Reception asking "show pending admissions inquiries" → routed to ConciergeAgent 🤖 (67% confidence, keywords: how/show)
+  - Concierge endpoint returns role-personalized greeting with live DB counts + 6 role-gated quick actions + 6 example prompts + scope disclaimer
+
+Stage Summary:
+- Phase 7 (Concierge/Orchestrator polish) ✅ COMPLETE
+- 3 new lib files (orchestrator.ts, conciergeAgent.ts, roleScope.ts fix)
+- 2 new API routes (/api/ai/orchestrate, /api/ai/concierge)
+- 1 UI component rebuilt (AIAssistant.tsx, 269 → 440 lines)
+- 1 file upgraded (assistantAgent.ts scope-aware)
+- 1 scope bug fixed (broadcast permission inconsistency)
+- All 7 phases of the rollout roadmap from the screenshots now delivered:
+  - Phase 1 (role-access contract) ✅
+  - Phase 2 (Communication Agent) ✅
+  - Phase 3 (core agents + first 3 trigger chains) ✅
+  - Phase 4 (remaining agents + trigger chains) ✅
+  - Phase 5 (Automation Control Centre + Digital Twin) ✅
+  - Phase 6 (School Day Autopilot) ✅
+  - Phase 7 (Concierge/Orchestrator polish) ✅
+- The AI chat panel is now: (1) routed by a 10-agent orchestrator, (2) scope-aware at the action-suggestion layer, (3) transparent about routing decisions, (4) transparent about scope restrictions, (5) auto-flags at-risk students when seen, (6) recoverable via ConciergeAgent fallback.

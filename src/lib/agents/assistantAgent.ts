@@ -1,5 +1,5 @@
 /**
- * AssistantAgent (§2.2 + §2.3) — The user-facing RAG chat, upgraded
+ * AssistantAgent (§2.2 + §2.3) — The user-facing RAG chat, upgraded (Phase 7 scope-aware)
  *
  * - Routes intents to other agents (IntakeAgent, OpsAgent, FinanceAgent, InsightAgent)
  * - Executes registered actions via the two-phase protocol (prepare → confirm)
@@ -7,6 +7,14 @@
  * - Offers relevant actions: "Want me to prepare the reminder batch for these 12 parents?"
  * - Conversation memory per user
  * - Scope-filtered retrieval (role-aware)
+ *
+ * Phase 7 additions:
+ *   - Suggested actions are gated by roleScope.can() — denied actions are surfaced
+ *     with a clear reason instead of being silently dropped
+ *   - Replies include a scope note when the agent retrieved context but had to redact
+ *     or restrict fields based on role
+ *   - When the user asks about a student, the at-risk score is auto-flagged if it
+ *     crosses the threshold and the role is allowed to see behavioral data
  */
 
 import ZAI from 'z-ai-web-dev-sdk'
@@ -15,6 +23,7 @@ import { retrieve } from './ragEngine'
 import { assembleContext, type RequestingUser } from '../contextEngine'
 import { buildSafeSystemPrompt, wrapUntrustedData, checkForInjection } from './promptDefense'
 import { logAgentInvocation } from './intakeAgent'
+import { can, type ResourceKey, type ActionKey } from '../roleScope'
 
 export interface ChatMessage {
   role: 'user' | 'assistant'
@@ -22,12 +31,26 @@ export interface ChatMessage {
   timestamp?: number
 }
 
+export interface SuggestedAction {
+  label: string
+  actionType: string
+  description: string
+  tier: 'A' | 'B' | 'C'
+  /** Phase 7: whether the user's role can execute this action */
+  allowed: boolean
+  denialReason?: string
+}
+
 export interface AssistantResponse {
   reply: string
   sources: { title: string; content: string }[]
-  suggestedActions: { label: string; actionType: string; description: string }[]
+  suggestedActions: SuggestedAction[]
   contextUsed: boolean
   agentRouted?: string
+  /** Phase 7: human-readable scope note appended when role restricted visibility */
+  scopeNote?: string
+  /** Phase 7: at-risk flag when the queried student crosses the threshold */
+  academicRiskFlag?: { studentId: string; studentName: string; score: number; reasons: string[] }
 }
 
 // ============ Action Registry ============
@@ -37,6 +60,9 @@ export interface RegisteredAction {
   description: string
   tier: 'A' | 'B' | 'C'
   keywords: string[] // trigger keywords for suggesting this action
+  /** Phase 7: required (resource, action) permission for this action */
+  resource: ResourceKey
+  action: ActionKey
 }
 
 const ACTION_REGISTRY: RegisteredAction[] = [
@@ -46,6 +72,8 @@ const ACTION_REGISTRY: RegisteredAction[] = [
     description: 'AI will identify all defaulting parents and prepare a batch of WhatsApp/SMS reminders for one-click approval.',
     tier: 'B',
     keywords: ['fee', 'reminder', 'defaulter', 'overdue', 'payment', 'pending'],
+    resource: 'communication_log',
+    action: 'broadcast',
   },
   {
     type: 'prepare_substitution_plan',
@@ -53,6 +81,8 @@ const ACTION_REGISTRY: RegisteredAction[] = [
     description: 'AI will read the timetable and generate a substitution plan for an absent teacher.',
     tier: 'B',
     keywords: ['substitution', 'substitute', 'teacher', 'absent', 'leave', 'cover'],
+    resource: 'task',
+    action: 'create',
   },
   {
     type: 'prepare_report_cards',
@@ -60,6 +90,8 @@ const ACTION_REGISTRY: RegisteredAction[] = [
     description: 'AI will compile report cards with personalized remarks for all students in an exam.',
     tier: 'B',
     keywords: ['report', 'card', 'result', 'publish', 'remarks'],
+    resource: 'report_card',
+    action: 'create',
   },
   {
     type: 'prepare_payroll',
@@ -67,6 +99,8 @@ const ACTION_REGISTRY: RegisteredAction[] = [
     description: 'AI will compile payroll for all staff with variance report vs last month.',
     tier: 'C',
     keywords: ['payroll', 'salary', 'payslip', 'payment', 'staff'],
+    resource: 'payroll',
+    action: 'create',
   },
   {
     type: 'show_at_risk',
@@ -74,6 +108,8 @@ const ACTION_REGISTRY: RegisteredAction[] = [
     description: 'AI will compute at-risk scores for all students and show the top 10 with explanations.',
     tier: 'A',
     keywords: ['at-risk', 'risk', 'struggling', 'counselling', 'intervention'],
+    resource: 'student',
+    action: 'view',
   },
   {
     type: 'show_attendance_anomalies',
@@ -81,6 +117,8 @@ const ACTION_REGISTRY: RegisteredAction[] = [
     description: 'AI will detect unusual absence patterns and list students needing attention.',
     tier: 'A',
     keywords: ['attendance', 'absent', 'anomaly', 'streak', 'pattern'],
+    resource: 'attendance',
+    action: 'view',
   },
 ]
 
@@ -121,12 +159,37 @@ export async function processMessage(
 
   // 4. Check if query is about a specific entity (student/staff)
   let entityContext = ''
+  let scopeNote: string | undefined
+  let academicRiskFlag: AssistantResponse['academicRiskFlag']
   const studentMatch = retrievalResults.find(r => r.title.includes('ADM'))
   if (studentMatch) {
     try {
-      const context = await assembleContext('STUDENT', studentMatch.documentId.replace('kc_student_', ''), 'assistant_query', user)
+      const studentId = studentMatch.documentId.replace('kc_student_', '')
+      const context = await assembleContext('STUDENT', studentId, 'assistant_query', user)
       if (context) {
         entityContext = `\n\nEntity context for ${studentMatch.title}:\n- Attendance: ${context.attendance?.rate}%\n- Fee status: ${context.financial?.feeStatus || 'N/A'}\n- Avg score: ${context.academic?.scores?.length || 0} scores\n- Events: ${context.eventTimeline?.length || 0} recent`
+
+        // Phase 7: surface a scope note if any fields were redacted
+        if (context._meta.redactedFields.length > 0) {
+          scopeNote = `Scope note: Some fields were redacted for your role (${user.role}): ${context._meta.redactedFields.join(', ')}.`
+        }
+
+        // Phase 7: auto-flag academic risk if the role can see behavioral data
+        if (can(user.role, 'behaviour', 'view') && context.behavior?.atRiskScore !== undefined) {
+          const score = context.behavior.atRiskScore
+          if (score >= 60) {
+            const reasons: string[] = []
+            if (context.attendance && context.attendance.rate < 75) reasons.push(`low attendance (${context.attendance.rate}%)`)
+            if (context.academic && context.academic.gradeTrend === 'down') reasons.push('declining grade trend')
+            if (context.behavior.points < 0) reasons.push(`behavior points: ${context.behavior.points}`)
+            academicRiskFlag = {
+              studentId,
+              studentName: (context.entity as any).fullName || studentMatch.title,
+              score,
+              reasons: reasons.length > 0 ? reasons : ['composite at-risk score crossed threshold'],
+            }
+          }
+        }
       }
     } catch { /* skip */ }
   }
@@ -182,9 +245,22 @@ ${contextStr}${entityContext}`
     const reply = response.choices[0]?.message?.content || 'I apologize, I could not generate a response.'
 
     // 8. Suggest relevant actions based on query keywords
-    const suggestedActions = ACTION_REGISTRY.filter(action =>
+    // Phase 7: gate by role — surface denial reason instead of silently dropping
+    const candidateActions = ACTION_REGISTRY.filter(action =>
       action.keywords.some(kw => lowerQuery.includes(kw))
     ).slice(0, 4)
+
+    const suggestedActions: SuggestedAction[] = candidateActions.map(action => {
+      const allowed = can(user.role, action.resource, action.action)
+      return {
+        label: action.label,
+        actionType: action.type,
+        description: action.description,
+        tier: action.tier,
+        allowed,
+        denialReason: allowed ? undefined : `Your role (${user.role}) cannot ${action.action} on ${action.resource}.`,
+      }
+    })
 
     // 9. Log agent invocation
     await logAgentInvocation({
@@ -201,13 +277,11 @@ ${contextStr}${entityContext}`
     return {
       reply,
       sources,
-      suggestedActions: suggestedActions.map(a => ({
-        label: a.label,
-        actionType: a.type,
-        description: a.description,
-      })),
+      suggestedActions,
       contextUsed,
       agentRouted,
+      scopeNote,
+      academicRiskFlag,
     }
   } catch (error: any) {
     return {
