@@ -13,7 +13,7 @@
  */
 
 import { db } from './db'
-import { sendCommunication, CommunicationInput } from './comms'
+import { sendCommunication, type CommunicationInput, type CommChannel } from './comms'
 
 // ============ Types ============
 export interface RuleCondition {
@@ -89,12 +89,14 @@ async function executeAction(action: RuleAction, event: EventPayload, simulation
     switch (action.type) {
       case 'send_communication': {
         const result = await sendCommunication({
-          channel: action.channel || 'SMS',
+          channel: (action.channel || 'SMS') as CommChannel,
           recipientType: action.recipientType || 'PARENT',
           recipientId: event.entityId,
           recipientContact: action.recipientContact || '',
           templateName: action.template,
           schoolId: event.schoolId,
+          audience: action.audience || 'MINIMUM',
+          initiatedByRole: action.initiatedByRole,
           metadata: { triggerEvent: event.type, ruleAction: true },
         })
         return { action: 'send_communication', status: 'EXECUTED', commId: result.id }
@@ -384,6 +386,195 @@ export async function seedDefaultRules(schoolId: string = 'school_default'): Pro
       tier: 'A',
       simulationMode: false,
     },
+
+    // === FEE DUE-APPROACHING CADENCE (T-7 / T-3 / T-0) — per spec ===
+    {
+      name: 'Fee Due T-7 → Email Reminder',
+      triggerEvent: 'fee.due_approaching',
+      conditions: JSON.stringify({ op: 'eq', field: 'payload.cadenceDay', value: 7 }),
+      actions: JSON.stringify([
+        { type: 'send_communication', channel: 'EMAIL', recipientType: 'PARENT', template: 'fee_reminder_email', audience: 'MINIMUM' },
+      ]),
+      tier: 'A',
+      simulationMode: false,
+    },
+    {
+      name: 'Fee Due T-3 → WhatsApp Reminder',
+      triggerEvent: 'fee.due_approaching',
+      conditions: JSON.stringify({ op: 'eq', field: 'payload.cadenceDay', value: 3 }),
+      actions: JSON.stringify([
+        { type: 'send_communication', channel: 'WHATSAPP', recipientType: 'PARENT', template: 'fee_reminder_overdue', audience: 'MINIMUM' },
+      ]),
+      tier: 'A',
+      simulationMode: false,
+    },
+    {
+      name: 'Fee Due T-0 → SMS + Email + Default-Risk Score',
+      triggerEvent: 'fee.due_approaching',
+      conditions: JSON.stringify({ op: 'eq', field: 'payload.cadenceDay', value: 0 }),
+      actions: JSON.stringify([
+        { type: 'send_communication', channel: 'SMS', recipientType: 'PARENT', template: 'fee_reminder_sms', audience: 'MINIMUM' },
+        { type: 'send_communication', channel: 'EMAIL', recipientType: 'PARENT', template: 'fee_reminder_email', audience: 'MINIMUM' },
+        { type: 'invoke_ai', agentType: 'FinanceAgent', purpose: 'default_risk_score' },
+      ]),
+      tier: 'B',
+      simulationMode: false,
+    },
+    {
+      name: 'Fee Overdue 7d + Unacknowledged → Admin Phone-Call Task',
+      triggerEvent: 'fee.overdue_unacknowledged',
+      conditions: null,
+      actions: JSON.stringify([
+        { type: 'create_task', title: 'Call family — fee overdue unacknowledged', assigneeRole: 'ADMIN', priority: 'HIGH', slaHours: 24 },
+      ]),
+      tier: 'B',
+      simulationMode: false,
+    },
+
+    // === EXAM GRADED → grade + parent notify + academic-risk score ===
+    {
+      name: 'Exam Graded → Grade Computation + Parent Notify + Risk Score',
+      triggerEvent: 'exam.graded',
+      conditions: null,
+      actions: JSON.stringify([
+        { type: 'start_workflow', workflowName: 'examCascade' },
+        { type: 'send_communication', channel: 'WHATSAPP', recipientType: 'PARENT', template: 'result_published_notification', audience: 'MINIMUM' },
+        { type: 'send_communication', channel: 'SMS', recipientType: 'PARENT', template: 'result_published_sms', audience: 'MINIMUM' },
+        { type: 'invoke_ai', agentType: 'AcademicRiskAgent', purpose: 'at_risk_score' },
+      ]),
+      tier: 'A',
+      simulationMode: false,
+    },
+    {
+      name: 'Subject Average < 40% → Remedial Plan Task',
+      triggerEvent: 'exam.subject_average_low',
+      conditions: JSON.stringify({ op: 'lt', field: 'payload.subjectAverage', value: 40 }),
+      actions: JSON.stringify([
+        { type: 'create_task', title: 'Subject remedial plan needed', assigneeRole: 'TEACHER', priority: 'HIGH', slaHours: 48 },
+      ]),
+      tier: 'B',
+      simulationMode: false,
+    },
+
+    // === TRANSPORT DELAY/INCIDENT ===
+    {
+      name: 'Transport Delay → Route-Scoped Parent Notification',
+      triggerEvent: 'transport.delay_or_incident',
+      conditions: JSON.stringify({ op: 'lt', field: 'payload.delayMinutes', value: 30 }),
+      actions: JSON.stringify([
+        { type: 'send_communication', channel: 'WHATSAPP', recipientType: 'PARENT', template: 'transport_delay_notice', audience: 'MINIMUM' },
+      ]),
+      tier: 'A',
+      simulationMode: false,
+    },
+    {
+      name: 'Transport Delay > 30min → Notify Principal + Transport Incharge',
+      triggerEvent: 'transport.delay_or_incident',
+      conditions: JSON.stringify({ op: 'gte', field: 'payload.delayMinutes', value: 30 }),
+      actions: JSON.stringify([
+        { type: 'send_communication', channel: 'SMS', recipientType: 'STAFF', template: 'safety_alert_principal', audience: 'MINIMUM' },
+        { type: 'create_task', title: 'Investigate transport delay >30min', assigneeRole: 'ADMIN', priority: 'HIGH', slaHours: 2 },
+      ]),
+      tier: 'B',
+      simulationMode: false,
+    },
+
+    // === STAFF LEAVE REQUESTED ===
+    {
+      name: 'Staff Leave Requested → Route to Approver + Substitute Check',
+      triggerEvent: 'staff.leave_requested',
+      conditions: null,
+      actions: JSON.stringify([
+        { type: 'start_workflow', workflowName: 'substitutionSaga' },
+        { type: 'create_task', title: 'Approve staff leave request', assigneeRole: 'SCHOOL_HEAD', priority: 'NORMAL', slaHours: 12 },
+      ]),
+      tier: 'B',
+      simulationMode: false,
+    },
+
+    // === SAFETY INCIDENT — critical category, requires ack ===
+    {
+      name: 'Safety Incident → Scoped Alert with Ack Tracking',
+      triggerEvent: 'safety.incident_reported',
+      conditions: null,
+      actions: JSON.stringify([
+        { type: 'send_communication', channel: 'SMS', recipientType: 'STAFF', template: 'safety_alert_principal', audience: 'MINIMUM' },
+        { type: 'send_communication', channel: 'WHATSAPP', recipientType: 'PARENT', template: 'safety_alert_parent', audience: 'MINIMUM' },
+      ]),
+      tier: 'A',
+      simulationMode: false,
+    },
+
+    // === ENQUIRY LOGGED ===
+    {
+      name: 'Enquiry Logged → Lead Creation + Counsellor Assignment + Follow-up Schedule',
+      triggerEvent: 'enquiry.logged',
+      conditions: null,
+      actions: JSON.stringify([
+        { type: 'create_task', title: 'Counsellor follow-up — new enquiry', assigneeRole: 'RECEPTION', priority: 'HIGH', slaHours: 24 },
+        { type: 'send_communication', channel: 'WHATSAPP', recipientType: 'PARENT', template: 'enquiry_followup', audience: 'MINIMUM' },
+        { type: 'schedule_followup', title: 'Day-3 follow-up: enquiry', delayHours: 72 },
+        { type: 'schedule_followup', title: 'Day-7 follow-up: enquiry', delayHours: 168 },
+      ]),
+      tier: 'A',
+      simulationMode: false,
+    },
+    {
+      name: 'Enquiry Unresponsive After 3 Follow-ups → Admissions Head',
+      triggerEvent: 'enquiry.unresponsive',
+      conditions: null,
+      actions: JSON.stringify([
+        { type: 'create_task', title: 'Personal outreach or close lead', assigneeRole: 'SCHOOL_HEAD', priority: 'NORMAL', slaHours: 48 },
+      ]),
+      tier: 'B',
+      simulationMode: false,
+    },
+
+    // === LICENCE EXPIRING (IT) — T-30 / T-7 / T-3 ===
+    {
+      name: 'Licence Expiring T-30 → IT Alert',
+      triggerEvent: 'licence.expiring',
+      conditions: JSON.stringify({ op: 'eq', field: 'payload.cadenceDay', value: 30 }),
+      actions: JSON.stringify([
+        { type: 'send_communication', channel: 'EMAIL', recipientType: 'STAFF', template: 'licence_expiring_it', audience: 'MINIMUM' },
+      ]),
+      tier: 'A',
+      simulationMode: false,
+    },
+    {
+      name: 'Licence Expiring T-7 → IT Escalated Alert',
+      triggerEvent: 'licence.expiring',
+      conditions: JSON.stringify({ op: 'eq', field: 'payload.cadenceDay', value: 7 }),
+      actions: JSON.stringify([
+        { type: 'send_communication', channel: 'EMAIL', recipientType: 'STAFF', template: 'licence_expiring_it', audience: 'MINIMUM' },
+        { type: 'create_task', title: 'Licence renewal pending', assigneeRole: 'IT_TEAM', priority: 'HIGH', slaHours: 168 },
+      ]),
+      tier: 'B',
+      simulationMode: false,
+    },
+    {
+      name: 'Licence Expiring T-3 → Notify Principal + Admin Task',
+      triggerEvent: 'licence.expiring',
+      conditions: JSON.stringify({ op: 'eq', field: 'payload.cadenceDay', value: 3 }),
+      actions: JSON.stringify([
+        { type: 'send_communication', channel: 'SMS', recipientType: 'STAFF', template: 'licence_expiring_it', audience: 'MINIMUM' },
+        { type: 'create_task', title: 'Procurement approval — licence expiring', assigneeRole: 'ADMIN', priority: 'URGENT', slaHours: 24 },
+      ]),
+      tier: 'B',
+      simulationMode: false,
+    },
+
+    // === DISCOVERY PATTERN DETECTED — never autonomous, always human-approval ===
+    {
+      name: 'Discovery Pattern → Draft Proposal in Review Queue (NEVER autonomous)',
+      triggerEvent: 'discovery.pattern_detected',
+      conditions: null,
+      actions: JSON.stringify([
+        { type: 'invoke_ai', agentType: 'DiscoveryAgent', purpose: 'draft_proposal' },
+      ]),
+      tier: 'C',
+      simulationMode: false,
+    },
   ]
 
   for (const rule of defaultRules) {
@@ -408,5 +599,5 @@ export async function seedDefaultRules(schoolId: string = 'school_default'): Pro
     }
   }
 
-  console.log(`  ✓ ${defaultRules.length} default automation rules seeded`)
+  console.log(`  ✓ ${defaultRules.length} automation rules seeded (includes 9-trigger-chain matrix)`)
 }

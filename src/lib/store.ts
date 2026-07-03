@@ -56,6 +56,14 @@ export type ViewKey =
   | 'ai-mock'
   | 'rag-knowledge'
   | 'settings'
+  // Phase 5 — Automation & Intelligence layer
+  | 'automation-center'
+  | 'notification-log'
+  | 'discovery-queue'
+  | 'digital-twin'
+  | 'autopilot'
+  | 'role-matrix'
+  | 'roadmap'
 
 interface AppState {
   user: AuthUser | null

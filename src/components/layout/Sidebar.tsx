@@ -8,7 +8,8 @@ import {
   CalendarClock, Library, HeartPulse, Building2, GraduationCap, UserCog,
   Landmark, CalendarRange, FileQuestion, Compass, Siren, Target, Database,
   Settings, Sparkles, Search, Bell, LogOut,
-  PanelLeftClose, PanelLeft, Zap
+  PanelLeftClose, PanelLeft, Zap,
+  Cpu, BellRing, Lightbulb, GitBranch, Timer, Grid3x3, Map,
 } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
 import { MODULES, ROLE_INFO } from '@/lib/modules'
@@ -20,6 +21,7 @@ const ICON_MAP: Record<string, any> = {
   CalendarClock, Library, HeartPulse, Building2, GraduationCap, UserCog,
   Landmark, CalendarRange, FileQuestion, Compass, Siren, Target, Database,
   Settings,
+  Cpu, BellRing, Lightbulb, GitBranch, Timer, Grid3x3, Map,
 }
 
 const CATEGORY_LABELS: Record<string, string> = {

@@ -12,6 +12,7 @@ import { SecurityModule } from '@/components/dashboard/SecurityModule'
 import { AttendanceModule } from '@/components/dashboard/AttendanceModule'
 import { FeesModule } from '@/components/dashboard/FeesModule'
 import { AdmissionsModule } from '@/components/dashboard/AdmissionsModule'
+import { Phase5Module } from '@/components/dashboard/Phase5Module'
 
 const AI_MODULE_KEYS = [
   'ai-question-paper',
@@ -24,6 +25,18 @@ const AI_MODULE_KEYS = [
 ]
 
 const CUSTOM_MODULE_KEYS = ['front-desk']
+
+const PHASE5_MODULE_KEYS = [
+  'automation-center',
+  'notification-log',
+  'discovery-queue',
+  'digital-twin',
+  'autopilot',
+  'role-matrix',
+  'roadmap',
+] as const
+
+type Phase5ViewKey = typeof PHASE5_MODULE_KEYS[number]
 
 export function AppShell() {
   const isAuthenticated = useAppStore((s) => s.isAuthenticated)
@@ -51,6 +64,8 @@ export function AppShell() {
             <FeesModule />
           ) : currentView === 'admissions' ? (
             <AdmissionsModule />
+          ) : (PHASE5_MODULE_KEYS as readonly string[]).includes(currentView) ? (
+            <Phase5Module viewKey={currentView as Phase5ViewKey} />
           ) : (
             <ModuleView moduleKey={currentView} />
           )}

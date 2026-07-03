@@ -1223,3 +1223,87 @@ model RuleRun {
 
   @@index([ruleId, executedAt])
 }
+
+// ============ DISCOVERY PROPOSAL (auto-discovered patterns awaiting human approval) ============
+model DiscoveryProposal {
+  id              String   @id @default(cuid())
+  schoolId        String   @default("school_default")
+  patternType     String   // e.g. "manual_pattern", "attendance_dip", "fee_default_cluster"
+  title           String
+  description     String
+  evidence        String   // JSON: signals, samples, supporting data
+  suggestedRule   String?  // JSON: proposed AutomationRule definition
+  affectedScope   String   // JSON: which entities/audience would be affected
+  predictedImpact String?  // JSON: estimated time saved / messages sent / risk reduced
+  status          String   @default("PENDING") // PENDING, APPROVED, REJECTED, IMPLEMENTED, EXPIRED
+  priority        String   @default("MEDIUM") // LOW, MEDIUM, HIGH, CRITICAL
+  confidence      Float    @default(0.0) // 0.0-1.0 model confidence
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  implementedRuleId String?  // FK to AutomationRule if approved + implemented
+  expiresAt       DateTime?  // proposals expire if not reviewed
+  createdAt       DateTime @default(now())
+
+  @@index([status, priority])
+  @@index([schoolId, createdAt])
+}
+
+// ============ SIMULATION RUN (Digital Twin replay) ============
+model SimulationRun {
+  id              String   @id @default(cuid())
+  schoolId        String   @default("school_default")
+  name            String
+  description     String?
+  startDate       DateTime
+  endDate         DateTime
+  scenarioConfig  String   // JSON: what-if overrides (rule toggles, parameter changes)
+  baselineMetrics String   // JSON: actual KPIs over that window
+  simulatedMetrics String  // JSON: predicted KPIs under scenario
+  impactReport    String   // JSON: diff between baseline and simulated
+  status          String   @default("PENDING") // PENDING, RUNNING, COMPLETED, FAILED
+  triggeredBy     String
+  duration        Int      @default(0)
+  createdAt       DateTime @default(now())
+  completedAt     DateTime?
+
+  @@index([schoolId, createdAt])
+}
+
+// ============ AUTOPILOT CHECKPOINT (School Day Autopilot heartbeat) ============
+model AutopilotCheckpoint {
+  id              String   @id @default(cuid())
+  schoolId        String   @default("school_default")
+  checkpointType  String   // MORNING_BRIEFING, PERIOD_CHECK, END_OF_DAY, INCIDENT_RESPOND
+  scheduledAt     DateTime
+  executedAt      DateTime?
+  status          String   @default("PENDING") // PENDING, RUNNING, COMPLETED, SKIPPED, FAILED
+  summary         String?
+  actionsTaken    String?  // JSON: array of actions executed
+  metrics         String?  // JSON: KPI snapshot at this checkpoint
+  agentInvocations String? // JSON: which agents were invoked
+  errorMessage    String?
+  createdAt       DateTime @default(now())
+
+  @@index([schoolId, scheduledAt])
+  @@index([status])
+}
+
+// ============ NOTIFICATION ACKNOWLEDGEMENT (read-receipt tracking for critical categories) ============
+model NotificationAck {
+  id              String   @id @default(cuid())
+  schoolId        String   @default("school_default")
+  commId          String   // FK to CommunicationLog.id
+  recipientType   String
+  recipientId     String
+  category        String   // SAFETY, FEE_OVERDUE, EXAM_RESULT
+  required        Boolean  @default(true)
+  acknowledgedAt  DateTime?
+  acknowledgedVia String?  // IN_APP, SMS_REPLY, WHATSAPP_REPLY
+  escalationCount Int      @default(0)
+  lastEscalatedAt DateTime?
+  createdAt       DateTime @default(now())
+
+  @@index([commId])
+  @@index([recipientId, acknowledgedAt])
+  @@index([category, acknowledgedAt])
+}

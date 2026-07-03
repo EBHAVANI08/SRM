@@ -1,6 +1,6 @@
 'use client'
 
-import { Sparkles, Download, Plus, Bell, Zap } from 'lucide-react'
+import { Sparkles, Download, Plus, Bell, Zap, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 interface SectionHeaderProps {
@@ -10,6 +10,7 @@ interface SectionHeaderProps {
   accent?: string
   onNew?: () => void
   onExport?: () => void
+  onRefresh?: () => void
   newLabel?: string
   showAI?: boolean
   aiActions?: { label: string; count: number }[]
@@ -22,6 +23,7 @@ export function SectionHeader({
   accent = '#1E3A8A',
   onNew,
   onExport,
+  onRefresh,
   newLabel = 'New Entry',
   showAI = true,
   aiActions,
@@ -51,6 +53,17 @@ export function SectionHeader({
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
+          {onRefresh && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onRefresh}
+              className="h-9 px-3 rounded-lg border-slate-200 text-slate-700 hover:bg-slate-50 gap-1.5 text-xs font-medium"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Refresh</span>
+            </Button>
+          )}
           {onExport && (
             <Button
               variant="outline"
