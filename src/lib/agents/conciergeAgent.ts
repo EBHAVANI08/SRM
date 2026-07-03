@@ -316,10 +316,10 @@ async function buildLiveCounts(user: RequestingUser): Promise<string> {
       }
       case 'IT_TEAM': {
         const recentRuns = await db.ruleRun.count({
-          where: { schoolId: user.schoolId, createdAt: { gte: todayStart } },
+          where: { executedAt: { gte: todayStart } },
         })
         const failedRuns = await db.ruleRun.count({
-          where: { schoolId: user.schoolId, success: false, createdAt: { gte: todayStart } },
+          where: { success: false, executedAt: { gte: todayStart } },
         })
         return `Today: **${recentRuns}** rule runs (${failedRuns} failed). I can show system health, licence status, and audit logs.`
       }

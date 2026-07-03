@@ -2,21 +2,33 @@
  * POST /api/exams/marks — Enter marks with anomaly detection
  * Body: { examId, studentId, subjectId?, marksObtained, totalMarks }
  * Returns: { success, record, anomalies }
+ *
+ * Phase 7 hardening: server-side scope enforced.
+ * - TEACHER+: can create exam marks
+ * - PARENT/STUDENT/RECEPTION/IT_TEAM: blocked from creating marks
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { enterMarksWithAnomalyDetection, computeRanks } from '@/lib/sagas/examSaga'
 import { hasPermission } from '@/lib/auth'
+import { getUserFromHeaders, guardQuery } from '@/lib/apiScope'
 
 export const runtime = 'nodejs'
 
 export async function POST(req: NextRequest) {
   try {
-    const userId = req.headers.get('x-user-id') || ''
-    const schoolId = req.headers.get('x-user-school-id') || 'school_default'
-    const permissions = JSON.parse(req.headers.get('x-user-permissions') || '[]')
+    const user = getUserFromHeaders(req)
 
-    if (!hasPermission(permissions, 'exams.*') && !hasPermission(permissions, '*')) {
+    // SERVER-SIDE SCOPE: only TEACHER+ can enter marks
+    const actionCheck = guardQuery('exam', 'create', user)
+    if (!actionCheck.ok) {
+      return NextResponse.json(
+        { success: false, error: actionCheck.reason, scopeDenied: true },
+        { status: 403 },
+      )
+    }
+
+    if (!hasPermission(user.permissions, 'exams.*') && !hasPermission(user.permissions, '*')) {
       return NextResponse.json({ success: false, error: 'Insufficient permissions' }, { status: 403 })
     }
 
@@ -35,8 +47,8 @@ export async function POST(req: NextRequest) {
           subjectId: entry.subjectId,
           marksObtained: entry.marksObtained,
           totalMarks: entry.totalMarks || body.totalMarks || 100,
-          schoolId,
-          actorId: userId,
+          schoolId: user.schoolId,
+          actorId: user.userId,
         })
         results.push({ studentId: entry.studentId, success: result.success, anomalies: result.anomalies })
         totalAnomalies += result.anomalies.length
@@ -61,8 +73,8 @@ export async function POST(req: NextRequest) {
       subjectId: body.subjectId,
       marksObtained: body.marksObtained,
       totalMarks: body.totalMarks || 100,
-      schoolId,
-      actorId: userId,
+      schoolId: user.schoolId,
+      actorId: user.userId,
     })
 
     return NextResponse.json({

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
 import { MODULES } from '@/lib/modules'
+import { ROLE_INFO } from '@/lib/roleScope'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -24,12 +25,58 @@ import {
   BarChart, Bar, PieChart, Pie, Cell, RadialBarChart, RadialBar
 } from 'recharts'
 
-const KPIS = [
-  { label: 'Total Students', value: '2,847', trend: '+4.2%', up: true, icon: Users },
-  { label: 'Staff Online', value: '186', trend: '+1.8%', up: true, icon: GraduationCap },
-  { label: 'Fee Collection', value: '₹4.82 Cr', trend: '+12.5%', up: true, icon: Wallet },
-  { label: 'Avg Attendance', value: '94.2%', trend: '+0.8%', up: true, icon: Activity },
-]
+// ============ Role-specific KPI catalog ============
+// Each role surfaces ONLY the widgets relevant to their daily actions.
+const ROLE_KPIS: Record<string, Array<{ label: string; value: string; trend: string; up: boolean; icon: any }>> = {
+  SUPER_ADMIN: [
+    { label: 'Total Students', value: '2,847', trend: '+4.2%', up: true, icon: Users },
+    { label: 'Staff Online', value: '186', trend: '+1.8%', up: true, icon: GraduationCap },
+    { label: 'Fee Collection', value: '₹4.82 Cr', trend: '+12.5%', up: true, icon: Wallet },
+    { label: 'Avg Attendance', value: '94.2%', trend: '+0.8%', up: true, icon: Activity },
+  ],
+  SCHOOL_HEAD: [
+    { label: 'Total Students', value: '2,847', trend: '+4.2%', up: true, icon: Users },
+    { label: 'Staff Online', value: '186', trend: '+1.8%', up: true, icon: GraduationCap },
+    { label: 'Fee Collection', value: '₹4.82 Cr', trend: '+12.5%', up: true, icon: Wallet },
+    { label: 'Avg Attendance', value: '94.2%', trend: '+0.8%', up: true, icon: Activity },
+  ],
+  ADMIN: [
+    { label: 'Active Students', value: '2,847', trend: '+4.2%', up: true, icon: Users },
+    { label: 'Pending Tasks', value: '23', trend: '-5', up: true, icon: Clock },
+    { label: 'Fee Outstanding', value: '₹38.4L', trend: '-2.1%', up: true, icon: Wallet },
+    { label: "Today's Attendance", value: '94.2%', trend: '+0.8%', up: true, icon: Activity },
+  ],
+  TEACHER: [
+    { label: 'My Classes Today', value: '6', trend: '2 pending', up: true, icon: BookOpen },
+    { label: 'My Students', value: '184', trend: 'across 4 sections', up: true, icon: Users },
+    { label: 'At-Risk Students', value: '7', trend: 'in my classes', up: false, icon: AlertTriangle },
+    { label: 'My Leave Balance', value: '12 days', trend: 'CL: 8, SL: 4', up: true, icon: CalendarClock },
+  ],
+  STUDENT: [
+    { label: 'My Attendance', value: '94.2%', trend: '+1.4%', up: true, icon: Activity },
+    { label: 'My Avg Score', value: '84%', trend: '+3.2%', up: true, icon: Target },
+    { label: 'Pending Assignments', value: '4', trend: '2 due this week', up: false, icon: FileText },
+    { label: 'Fee Status', value: 'Clear', trend: 'no dues', up: true, icon: Wallet },
+  ],
+  PARENT: [
+    { label: "Child's Attendance", value: '94.2%', trend: '+1.4%', up: true, icon: Activity },
+    { label: "Child's Avg Score", value: '84%', trend: '+3.2%', up: true, icon: Target },
+    { label: 'Fee Status', value: '₹0 due', trend: 'paid this term', up: true, icon: Wallet },
+    { label: 'Next PTM', value: '15 Jul', trend: '12 days away', up: true, icon: Calendar },
+  ],
+  RECEPTION: [
+    { label: "Today's Visitors", value: '14', trend: '3 walk-ins', up: true, icon: Users },
+    { label: 'Pending Gate Passes', value: '5', trend: 'awaiting approval', up: false, icon: ShieldCheck },
+    { label: 'Inquiry Queue', value: '8', trend: '2 new today', up: true, icon: UserPlus },
+    { label: 'Appointments', value: '3', trend: 'today', up: true, icon: CalendarDays },
+  ],
+  IT_TEAM: [
+    { label: 'System Health', value: '99.2%', trend: 'all green', up: true, icon: Activity },
+    { label: 'Failed Rule Runs (24h)', value: '4', trend: '-2', up: true, icon: Cpu },
+    { label: 'Licence Status', value: '4 active', trend: '1 expiring in 30d', up: false, icon: ShieldCheck },
+    { label: 'Audit Log Events (24h)', value: '1,284', trend: '+18%', up: true, icon: Database },
+  ],
+}
 
 const ATTENDANCE_TREND = [
   { day: 'Mon', value: 92.1 }, { day: 'Tue', value: 93.4 }, { day: 'Wed', value: 94.2 },
@@ -133,6 +180,18 @@ export function DashboardHome() {
         ]}
       />
 
+      {/* Role scope banner — visible reminder of what this role can/cannot see */}
+      {user && ROLE_INFO[user.role] && ROLE_INFO[user.role].neverSees !== 'N/A' && (
+        <div className="flex items-start gap-2 p-3 rounded-xl bg-blue-50 border border-blue-200">
+          <ShieldCheck className="w-4 h-4 text-blue-700 mt-0.5 flex-shrink-0" />
+          <div className="text-xs leading-relaxed">
+            <span className="font-semibold text-blue-900">{ROLE_INFO[user.role].label} scope:</span>{' '}
+            <span className="text-blue-800">sees {ROLE_INFO[user.role].sees.toLowerCase()}.</span>{' '}
+            <span className="text-blue-700">Never sees: {ROLE_INFO[user.role].neverSees.toLowerCase()}.</span>
+          </div>
+        </div>
+      )}
+
       {/* Module grid */}
       <div>
         <div className="flex items-center justify-between mb-4">
@@ -154,8 +213,9 @@ export function DashboardHome() {
 
 
       {/* KPIs — Apple style: clean white cards with graphite icons */}
+      {/* Each role sees ONLY the KPIs relevant to their daily actions (Phase 7). */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
-        {KPIS.map((kpi, i) => (
+        {(ROLE_KPIS[user?.role || 'TEACHER'] || ROLE_KPIS.TEACHER).map((kpi, i) => (
           <motion.div
             key={kpi.label}
             initial={{ opacity: 0, y: 10 }}

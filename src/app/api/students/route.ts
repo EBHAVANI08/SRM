@@ -1,102 +1,75 @@
 /**
- * GET /api/students — List students (role-scoped)
+ * GET /api/students — List students (role-scoped, server-side enforced)
  * POST /api/students — Create a student (publishes event)
  *
- * Phase 1: Basic CRUD with event publishing and role-based field filtering
+ * Phase 7 hardening: row-level scope enforced via apiScope.guardQuery().
+ * - TEACHER: only sees students in assigned sections (assignedStudentIds)
+ * - PARENT: only sees own children (childrenStudentIds)
+ * - STUDENT: only sees self
+ * - RECEPTION: school-wide minimal directory
+ * - IT_TEAM: blocked (no access to student resource)
+ * - ADMIN/SCHOOL_HEAD/SUPER_ADMIN: school-wide
+ *
+ * Field redaction: applied via apiScope.maskRecord() per role sensitivity tier.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { publishEvent } from '@/lib/eventBus'
 import { hasPermission } from '@/lib/auth'
+import { getUserFromHeaders, guardQuery, maskRecords } from '@/lib/apiScope'
 
 export const runtime = 'nodejs'
 
-// Helper: get user from middleware headers
-function getUser(req: NextRequest) {
-  return {
-    userId: req.headers.get('x-user-id') || '',
-    role: req.headers.get('x-user-role') || '',
-    schoolId: req.headers.get('x-user-school-id') || 'school_default',
-    permissions: JSON.parse(req.headers.get('x-user-permissions') || '[]'),
-  }
-}
-
-// Role-based field selection (redaction at query level — §2.1)
-function getSelectableFields(role: string) {
-  const baseFields = {
-    id: true, admissionNo: true, firstName: true, lastName: true, fullName: true,
-    dob: true, gender: true, photo: true, status: true, sectionId: true,
-    admissionDate: true,
-  }
-
-  switch (role) {
-    case 'TEACHER':
-      return { ...baseFields, bloodGroup: true, medicalConditions: true, allergies: true,
-        fatherName: true, motherName: true, guardianName: true, guardianPhone: true }
-    case 'PARENT':
-      // Parent only sees their own children (filtered in query)
-      return { ...baseFields, bloodGroup: true, address: true, city: true,
-        fatherName: true, motherName: true, guardianName: true, guardianPhone: true, guardianEmail: true,
-        fees: { select: { id: true, feeType: true, amount: true, paid: true, balance: true, status: true } } }
-    case 'STUDENT':
-      return baseFields
-    case 'RECEPTION':
-      return { ...baseFields, guardianName: true, guardianPhone: true, address: true, city: true }
-    default: // ADMIN, SCHOOL_HEAD, SUPER_ADMIN, IT_TEAM
-      return true // all fields
-  }
-}
-
 export async function GET(req: NextRequest) {
   try {
-    const user = getUser(req)
+    const user = getUserFromHeaders(req)
     const { searchParams } = new URL(req.url)
     const search = searchParams.get('search') || ''
     const sectionId = searchParams.get('sectionId')
     const limit = parseInt(searchParams.get('limit') || '50')
     const offset = parseInt(searchParams.get('offset') || '0')
 
-    const where: any = {}
+    // Build caller's extra where-clause
+    const extraWhere: Record<string, any> = {}
     if (search) {
-      where.OR = [
+      extraWhere.OR = [
         { firstName: { contains: search } },
         { lastName: { contains: search } },
         { fullName: { contains: search } },
         { admissionNo: { contains: search } },
       ]
     }
-    if (sectionId) where.sectionId = sectionId
+    if (sectionId) extraWhere.sectionId = sectionId
 
-    // Parent role: only see their children
-    if (user.role === 'PARENT') {
-      // In production, filter by parent's children via PersonRelationship
-      // For now, allow all (demo mode)
+    // SERVER-SIDE SCOPE ENFORCEMENT — cannot be bypassed by client
+    const guard = guardQuery('student', 'view', user, extraWhere)
+    if (!guard.ok) {
+      return NextResponse.json(
+        { success: false, error: guard.reason, scopeDenied: true },
+        { status: 403 },
+      )
     }
 
     const students = await db.student.findMany({
-      where,
+      where: guard.where,
       take: limit,
       skip: offset,
       orderBy: { fullName: 'asc' },
     })
 
-    // Role-based field redaction (post-query, for simplicity in Phase 1)
-    // In Phase 3, this moves to the Context Engine with server-side redaction
-    const redactedStudents = students.map((s) => {
-      if (user.role === 'STUDENT') {
-        // Students see minimal info about peers
-        const { guardianPhone, guardianEmail, guardianOccupation, annualIncome, address, city, state, pincode, aadhaarNo, ...rest } = s
-        return rest
-      }
-      if (user.role === 'RECEPTION') {
-        const { aadhaarNo, annualIncome, ...rest } = s
-        return rest
-      }
-      return s // ADMIN, SCHOOL_HEAD, SUPER_ADMIN, TEACHER see full record
-    })
+    // Field-level redaction per role sensitivity tier
+    const redactedStudents = maskRecords('student', user, students as any)
 
-    return NextResponse.json({ success: true, students: redactedStudents, count: redactedStudents.length })
+    return NextResponse.json({
+      success: true,
+      students: redactedStudents,
+      count: redactedStudents.length,
+      scope: {
+        role: user.role,
+        filtered: true,
+      },
+    })
   } catch (error: any) {
     console.error('GET /api/students error:', error)
     return NextResponse.json({ success: false, error: error?.message }, { status: 500 })
@@ -105,7 +78,16 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const user = getUser(req)
+    const user = getUserFromHeaders(req)
+
+    // Server-side: only ADMIN+ can create students
+    const actionCheck = guardQuery('student', 'create', user)
+    if (!actionCheck.ok) {
+      return NextResponse.json(
+        { success: false, error: actionCheck.reason, scopeDenied: true },
+        { status: 403 },
+      )
+    }
 
     if (!hasPermission(user.permissions, 'admissions.create')) {
       return NextResponse.json({ success: false, error: 'Insufficient permissions' }, { status: 403 })
@@ -135,11 +117,11 @@ export async function POST(req: NextRequest) {
         guardianPhone,
         sectionId: sectionId || null,
         status: 'ACTIVE',
-        ...body, // pass through other fields
+        ...body,
       },
     })
 
-    // Publish event (same transaction conceptually — in production, use $transaction)
+    // Publish event
     await publishEvent({
       type: 'student.admitted',
       entityType: 'STUDENT',

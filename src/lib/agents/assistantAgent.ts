@@ -194,13 +194,22 @@ export async function processMessage(
     } catch { /* skip */ }
   }
 
-  // 5. Determine agent routing
+  // 5. Determine agent routing (also informed by orchestrator hint in moduleContext)
   let agentRouted: string | undefined
   const lowerQuery = userQuery.toLowerCase()
-  if (lowerQuery.includes('fee') || lowerQuery.includes('payment') || lowerQuery.includes('defaulter')) agentRouted = 'FinanceAgent'
-  else if (lowerQuery.includes('substitute') || lowerQuery.includes('timetable')) agentRouted = 'OpsAgent'
-  else if (lowerQuery.includes('at-risk') || lowerQuery.includes('risk') || lowerQuery.includes('pattern')) agentRouted = 'InsightAgent'
-  else if (lowerQuery.includes('report') || lowerQuery.includes('exam') || lowerQuery.includes('marks')) agentRouted = 'InsightAgent'
+  if (moduleContext?.includes('routed=')) {
+    // Trust the orchestrator's routing decision
+    const m = moduleContext.match(/routed=([A-Za-z]+)/)
+    if (m) agentRouted = m[1]
+  }
+  if (!agentRouted) {
+    if (lowerQuery.includes('fee') || lowerQuery.includes('payment') || lowerQuery.includes('defaulter')) agentRouted = 'FinanceAgent'
+    else if (lowerQuery.includes('substitute') || lowerQuery.includes('timetable')) agentRouted = 'HRStaffingAgent'
+    else if (lowerQuery.includes('transport') || lowerQuery.includes('bus') || lowerQuery.includes('route')) agentRouted = 'TransportAgent'
+    else if (lowerQuery.includes('safety') || lowerQuery.includes('incident') || lowerQuery.includes('emergency')) agentRouted = 'SafetyAgent'
+    else if (lowerQuery.includes('at-risk') || lowerQuery.includes('risk') || lowerQuery.includes('pattern')) agentRouted = 'InsightAgent'
+    else if (lowerQuery.includes('report') || lowerQuery.includes('exam') || lowerQuery.includes('marks')) agentRouted = 'InsightAgent'
+  }
 
   // 6. Build system prompt
   const systemPrompt = buildSafeSystemPrompt(

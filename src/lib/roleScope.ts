@@ -397,8 +397,16 @@ export function applyScope(
   switch (s.scope) {
     case 'global':
       return { where: {}, allowed: true }
-    case 'school':
+    case 'school': {
+      // Student model has no schoolId column (single-school deployment).
+      // For resources that DO have schoolId, filter by it; for Student/parent,
+      // return all (school scope is implicit).
+      const noSchoolIdResources: ResourceKey[] = ['student', 'parent']
+      if (noSchoolIdResources.includes(resource)) {
+        return { where: {}, allowed: true }
+      }
       return { where: { schoolId: ctx.schoolId }, allowed: true }
+    }
     case 'assigned':
       if (resource === 'student' || resource === 'attendance' || resource === 'exam' || resource === 'report_card' || resource === 'behaviour') {
         return { where: { id: { in: ctx.assignedStudentIds ?? [] } }, allowed: true }

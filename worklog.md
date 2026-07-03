@@ -89,3 +89,47 @@ Stage Summary:
   - Phase 6 (School Day Autopilot) ✅
   - Phase 7 (Concierge/Orchestrator polish) ✅
 - The AI chat panel is now: (1) routed by a 10-agent orchestrator, (2) scope-aware at the action-suggestion layer, (3) transparent about routing decisions, (4) transparent about scope restrictions, (5) auto-flags at-risk students when seen, (6) recoverable via ConciergeAgent fallback.
+
+---
+Task ID: step0-6-audit-and-hardening
+Agent: main (continuation session)
+Task: Step 0 mandatory audit + Step 1 server-side role-scope enforcement across all API routes + Step 2 add 3 missing named agents (Transport, HR/Staffing, Safety) + Step 4 dashboard role-awareness + Step 6 validation. Plus user-requested UI change: move "Ask LearnX AI" button from a fixed sidebar slot to a module under Notifications.
+
+Work Log:
+- Step 0 Audit — Mapped the codebase: Next.js 16 + React 19 + Prisma 6 + SQLite + z-ai-web-dev-sdk. 73 Prisma models, 48 API routes, 10 named agents in orchestrator (pre-this-session). Gap audit found that roleScope.ts existed but was only enforced in 4 places (/api/role-matrix, /api/roadmap, comms.ts, orchestrator.ts). Critical data routes (/api/students, /api/fees/defaulters, /api/attendance, /api/exams/marks, /api/insights/feed, /api/digital-twin/simulate) did NOT enforce row-level scope or action permissions on the server — they relied on UI hints only.
+- UI move — Removed the fixed "Ask LearnX AI" button from the bottom of the sidebar. Added a new ViewKey 'ask-learnx-ai' to store.ts and a new module entry under the 'engagement' category in modules.ts (placed immediately after the 'notification-log' module). Built AskLearnXAILanding.tsx (~180 lines): hero card, 4 trust cards (13 Named Agents, Scope Enforced, Field Redaction, At-Risk Auto-Flag), full agent catalog with tier badges + keywords + min-role, 5-step Orchestrator flow diagram, CTA. Sidebar handleModuleClick() now opens the AI overlay panel when 'ask-learnx-ai' is clicked (and keeps the module highlighted).
+- Step 2 — Added 3 missing named agents to agentRegistry.ts (new file, pure-data, no SDK imports — safe for client components): TransportAgent 🚌 (routes/delays/vehicle status, autonomous parent notify, safety escalation), HRStaffingAgent 👥 (leave + substitution, substitute availability check, exam-duty conflict escalation), SafetyAgent 🚨 (incident reporting, scoped alert with ack tracking, school-wide broadcasts require principal confirm). Slimmed OpsAgent to just timetable/hostel/gate-pass. Updated orchestrator dispatch to route all three through AssistantAgent.processMessage with a `routed=<AgentName>` hint in moduleContext. Updated AssistantAgent's routing hint to recognize transport/safety/HR keywords. Refactored NAMED_AGENTS, ROLE_PRECEDENCE, roleRank, AgentDescriptor into agentRegistry.ts so client components (AskLearnXAILanding) can import them without pulling in the z-ai SDK (which broke Turbopack). Updated all "10 named agents" copy to "13 named agents".
+- Step 1 — Created src/lib/apiScope.ts: getUserFromHeaders(), enforceScope(), enforceAction(), maskRecord(), maskRecords(), guardQuery() (combined action+scope check). Applied server-side scope enforcement to:
+    * /api/students GET+POST: guardQuery('student', 'view'/'create', user, extraWhere) + maskRecords() for field redaction. TEACHER now blocked from seeing all students (assigned scope = empty assignedStudentIds list returns 0). IT_TEAM blocked entirely. PARENT/STUDENT see only self/children.
+    * /api/fees/defaulters GET: enforceAction('fee', 'view') — TEACHER/STUDENT/IT_TEAM blocked. POST: enforceAction('communication_log', 'broadcast') — only ADMIN+ can bulk-send.
+    * /api/attendance GET: guardQuery('attendance', 'view') + extraWhere for studentId/date. POST: guardQuery('attendance', 'create') — TEACHER+ only.
+    * /api/exams/marks POST: guardQuery('exam', 'create') — TEACHER+ only. STUDENT/PARENT/RECEPTION/IT_TEAM blocked.
+    * /api/insights/feed GET: enforceAction('student', 'view') — IT_TEAM gets empty feed (PII blocked).
+    * /api/digital-twin/simulate POST: enforceAction('digital_twin', 'create') — only SUPER_ADMIN/SCHOOL_HEAD/IT_TEAM can run simulations.
+  Fixed roleScope.applyScope() bug: 'school' scope was returning `{schoolId: ctx.schoolId}` for ALL resources, but Student model has no schoolId column — Prisma threw. Added noSchoolIdResources=['student','parent'] guard returning `{}` for those.
+  Fixed conciergeAgent IT_TEAM live-counts bug: was querying RuleRun with schoolId+createdAt filters, but RuleRun has neither — changed to executedAt only.
+- Step 4 — Dashboard role-awareness: Built ROLE_KPIS catalog in DashboardHome.tsx (8 roles × 4 KPIs each, all role-specific). PRINCIPAL sees school-wide counts, TEACHER sees "My Classes/My Students/At-Risk/Leave Balance", STUDENT sees "My Attendance/My Avg Score/Pending Assignments/Fee Status", PARENT sees "Child's X" KPIs, RECEPTION sees visitor/gate-pass/inquiry/appointment counts, IT_TEAM sees system-health/failed-runs/licence/audit-log counts. Added a role scope banner above the KPI grid using ROLE_INFO[role].sees/neverSees — visible reminder of the role contract.
+- Step 6 Validation — Wrote /home/z/my-project/scripts/validate-phase7.py and ran it in pieces:
+    * Test 1 (cross-scope rejection): 5/5 PASS — TEACHER blocked from /api/fees/defaulters (403), IT_TEAM blocked from /api/students (403), STUDENT blocked from /api/exams/marks (403), STUDENT blocked from /api/attendance (403), TEACHER blocked from POST /api/fees/defaulters broadcast (403).
+    * Test 2 (allowed queries): 4/4 PASS — PRINCIPAL gets 4 defaulters (200), ADMIN gets 4 students (200), TEACHER gets 0 students (200, scope-filtered to assignedStudentIds=[]), IT_TEAM gets empty insights feed (200, count=0).
+    * Test 3 (orchestrator routing to new agents): 3/3 PASS — "bus 14 is running late" → TransportAgent (conf 0.64), "I need leave approval" → HRStaffingAgent (conf 1.0), "report a safety incident" → SafetyAgent (conf 0.64).
+    * Test 4 (concierge personalization): 3/3 PASS — PRINCIPAL body mentions "active students", TEACHER body mentions "open task(s) assigned", IT_TEAM body mentions "rule runs".
+    * Test 5 (Digital Twin simulation): 2/2 PASS — PRINCIPAL can run simulation (200, runId=cmr54hu1j..., recommendedAction="NO IMPACT"), TEACHER blocked from simulation (403).
+  Total: 17/17 validation tests PASS.
+- Verification: `bun run lint` → 0 errors / 0 warnings. `bun run build` → success, 48 API routes (no new routes added, 6 existing routes hardened).
+
+Stage Summary:
+- All 6 steps from the user's spec delivered:
+  - Step 0 (audit) ✅ — written audit produced and acted on
+  - Step 1 (role access contract) ✅ — server-side enforcement via apiScope.ts guardQuery/enforceAction on 6 critical routes; field-level redaction via maskRecords
+  - Step 2 (agent architecture) ✅ — 13 named agents in registry (was 10): added TransportAgent, HRStaffingAgent, SafetyAgent
+  - Step 3 (automation engine) ✅ — already delivered in Phase 5 (control centre, activity log, digital twin, trigger matrix); no regression
+  - Step 4 (school day autopilot) ✅ — already delivered in Phase 6; dashboard now role-aware so the morning brief surfaces to the right role
+  - Step 5 (AI assistant scope awareness) ✅ — already delivered in Phase 7; orchestrator gates actions, surfaces scope notes, auto-flags at-risk
+  - Step 6 (validation) ✅ — 17/17 cross-scope rejection + allowed + routing + concierge + simulation tests pass
+- UI change request delivered: "Ask LearnX AI" is now a module under Notifications (category: engagement), no longer a fixed bottom-of-sidebar button. Clicking it opens the chat overlay AND surfaces a rich landing page in the main content area with the 13-agent catalog.
+- 4 new files: src/lib/apiScope.ts (~130 lines), src/lib/agents/agentRegistry.ts (~145 lines), src/components/dashboard/AskLearnXAILanding.tsx (~180 lines), scripts/validate-phase7.py (~190 lines)
+- 6 routes hardened: /api/students, /api/fees/defaulters, /api/attendance, /api/exams/marks, /api/insights/feed, /api/digital-twin/simulate
+- 1 component rewritten: Sidebar.tsx (no more fixed AI button; module-click handler routes 'ask-learnx-ai' specially)
+- 1 component enriched: DashboardHome.tsx (ROLE_KPIS catalog + role scope banner)
+- 2 bug fixes: applyScope schoolId-on-Student bug, conciergeAgent IT_TEAM RuleRun query bug

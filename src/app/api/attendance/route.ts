@@ -1,52 +1,64 @@
 /**
- * GET /api/attendance — List attendance records
+ * GET /api/attendance — List attendance records (role-scoped)
  * POST /api/attendance — Mark attendance (publishes event, triggers absence cascade)
  *
- * Phase 1: Basic CRUD with event publishing
+ * Phase 7 hardening: row-level scope enforced.
+ * - TEACHER: only sees attendance for students in assigned sections
+ * - PARENT: only sees their children's attendance
+ * - STUDENT: only sees own attendance
+ * - IT_TEAM: blocked (no attendance access)
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { publishEvent } from '@/lib/eventBus'
 import { hasPermission } from '@/lib/auth'
+import { getUserFromHeaders, guardQuery } from '@/lib/apiScope'
 
 export const runtime = 'nodejs'
 
-function getUser(req: NextRequest) {
-  return {
-    userId: req.headers.get('x-user-id') || '',
-    role: req.headers.get('x-user-role') || '',
-    schoolId: req.headers.get('x-user-school-id') || 'school_default',
-    permissions: JSON.parse(req.headers.get('x-user-permissions') || '[]'),
-  }
-}
-
 export async function GET(req: NextRequest) {
   try {
-    const user = getUser(req)
+    const user = getUserFromHeaders(req)
     const { searchParams } = new URL(req.url)
     const studentId = searchParams.get('studentId')
     const date = searchParams.get('date')
     const limit = parseInt(searchParams.get('limit') || '50')
 
-    const where: any = {}
-    if (studentId) where.studentId = studentId
+    const extraWhere: Record<string, any> = {}
+    if (studentId) extraWhere.studentId = studentId
     if (date) {
       const dayStart = new Date(date)
       dayStart.setHours(0, 0, 0, 0)
       const dayEnd = new Date(date)
       dayEnd.setHours(23, 59, 59, 999)
-      where.date = { gte: dayStart, lte: dayEnd }
+      extraWhere.date = { gte: dayStart, lte: dayEnd }
+    }
+
+    // SERVER-SIDE SCOPE — Attendance has no schoolId column; applyScope('school')
+    // for attendance returns {id: {in: assignedStudentIds}} for TEACHER.
+    // For STUDENT/parent, the scope filters by studentId (self/children).
+    const guard = guardQuery('attendance', 'view', user, extraWhere)
+    if (!guard.ok) {
+      return NextResponse.json(
+        { success: false, error: guard.reason, scopeDenied: true },
+        { status: 403 },
+      )
     }
 
     const records = await db.attendance.findMany({
-      where,
+      where: guard.where,
       take: limit,
       orderBy: { date: 'desc' },
       include: { student: { select: { id: true, fullName: true, admissionNo: true, photo: true, sectionId: true } } },
     })
 
-    return NextResponse.json({ success: true, records, count: records.length })
+    return NextResponse.json({
+      success: true,
+      records,
+      count: records.length,
+      scope: { role: user.role, filtered: true },
+    })
   } catch (error: any) {
     console.error('GET /api/attendance error:', error)
     return NextResponse.json({ success: false, error: error?.message }, { status: 500 })
@@ -55,7 +67,16 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const user = getUser(req)
+    const user = getUserFromHeaders(req)
+
+    // SERVER-SIDE SCOPE: only TEACHER+ can mark attendance
+    const actionCheck = guardQuery('attendance', 'create', user)
+    if (!actionCheck.ok) {
+      return NextResponse.json(
+        { success: false, error: actionCheck.reason, scopeDenied: true },
+        { status: 403 },
+      )
+    }
 
     if (!hasPermission(user.permissions, 'attendance.mark')) {
       return NextResponse.json({ success: false, error: 'Insufficient permissions' }, { status: 403 })

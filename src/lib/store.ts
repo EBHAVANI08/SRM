@@ -64,6 +64,7 @@ export type ViewKey =
   | 'autopilot'
   | 'role-matrix'
   | 'roadmap'
+  | 'ask-learnx-ai'
 
 interface AppState {
   user: AuthUser | null

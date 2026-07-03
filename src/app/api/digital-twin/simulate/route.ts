@@ -3,24 +3,31 @@
  * Body: { name, description?, startDate, endDate, scenarioConfig }
  *
  * startDate / endDate: ISO strings, window must be ≤ 90 days
+ *
+ * Phase 7 hardening: server-side scope enforced.
+ * - Only SUPER_ADMIN / SCHOOL_HEAD / IT_TEAM can run simulations (Tier C operation)
+ * - TEACHER/STUDENT/PARENT/RECEPTION: blocked
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { runSimulation, type ScenarioConfig } from '@/lib/digitalTwin'
+import { getUserFromHeaders, enforceAction } from '@/lib/apiScope'
 
 export const runtime = 'nodejs'
 
-function getUser(req: NextRequest) {
-  return {
-    userId: req.headers.get('x-user-id') || 'unknown',
-    role: req.headers.get('x-user-role') || '',
-    schoolId: req.headers.get('x-user-school-id') || 'school_default',
-  }
-}
-
 export async function POST(req: NextRequest) {
   try {
-    const user = getUser(req)
+    const user = getUserFromHeaders(req)
+
+    // SERVER-SIDE SCOPE: only SUPER_ADMIN / SCHOOL_HEAD / IT_TEAM can simulate
+    const actionCheck = enforceAction('digital_twin', 'create', user)
+    if (!actionCheck.allowed) {
+      return NextResponse.json(
+        { success: false, error: actionCheck.reason, scopeDenied: true },
+        { status: 403 },
+      )
+    }
+
     const body = await req.json()
     if (!body.name || !body.startDate || !body.endDate) {
       return NextResponse.json({ success: false, error: 'name, startDate, endDate are required' }, { status: 400 })

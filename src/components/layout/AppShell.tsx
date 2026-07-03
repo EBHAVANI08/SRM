@@ -13,6 +13,7 @@ import { AttendanceModule } from '@/components/dashboard/AttendanceModule'
 import { FeesModule } from '@/components/dashboard/FeesModule'
 import { AdmissionsModule } from '@/components/dashboard/AdmissionsModule'
 import { Phase5Module } from '@/components/dashboard/Phase5Module'
+import { AskLearnXAILanding } from '@/components/dashboard/AskLearnXAILanding'
 
 const AI_MODULE_KEYS = [
   'ai-question-paper',
@@ -52,6 +53,8 @@ export function AppShell() {
         <main className="flex-1 overflow-y-auto custom-scroll">
           {currentView === 'dashboard' ? (
             <DashboardHome />
+          ) : currentView === 'ask-learnx-ai' ? (
+            <AskLearnXAILanding />
           ) : AI_MODULE_KEYS.includes(currentView) ? (
             <AIPoweredModule moduleKey={currentView} />
           ) : currentView === 'front-desk' ? (

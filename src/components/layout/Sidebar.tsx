@@ -20,7 +20,7 @@ const ICON_MAP: Record<string, any> = {
   CalendarDays, Trophy, Award, FolderLock, ShieldCheck, Cog, Brain, Users,
   CalendarClock, Library, HeartPulse, Building2, GraduationCap, UserCog,
   Landmark, CalendarRange, FileQuestion, Compass, Siren, Target, Database,
-  Settings,
+  Settings, Sparkles,
   Cpu, BellRing, Lightbulb, GitBranch, Timer, Grid3x3, Map,
 }
 
@@ -59,6 +59,17 @@ export function Sidebar() {
   const categories = Array.from(new Set(filteredModules.map((m) => m.category)))
   const roleInfo = ROLE_INFO[user.role]
   const unreadCount = notifications.filter((n) => !n.read).length
+
+  // Handle module click: 'ask-learnx-ai' opens the AI panel as an overlay,
+  // all others navigate normally.
+  const handleModuleClick = (key: string) => {
+    if (key === 'ask-learnx-ai') {
+      setView(key)              // keep the module highlighted in the sidebar
+      setAIAssistantOpen(true)  // open the AI overlay panel
+      return
+    }
+    setView(key)
+  }
 
   return (
     <aside
@@ -127,25 +138,35 @@ export function Sidebar() {
                 {catModules.map((m) => {
                   const Icon = ICON_MAP[m.icon] || LayoutDashboard
                   const isActive = currentView === m.key
+                  const isAIPanel = m.key === 'ask-learnx-ai'
                   return (
                     <button
                       key={m.key}
-                      onClick={() => setView(m.key)}
+                      onClick={() => handleModuleClick(m.key)}
                       className={`sidebar-item w-full ${isActive ? 'active' : ''} ${
                         collapsed ? 'justify-center' : ''
-                      }`}
+                      } ${isAIPanel ? 'ask-learnx-ai-item' : ''}`}
+                      style={isAIPanel ? {
+                        background: 'linear-gradient(135deg, #1E3A8A, #2563EB)',
+                        color: '#FFFFFF',
+                        borderColor: '#1E3A8A',
+                        fontWeight: 600,
+                      } : undefined}
                       title={collapsed ? m.title : undefined}
                     >
                       <span className="text-base flex-shrink-0 leading-none">{m.emoji}</span>
                       {!collapsed && (
                         <>
                           <span className="flex-1 text-left truncate">{m.shortTitle}</span>
-                          {m.aiPowered && (
+                          {m.aiPowered && !isAIPanel && (
                             <span className="w-1 h-1 rounded-full bg-orange-500 opacity-50" />
+                          )}
+                          {isAIPanel && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                           )}
                         </>
                       )}
-                      {collapsed && m.aiPowered && (
+                      {collapsed && m.aiPowered && !isAIPanel && (
                         <span className="absolute top-1.5 right-1.5 w-1 h-1 rounded-full bg-orange-500 opacity-50" />
                       )}
                     </button>
@@ -155,34 +176,6 @@ export function Sidebar() {
             </div>
           )
         })}
-      </div>
-
-      {/* AI Assistant Section — as a section under modules */}
-      <div className="relative z-10 px-3 pb-2">
-        {!collapsed && (
-          <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-2 mb-1.5">
-            AI Assistant
-          </div>
-        )}
-        <button
-          onClick={() => setAIAssistantOpen(true)}
-          className={`sidebar-item w-full ${collapsed ? 'justify-center' : ''}`}
-          style={{
-            background: 'linear-gradient(135deg, #1E3A8A, #2563EB)',
-            color: '#FFFFFF',
-            borderColor: '#1E3A8A',
-            fontWeight: 600,
-          }}
-          title={collapsed ? 'Ask LearnX AI' : undefined}
-        >
-          <Sparkles className="w-4 h-4 flex-shrink-0" />
-          {!collapsed && (
-            <>
-              <span className="flex-1 text-left truncate">Ask LearnX AI</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-            </>
-          )}
-        </button>
       </div>
 
       {/* User card — elegant */}

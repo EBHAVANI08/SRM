@@ -265,7 +265,7 @@ export function AIAssistant() {
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-base">LearnX AI</span>
-                      <span className="px-1.5 py-0.5 rounded-full bg-white/10 text-white text-[9px] font-semibold">10 AGENTS</span>
+                      <span className="px-1.5 py-0.5 rounded-full bg-white/10 text-white text-[9px] font-semibold">13 AGENTS</span>
                     </div>
                     <div className="text-[11px] text-white/60 flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
@@ -516,7 +516,7 @@ export function AIAssistant() {
               </form>
               <div className="flex items-center justify-between mt-2 px-1">
                 <span className="text-[10px] text-slate-400 flex items-center gap-1">
-                  <CheckCircle2 className="w-2.5 h-2.5" /> Orchestrator + 10 named agents
+                  <CheckCircle2 className="w-2.5 h-2.5" /> Orchestrator + 13 named agents
                 </span>
                 <span className="text-[10px] text-slate-400">Press Enter to send</span>
               </div>
