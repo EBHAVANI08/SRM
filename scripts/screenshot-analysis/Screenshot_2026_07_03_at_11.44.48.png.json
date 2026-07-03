@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "# D. Automation Discovery Engine — the actual differentiator\n\nThis is the single feature that no competitor ERP has: the system watches for repetitive manual work and proposes automating it, instead of waiting for the school to request a feature.\n\n## Table: Automation Discovery Engine Mechanisms\n| Mechanism | Detail |\n|-----------|--------|\n| Pattern detection | Log every manual admin/teacher action with metadata (who, what screen, what sequence, how often, how long it takes). The Discovery Agent looks for repeated sequences above a frequency threshold (e.g. the same 4-step action taken by the same role 3+ times in a week) |\n| Proposal, not action | When a pattern is found, the Discovery Agent drafts a candidate automation rule in plain language (e.g. \"Every Monday you manually export the attendance summary and email it to the Principal — want me to automate this?\") and places it in a review queue |\n| Human approval required | Admin/Principal reviews the proposal in the Automation Control Centre, can accept, edit the condition, or dismiss it — nothing is auto-enabled without explicit approval |\n| Learning loop | Accepted proposals become live rules in the Automation Rules Engine (Section F); dismissed proposals are recorded so the same suggestion isn't repeated |",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1783097979,
+  "id": "202607040059301d2363bd8f8a40e9",
+  "model": "glm-4.6v",
+  "object": "chat.completion",
+  "request_id": "202607040059301d2363bd8f8a40e9",
+  "usage": {
+    "completion_tokens": 259,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 2386,
+    "prompt_tokens_details": {
+      "cached_tokens": 101
+    },
+    "total_tokens": 2645
+  }
+}

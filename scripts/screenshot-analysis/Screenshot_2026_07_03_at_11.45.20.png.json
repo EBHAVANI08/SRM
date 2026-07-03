@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "# E. Digital Twin Simulation Mode — de-risking automation\n\n## Description\nBefore any new automation rule or policy change goes live (a new attendance threshold, a new late-fee policy, a new escalation window), it should be testable against real historical data first — this is what makes \"fully automated\" safe to turn on rather than risky.\n\n## Table: Digital Twin Simulation Steps\n| Column Name | Description |\n|-------------|-------------|\n| Step | Numerical step identifier with descriptive label |\n| What happens | Detailed explanation of actions and outcomes for each step |\n\n### Table Rows:\n1. **Step 1. Draft**\n   - What happens: Admin (or an accepted Discovery Agent proposal) defines a new rule or edits an existing one in the Automation Control Centre, but leaves it in \"simulation\" state, not live\n\n2. **Step 2. Replay**\n   - What happens: The system replays the rule against the last N months of real historical data (read-only, no live side effects) and computes: how many times it would have fired, which students/parents/staff would have been affected, and any conflicts with existing rules\n\n3. **Step 3. Impact report**\n   - What happens: Admin sees a plain-language summary before activating — e.g. \"This rule would have sent 340 extra notifications last term and flagged 12 students as at-risk who weren't previously flagged\"\n\n4. **Step 4. Go live or discard**\n   - What happens: Admin explicitly promotes the rule from simulation to live, or discards it. Only explicit promotion makes it active",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1783097988,
+  "id": "2026070400594387c859e42bc44c63",
+  "model": "glm-4.6v",
+  "object": "chat.completion",
+  "request_id": "2026070400594387c859e42bc44c63",
+  "usage": {
+    "completion_tokens": 330,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 2319,
+    "prompt_tokens_details": {
+      "cached_tokens": 101
+    },
+    "total_tokens": 2649
+  }
+}

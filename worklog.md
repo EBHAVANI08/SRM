@@ -133,3 +133,47 @@ Stage Summary:
 - 1 component rewritten: Sidebar.tsx (no more fixed AI button; module-click handler routes 'ask-learnx-ai' specially)
 - 1 component enriched: DashboardHome.tsx (ROLE_KPIS catalog + role scope banner)
 - 2 bug fixes: applyScope schoolId-on-Student bug, conciergeAgent IT_TEAM RuleRun query bug
+
+---
+Task ID: screenshot-spec-alignment
+Agent: main (continuation session)
+Task: User provided 9 reference screenshots from the LearnX product spec document. Audit each screenshot against the current codebase, identify gaps, and close them so the running application faithfully reflects every spec section.
+
+Work Log:
+- Step 1 — Analyzed all 9 screenshots using z-ai vision CLI (parallel + retry-on-429). Each screenshot parsed to a structured description saved under scripts/screenshot-analysis/.
+- Step 2 — Audited codebase against each screenshot:
+    * Screenshot 1 (Multi-Agent Architecture) — ✅ already 13 named agents in registry
+    * Screenshot 2 (Agent Capability Matrix: Agent/Owns/Autonomous/Propose-Only) — ⚠️ MISSING: agent registry had no owns/autonomousActions/proposeOnlyActions fields
+    * Screenshot 3 (Discovery Engine with learning loop) — ⚠️ PARTIAL: dedup only checked PENDING proposals, REJECTED ones could be re-suggested
+    * Screenshot 4 (Digital Twin 4 steps) — ✅ already implemented
+    * Screenshot 5 (Comparison table typical ERP vs LearnX) — ❌ MISSING: no UI surface for this positioning
+    * Screenshot 6 (Role Access Matrix 7 roles) — ✅ already implemented
+    * Screenshot 7+8 (Trigger Matrix 9-10 triggers + Notification Engine 4 reqs) — ✅ already implemented
+    * Screenshot 9 (7-phase Rollout Sequencing) — ✅ already implemented
+- Step 3 — Added owns/autonomousActions/proposeOnlyActions fields to all 14 agents in agentRegistry.ts (mirrors Screenshot 2 spec exactly). Added SPEC_AGENTS export filtering to the 10 spec-named agents. InsightAgent renamed-in-description to "Academic-Risk" to match spec.
+- Step 4 — Fixed Discovery Engine learning-loop dedup: changed `findFirst` filter from `status: 'PENDING'` to `status: { in: ['PENDING', 'REJECTED', 'APPROVED'] }` so dismissed proposals are NEVER re-suggested (Screenshot 3 spec satisfied).
+- Step 5 — Created src/lib/differentiators.ts: pure-data catalog with COMPARISON_TABLE (6 rows from Screenshot 5), DISCOVERY_MECHANISMS (4 from Screenshot 3), DIGITAL_TWIN_STEPS (4 from Screenshot 4), ARCHITECTURE_OVERVIEW (from Screenshot 1), NOTIFICATION_REQUIREMENTS (4 from Screenshot 8), ONE_LINE_POSITIONING (Screenshot 5 footer).
+- Step 6 — Built src/components/dashboard/DifferentiatorsModule.tsx (~310 lines): two new UI modules — AgentMatrixModule (mirrors Screenshot 2 spec table with 10 spec agents + 4 infrastructure agents, tier badges, propose-only enforcement explainer) and WhyLearnXModule (mirrors Screenshots 1, 3, 4, 5, 8 — 5 spec sections + positioning hero + maturity-level-4 footer + cross-links to live modules).
+- Step 7 — Added 'agent-matrix' and 'why-learnx' ViewKeys to store.ts. Added both as module entries in modules.ts under 'ai' category. Wired DIFFERENTIATOR_KEYS routing into AppShell.tsx. Added Bot icon to Sidebar ICON_MAP.
+- Step 8 — Created /api/agent-matrix and /api/why-learnx API routes. Both JWT-protected. Both return the full spec catalog as JSON for programmatic access (e.g. ConciergeAgent can fetch /api/why-learnx to answer "what makes LearnX different?").
+- Step 9 — Fixed 3 pre-existing Prisma bugs surfaced during validation:
+    * discoveryEngine.ts detectAttendanceDipClusters: queried Attendance with schoolId (Attendance has no schoolId column) → removed schoolId filter
+    * discoveryEngine.ts detectFeeDefaultClusters: queried FeeInstallment with schoolId AND selected studentId (neither column exists on FeeInstallment) → removed schoolId, joined via `fee: { select: { studentId: true } }` relation
+    * schoolDayAutopilot.ts: same schoolId-on-non-existent-column bug for Student, Attendance, FeeInstallment → removed schoolId filters from those 3 queries
+- Step 10 — Wrote scripts/validate-screenshots.py: 15-test validation suite covering all 9 screenshots. Final result: 15/15 PASS.
+
+Stage Summary:
+- All 9 reference screenshots now have a 1:1 reflection in the running application:
+  - Screenshot 1 → /api/agent-matrix + WhyLearnXModule Section B
+  - Screenshot 2 → /api/agent-matrix + AgentMatrixModule (full table with Owns/Autonomous/Propose-Only)
+  - Screenshot 3 → discoveryEngine.ts learning-loop fix + WhyLearnXModule Section D
+  - Screenshot 4 → /api/why-learnx digitalTwinSteps + WhyLearnXModule Section E
+  - Screenshot 5 → /api/why-learnx comparisonTable + WhyLearnXModule Section A + positioning hero
+  - Screenshot 6 → /api/role-matrix (already existed)
+  - Screenshot 7+8 → /api/trigger-matrix (already existed) + WhyLearnXModule Section H
+  - Screenshot 9 → /api/roadmap (already existed)
+- 4 new files: src/lib/differentiators.ts (~115 lines), src/components/dashboard/DifferentiatorsModule.tsx (~310 lines), src/app/api/agent-matrix/route.ts, src/app/api/why-learnx/route.ts
+- 2 new UI modules visible in sidebar under "AI Intelligence" category: "Agent Matrix" 🤖 and "Why LearnX" ✨
+- 2 lib files upgraded: agentRegistry.ts (added owns/autonomousActions/proposeOnlyActions to all 14 agents), discoveryEngine.ts (learning-loop dedup fix + Prisma bug fixes)
+- 1 lib file fixed: schoolDayAutopilot.ts (3 schoolId-on-non-existent-column bugs)
+- Validation: 15/15 screenshot-spec tests PASS. Lint: 0 errors. Build: success. 50 API routes (was 48).

@@ -7,7 +7,7 @@ import {
   CalendarDays, Trophy, Award, FolderLock, ShieldCheck, Cog, Brain, Users,
   CalendarClock, Library, HeartPulse, Building2, GraduationCap, UserCog,
   Landmark, CalendarRange, FileQuestion, Compass, Siren, Target, Database,
-  Settings, Sparkles, Search, Bell, LogOut,
+  Settings, Sparkles, Search, Bell, LogOut, Bot,
   PanelLeftClose, PanelLeft, Zap,
   Cpu, BellRing, Lightbulb, GitBranch, Timer, Grid3x3, Map,
 } from 'lucide-react'
@@ -20,7 +20,7 @@ const ICON_MAP: Record<string, any> = {
   CalendarDays, Trophy, Award, FolderLock, ShieldCheck, Cog, Brain, Users,
   CalendarClock, Library, HeartPulse, Building2, GraduationCap, UserCog,
   Landmark, CalendarRange, FileQuestion, Compass, Siren, Target, Database,
-  Settings, Sparkles,
+  Settings, Sparkles, Bot,
   Cpu, BellRing, Lightbulb, GitBranch, Timer, Grid3x3, Map,
 }
 

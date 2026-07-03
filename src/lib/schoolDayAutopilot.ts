@@ -63,9 +63,9 @@ async function snapshotKpis(schoolId: string): Promise<Record<string, any>> {
     pendingProposals,
     queuedComms,
   ] = await Promise.all([
-    db.student.count({ where: { schoolId } }),
-    db.attendance.count({ where: { schoolId, date: { gte: today, lt: tomorrow }, status: 'PRESENT' } }),
-    db.feeInstallment.count({ where: { schoolId, status: 'OVERDUE' } }),
+    db.student.count(),  // Student has no schoolId column (single-school deployment)
+    db.attendance.count({ where: { date: { gte: today, lt: tomorrow }, status: 'PRESENT' } }),  // Attendance has no schoolId
+    db.feeInstallment.count({ where: { status: 'OVERDUE' } }),  // FeeInstallment has no schoolId
     db.task.count({ where: { schoolId, status: { in: ['PENDING', 'IN_PROGRESS'] } } }),
     db.notificationAck.count({ where: { schoolId, acknowledgedAt: null, required: true } }),
     db.discoveryProposal.count({ where: { schoolId, status: 'PENDING' } }),

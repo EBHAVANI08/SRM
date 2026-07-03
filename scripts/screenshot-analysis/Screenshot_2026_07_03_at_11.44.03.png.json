@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "# Multi-Agent AI Architecture  \n\n## Description  \nReplace the single generic AI assistant with a set of named, domain-scoped agents under one Orchestrator. Each agent has read/write access limited to its domain and to the role currently talking to it — this is how AI capability and Section F's role-security coexist without conflict.  \n\n\n## Diagram Elements  \n\n### Central Node: Orchestrator Agent  \n- **Shape**: Dark blue rounded rectangle  \n- **Text**:  \n  - Primary: `Orchestrator Agent`  \n  - Secondary: `Routes requests, resolves cross-agent conflicts, enforces role scope on every agent call`  \n- **Arrow Annotation**: `every agent call passes through the Orchestrator's role-scope check before touching data` (gray text, positioned above the Orchestrator node)  \n\n\n### Top Row Agents (5 nodes)  \nEach node is a light blue rounded rectangle with:  \n- **Primary Text**: Agent name  \n- **Secondary Text**: Domain description (smaller font)  \n- **Arrows**: Gray lines pointing from each agent to the Orchestrator (direction: agent → Orchestrator)  \n\n1. **Admissions Agent**  \n   - Secondary Text: `lead routing, enrolment`  \n2. **Attendance Agent**  \n   - Secondary Text: `absence patterns, alerts`  \n3. **Finance Agent**  \n   - Secondary Text: `fees, dues, defaults risk`  \n4. **Academic-Risk Agent**  \n   - Secondary Text: `grades, early-warning`  \n5. **Communication Agent**  \n   - Secondary Text: `notification routing`  \n\n\n### Bottom Row Agents (5 nodes)  \nEach node is a light blue rounded rectangle with:  \n- **Primary Text**: Agent name  \n- **Secondary Text**: Domain description (smaller font)  \n- **Arrows**: Gray lines pointing from each agent to the Orchestrator (direction: agent → Orchestrator)  \n\n1. **Transport Agent**  \n   - Secondary Text: `routes, delays, safety`  \n2. **HR/Staffing Agent**  \n   - Secondary Text: `leave, substitution`  \n3. **Safety Agent**  \n   - Secondary Text: `incidents, escalation`  \n4. **Concierge Agent**  \n   - Secondary Text: `per-role chat interface`  \n5. **Discovery Agent**  \n   - Secondary Text: `finds new automations`  \n\n\n## Visual Style  \n- **Background**: White  \n- **Node Borders**: Thin gray lines  \n- **Text Color**: Black (primary) / Gray (secondary)  \n- **Arrow Color**: Gray  \n- **Orchestrator Node**: Dark blue fill, white text  \n- **Agent Nodes**: Light blue fill, black text",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1783097957,
+  "id": "20260704005905e22dfccd297848b9",
+  "model": "glm-4.6v",
+  "object": "chat.completion",
+  "request_id": "20260704005905e22dfccd297848b9",
+  "usage": {
+    "completion_tokens": 573,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 3324,
+    "prompt_tokens_details": {
+      "cached_tokens": 6
+    },
+    "total_tokens": 3897
+  }
+}

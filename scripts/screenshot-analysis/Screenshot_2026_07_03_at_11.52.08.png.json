@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "### Table (Top Section)\n- **Column 1 Header**: (Empty, implied as first column)\n- **Column 2 Header**: (Empty, implied as second column)\n- **Column 3 Header**: `broadcast`\n- **Row 1**:\n  - **Column 1**: `lead.newly_logged`\n  - **Column 2**: `Lead creation → counsellor assignment → follow-up scheduling`\n  - **Column 3**: `Lead unresponsive after configured follow-up attempts`\n- **Row 2**:\n  - **Column 1**: `licence.expiring`\n  - **Column 2**: `IT alert at T-30/T-7 with vendor/cost detail`\n  - **Column 3**: `Renewal not actioned by T-3`\n- **Row 3**:\n  - **Column 1**: `discovery.pattern_detected`\n  - **Column 2**: `Draft proposal generated, placed in review queue`\n  - **Column 3**: `Always requires human approval before going live — by design, never autonomous`\n\n\n### Section H: Notification / Communication Engine\n- **Section Title**: `H. Notification / Communication Engine` (bold, blue text, preceded by a vertical blue bar)\n\n\n### Table (Notification / Communication Engine)\n- **Column Headers**:\n  - **Column 1**: `Requirement`\n  - **Column 2**: `Detail`\n- **Row 1**:\n  - **Requirement**: `Single service of record`\n  - **Detail**: `All modules and agents call one Communication Agent/service — no module sends messages directly`\n- **Row 2**:\n  - **Requirement**: `Real delivery tracking`\n  - **Detail**: `queued → sent → delivered → read/failed per notification, visible in a Notification Log`\n- **Row 3**:\n  - **Requirement**: `Minimum-scope default`\n  - **Detail**: `Every notification defaults to the smallest relevant audience (one class, one family) unless an authorised role explicitly broadcasts wider`\n- **Row 4**:\n  - **Requirement**: `Acknowledgement for critical categories`\n  - **Detail**: `Safety alerts, fee-overdue notices, exam results require read-receipt tracking; unacknowledged critical alerts auto-escalate`",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1783098020,
+  "id": "2026070401001053622faeec654b9e",
+  "model": "glm-4.6v",
+  "object": "chat.completion",
+  "request_id": "2026070401001053622faeec654b9e",
+  "usage": {
+    "completion_tokens": 476,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 2721,
+    "prompt_tokens_details": {
+      "cached_tokens": 8
+    },
+    "total_tokens": 3197
+  }
+}

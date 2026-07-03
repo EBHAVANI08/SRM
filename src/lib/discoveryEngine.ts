@@ -119,8 +119,9 @@ async function detectRepeatedManualActions(schoolId: string): Promise<DiscoveryP
  */
 async function detectAttendanceDipClusters(schoolId: string): Promise<DiscoveryPattern[]> {
   const since = new Date(Date.now() - 14 * 86400000)
+  // Attendance has no schoolId column — filter by date only (single-school deployment)
   const records = await db.attendance.findMany({
-    where: { schoolId, date: { gte: since } },
+    where: { date: { gte: since } },
     select: { studentId: true, date: true, status: true },
     take: 5000,
   })
@@ -180,16 +181,19 @@ async function detectAttendanceDipClusters(schoolId: string): Promise<DiscoveryP
  * Looks for sections where ≥ 5 students have fees overdue > 7 days.
  */
 async function detectFeeDefaultClusters(schoolId: string): Promise<DiscoveryPattern[]> {
+  // FeeInstallment has no schoolId or studentId column — query all (single-school deployment).
+  // We join via the fee relation to get studentId.
   const overdue = await db.feeInstallment.findMany({
-    where: { schoolId, status: 'OVERDUE' },
-    select: { studentId: true, dueDate: true, amount: true },
+    where: { status: 'OVERDUE' },
+    select: { id: true, feeId: true, dueDate: true, amount: true, fee: { select: { studentId: true } } },
   })
   const sevenDaysAgo = new Date(Date.now() - 7 * 86400000)
   const clusters: Record<string, { count: number; totalAmount: number }> = {}
   for (const f of overdue) {
     if (f.dueDate > sevenDaysAgo) continue
     // group by student prefix (rough section proxy) — in production we'd join to student.sectionId
-    const sectionKey = f.studentId.slice(-4) // demo only
+    const studentId = f.fee?.studentId || 'unknown'
+    const sectionKey = studentId.slice(-4) // demo only
     if (!clusters[sectionKey]) clusters[sectionKey] = { count: 0, totalAmount: 0 }
     clusters[sectionKey].count++
     clusters[sectionKey].totalAmount += f.amount
@@ -276,9 +280,17 @@ export async function runDiscoverySweep(schoolId: string = 'school_default'): Pr
 
   let created = 0
   for (const p of allPatterns) {
-    // Dedup: skip if a PENDING proposal with the same title exists
+    // ─── Learning loop (Screenshot 3 spec) ───
+    // Dedup against BOTH pending AND rejected proposals with the same title.
+    // Dismissed proposals must NEVER be re-suggested — that's the learning loop.
+    // APPROVED proposals that became live rules are also deduped (the pattern is
+    // already automated at that point, so re-proposing would be noise).
     const existing = await db.discoveryProposal.findFirst({
-      where: { schoolId, title: p.title, status: 'PENDING' },
+      where: {
+        schoolId,
+        title: p.title,
+        status: { in: ['PENDING', 'REJECTED', 'APPROVED'] },
+      },
     })
     if (existing) continue
 

@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "# Role Access Matrix (refined, with owning agent)\n\n## Table Structure\n- **Table Header Row**: Contains four columns with the following labels:\n  - Column 1: \"Role\"\n  - Column 2: \"Sees\"\n  - Column 3: \"Never sees\"\n  - Column 4: \"Primary agent(s) available to this role\"\n\n## Table Rows (Role Entries)\n### 1. Super Admin\n- **Role**: Super Admin\n- **Sees**: All schools/tenants, billing, system health, global automation config, Discovery Engine proposals across tenants\n- **Never sees**: N/A\n- **Primary agent(s) available to this role**: All agents (oversight mode)\n\n### 2. School Admin / Principal / Director\n- **Role**: School Admin / Principal / Director\n- **Sees**: Whole-school data, Automation Control Centre, Digital Twin simulator, Automation Activity Log, Discovery Engine proposal queue\n- **Never sees**: Other schools' data\n- **Primary agent(s) available to this role**: All domain agents (approval authority), Discovery Agent, Concierge Agent\n\n### 3. Teacher\n- **Role**: Teacher\n- **Sees**: Only her assigned classes/sections/subjects, her students' records, her timetable, her own leave/payroll\n- **Never sees**: Other teachers' classes, whole-school finance/HR, admissions pipeline\n- **Primary agent(s) available to this role**: Attendance Agent, Academic-Risk Agent (own classes only), Concierge Agent (scoped)\n\n### 4. Student\n- **Role**: Student\n- **Sees**: Own timetable, grades, attendance, fee status, assignments\n- **Never sees**: Any other student's or staff's data\n- **Primary agent(s) available to this role**: Concierge Agent (own-record scope only, e.g. AI tutor)\n\n### 5. Parent\n- **Role**: Parent\n- **Sees**: Own child(ren) only\n- **Never sees**: Other families' data, staff/school-wide operations\n- **Primary agent(s) available to this role**: Concierge Agent (own child scope), Finance Agent (own dues), Communication Agent (inbound)\n\n### 6. Reception / Front Office\n- **Role**: Reception / Front Office\n- **Sees**: Visitor log, enquiry tracker, gate pass, minimal student directory\n- **Never sees**: Grades, HR, financial ledgers\n- **Primary agent(s) available to this role**: Admissions Agent (lead intake), Concierge Agent (scoped)\n\n### 7. IT\n- **Role**: IT\n- **Sees**: System health, account admin, integration/licence tracker, audit logs, automation error queue\n- **Never sees**: Academic content, financial ledgers\n- **Primary agent(s) available to this role**: Discovery Agent (technical error patterns), Concierge Agent (scoped)",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1783098005,
+  "id": "20260704005952a659022078e34b9a",
+  "model": "glm-4.6v",
+  "object": "chat.completion",
+  "request_id": "20260704005952a659022078e34b9a",
+  "usage": {
+    "completion_tokens": 606,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 3324,
+    "prompt_tokens_details": {
+      "cached_tokens": 7
+    },
+    "total_tokens": 3930
+  }
+}

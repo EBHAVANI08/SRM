@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "# J. Rollout Sequencing\n\n## Table Structure\n- **Table Headers**:\n  - \"Phase\" (leftmost column)\n  - \"Focus\" (middle column)\n  - \"Why this order\" (rightmost column)\n- **Table Rows** (7 total, numbered 1–7):\n\n### Row 1\n- **Phase**: 1\n- **Focus**: Step 0 audit + Step 1 role-access contract\n- **Why this order**: Nothing downstream is safe until data boundaries are correct\n\n### Row 2\n- **Phase**: 2\n- **Focus**: Step 3 Communication Agent (real notification tracking)\n- **Why this order**: Every later automation depends on trustworthy delivery\n\n### Row 3\n- **Phase**: 3\n- **Focus**: Step 2 core agents (Admissions, Attendance, Finance) + Step 3 rules engine, first 3 trigger chains\n- **Why this order**: Highest daily time-cost pain points, fastest visible win\n\n### Row 4\n- **Phase**: 4\n- **Focus**: Remaining agents and trigger chains (Academic-Risk, Transport, HR, Safety, Discovery)\n- **Why this order**: Builds out full agent coverage once the pattern is proven\n\n### Row 5\n- **Phase**: 5\n- **Focus**: Step 4 Automation Control Centre + Digital Twin simulator\n- **Why this order**: Needs a working rules engine and historical data to simulate against\n\n### Row 6\n- **Phase**: 6\n- **Focus**: Step 4 School Day Autopilot\n- **Why this order**: Depends on all domain agents and the rules engine being stable\n\n### Row 7\n- **Phase**: 7\n- **Focus**: Step 5 Concierge/Orchestrator scope-awareness polish\n- **Why this order**: Best refined last once the Activity Log and agent boundaries it reads from are stable",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1783098035,
+  "id": "20260704010024de8c8d6fe5bb430d",
+  "model": "glm-4.6v",
+  "object": "chat.completion",
+  "request_id": "20260704010024de8c8d6fe5bb430d",
+  "usage": {
+    "completion_tokens": 402,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 2520,
+    "prompt_tokens_details": {
+      "cached_tokens": 7
+    },
+    "total_tokens": 2922
+  }
+}

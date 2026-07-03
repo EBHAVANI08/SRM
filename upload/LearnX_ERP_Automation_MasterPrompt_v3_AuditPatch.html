@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LearnX AI ERP — Grounded Audit Patch v3</title>
+<style>
+  body { font-family: -apple-system, Segoe UI, Arial, sans-serif; max-width: 1120px; margin: 0 auto; padding: 40px 24px; color: #1a1a1a; line-height: 1.55; background: #fafafa; }
+  h1 { font-size: 26px; border-bottom: 3px solid #1f3a5f; padding-bottom: 10px; }
+  h2 { font-size: 20px; color: #1f3a5f; margin-top: 44px; border-left: 5px solid #1f3a5f; padding-left: 10px; }
+  h3 { font-size: 16px; color: #2b2b2b; margin-top: 26px; }
+  table { border-collapse: collapse; width: 100%; margin: 16px 0 28px 0; font-size: 13.5px; }
+  th, td { border: 1px solid #ccc; padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: #1f3a5f; color: #fff; }
+  tr:nth-child(even) { background: #f0f3f7; }
+  code { background: #eef0f3; padding: 1px 5px; border-radius: 3px; font-size: 13px; }
+  .meta { color: #555; font-size: 13.5px; }
+  .note { background: #fff6e0; border-left: 4px solid #d9a441; padding: 10px 14px; margin: 16px 0; font-size: 14px; }
+  .bug { background: #fdeaea; border-left: 4px solid #c0392b; padding: 10px 14px; margin: 16px 0; font-size: 14px; }
+  .promptbox { background: #10151f; color: #d8e2f0; padding: 24px; border-radius: 6px; white-space: pre-wrap; font-family: "SF Mono", Consolas, monospace; font-size: 13px; line-height: 1.6; overflow-x: auto; }
+  .promptbox h3, .promptbox h4 { color: #ffd479; margin-top: 20px; }
+  svg text { font-family: Arial, sans-serif; }
+</style>
+</head>
+<body>
+
+<h1>LearnX AI ERP — Grounded Audit Patch (built from live screenshots)</h1>
+<p class="meta">Version: v3 — patch layer on top of v2 &nbsp;|&nbsp; Date: 04 July 2026 &nbsp;|&nbsp; Target model: Z.ai GLM 5.2 &nbsp;|&nbsp; Source: 9 screenshots of Command Center, Front Desk, Admissions, Attendance, Fees, Documents, Automation, Finance</p>
+
+<div class="note">
+<strong>How this fits with v1/v2.</strong> v1 and v2 gave you the target architecture (role scoping, multi-agent system, Automation Discovery Engine, Digital Twin). This v3 is different: it's evidence-based, built from actually looking at 9 real screens of the live app. It documents exactly what's broken or shallow right now, with the specific screen and button named, and gives GLM 5.2 a precise fix for the one thing you keep raising — clicking a send action with no preview of what's being sent. Inject v2 for the big architectural rebuild; inject this v3 alongside it (or first) for the concrete, provable defects.
+</div>
+
+<h2>A. Grounded findings — exact screen, exact defect</h2>
+<table>
+<tr><th>#</th><th>Where (screen/button)</th><th>What's actually happening</th><th>Why it matters</th></tr>
+<tr><td>1</td><td>Front Desk → visitor cards; Attendance → "3 Absentees Not Yet Notified"; Fees → "2 Fee Defaulters Detected"; Admissions → "Send status update to parent"</td><td>Every WhatsApp/SMS/Email send button fires immediately on click. No screen shows the actual message text before it goes out.</td><td>This is your core complaint — staff have no way to verify what's being sent to a parent before it's sent, and no way to catch a wrong name, wrong amount, or broken template before it reaches someone.</td></tr>
+<tr><td>2</td><td>Front Desk visitor cards</td><td>"Pass sent via WHATSAPP/SMS/EMAIL" renders as a static green confirmation the instant the pass is generated.</td><td>No queued → sent → delivered → read progression is visible. Looks like a cosmetic label rather than a tracked delivery status.</td></tr>
+<tr><td>3</td><td>Finance → Financial &amp; Accounting → "Double-Entry Books" card → Open</td><td>The modal that opens is titled "Double-Entry Books" but every field inside is a Parent-Teacher Meeting scheduler (Title placeholder "Parent-Teacher Meeting Q1," Type dropdown defaulting to "PTM," Start/End Time, Venue, Participants).</td><td>Confirmed functional bug: the card is not wired to accounting logic at all — it opens an unrelated generic event-scheduling modal.</td></tr>
+<tr><td>4</td><td>Documents, Automation, and Finance modules — all 7 sub-module cards in each</td><td>Every card description reads as a template: "AI-powered [feature name] with intelligent automation," with only the noun changed (AI OCR, Version Control, E-Signatures / No-Code Workflows, Trigger Engine, Webhooks / Vendor Mgmt, GST Filing, Bank Reconciliation, etc).</td><td>Combined with finding #3, this strongly suggests most or all of these 21 cards are scaffolded placeholders sharing one generic modal, not 21 distinct working features.</td><tr>
+<tr><td>5</td><td>Command Center dashboard</td><td>A text banner states "School Admin scope: sees whole-school data... never sees other schools' data, audit logs, payroll detail" — printed to the admin as a sentence.</td><td>This describes intent, not enforcement. It says nothing about whether the API actually blocks a teacher, student, or parent from querying outside their scope — that has to be verified server-side, not assumed from this label.</td></tr>
+<tr><td>6</td><td>Command Center dashboard</td><td>Counters like "247 AI tasks automated today," "84 smart predictions," "12 alerts sent" have no click-through to see what those tasks actually were.</td><td>Unverifiable numbers. This is exactly what an Automation Activity Log (from the v2 prompt) is meant to fix — every one of those 247 should be a readable row, not just a count.</td></tr>
+<tr><td>7</td><td>Admissions modal — AI Prospect Score</td><td>92/100 shown with a visible breakdown across 4 named parameters (academic readiness 88%, social skills 92%, demographic fit 85%, extracurricular potential 90%).</td><td>This is the one AI feature in the screenshots that's actually transparent about how it got its number. It's the pattern to copy everywhere else — the opposite of finding #6.</td></tr>
+</table>
+
+<h2>B. The fix for finding #1 — Notification Preview &amp; Confirmation Flow</h2>
+<p>This directly answers "when I click on something it shows sent, but doesn't show what message was sent before sending." The send action must become a two-step flow everywhere in the app, not a one-click fire.</p>
+<table>
+<tr><th>Step</th><th>What the user sees</th></tr>
+<tr><td>1. Compose (automatic)</td><td>System renders the exact message per recipient using the real template + real merged data (parent name, student name, amount, date, class — whatever the template calls for)</td></tr>
+<tr><td>2. Preview (mandatory, cannot be skipped)</td><td>A preview panel shows: the rendered message text exactly as it will be sent, the channel(s) selected, the exact recipient list (names, not just a count like "2 defaulters"), and for bulk sends, a way to expand and see each individual recipient's rendered message — not just one generic template shown once</td></tr>
+<tr><td>3. Edit (optional)</td><td>User can edit the message text for this send only, or edit the underlying template for future sends</td></tr>
+<tr><td>4. Confirm and send</td><td>Explicit "Send" button separate from "Preview" — this is the only action that actually dispatches</td></tr>
+<tr><td>5. Track</td><td>Status updates in place from queued → sent → delivered → read/failed per recipient, visible without leaving the screen (not just a static "sent" pill)</td></tr>
+</table>
+<div class="bug"><strong>Non-negotiable rule for GLM 5.2:</strong> no button anywhere in the app may trigger an outbound parent/teacher/student notification without the user having seen the exact rendered message text first. If a "Send via WhatsApp" button currently calls the send function directly, it must be refactored to call a preview function first, with send gated behind explicit confirmation.</div>
+
+<h2>C. The fix for findings #3 and #4 — Sub-Module Wiring Integrity Audit</h2>
+<p>Before any new feature work in Documents, Automation, or Finance, GLM 5.2 must verify each of the 21 sub-module cards individually — this is not optional cleanup, it's confirmed broken based on the Double-Entry Books finding.</p>
+<table>
+<tr><th>Module</th><th>Cards to individually verify</th></tr>
+<tr><td>Documents</td><td>AI OCR, Auto-Categorize, Version Control, E-Signatures, Compliance Tracker, Bulk Upload, Smart Search</td></tr>
+<tr><td>Automation</td><td>No-Code Workflows, AI Process Automation, Trigger Engine, Scheduler, Webhooks, Integration Hub, Audit Trail</td></tr>
+<tr><td>Finance</td><td>Double-Entry Books, Budget Tracker, Vendor Mgmt, GST Filing, AI Cash Forecast, Bank Reconciliation, Audit Trail</td></tr>
+</table>
+<p>For each card: click "Open," confirm the modal/screen that appears actually matches that card's stated purpose (not a shared generic form), confirm the fields are relevant to that specific feature, and confirm submitting the form actually writes to the correct data model rather than a generic "event" record. Replace the templated one-line description ("AI-powered X with intelligent automation") with a real, specific description of what that feature actually does once fixed.</p>
+
+<h2>D. Rebuilding the actual ERP flow — how information should move between modules</h2>
+<p>This is the "how does the ERP actually work end to end, and how is it interlinked with the whole student biodata" part of your question. Below is the concrete data flow GLM 5.2 should implement, using the exact modules you have.</p>
+
+<svg viewBox="0 0 1020 460" xmlns="http://www.w3.org/2000/svg">
+<style>
+  .box { fill:#eef3fa; stroke:#1f3a5f; stroke-width:1.5; }
+  .lbl { font-size:12.5px; fill:#1a1a1a; }
+  .arrow { stroke:#666; stroke-width:1.3; marker-end:url(#arr2); fill:none; }
+  .lblsm { font-size:11px; fill:#444; }
+</style>
+<defs>
+  <marker id="arr2" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+    <path d="M0,0 L7,3 L0,6 Z" fill="#666"/>
+  </marker>
+</defs>
+
+<rect x="30" y="30" width="170" height="55" rx="6" class="box"/>
+<text x="115" y="55" text-anchor="middle" class="lbl">Front Desk</text>
+<text x="115" y="72" text-anchor="middle" class="lblsm">enquiry logged</text>
+
+<rect x="250" y="30" width="170" height="55" rx="6" class="box"/>
+<text x="335" y="55" text-anchor="middle" class="lbl">Admissions</text>
+<text x="335" y="72" text-anchor="middle" class="lblsm">student record created</text>
+
+<rect x="470" y="30" width="170" height="55" rx="6" class="box"/>
+<text x="555" y="55" text-anchor="middle" class="lbl">Student Biodata Core</text>
+<text x="555" y="72" text-anchor="middle" class="lblsm">single source of truth</text>
+
+<rect x="690" y="30" width="170" height="55" rx="6" class="box"/>
+<text x="775" y="55" text-anchor="middle" class="lbl">Fees</text>
+<text x="775" y="72" text-anchor="middle" class="lblsm">fee schedule generated</text>
+
+<rect x="30" y="180" width="170" height="55" rx="6" class="box"/>
+<text x="115" y="205" text-anchor="middle" class="lbl">Attendance</text>
+<text x="115" y="222" text-anchor="middle" class="lblsm">reads/writes biodata</text>
+
+<rect x="250" y="180" width="170" height="55" rx="6" class="box"/>
+<text x="335" y="205" text-anchor="middle" class="lbl">Academics / Exams</text>
+<text x="335" y="222" text-anchor="middle" class="lblsm">reads/writes biodata</text>
+
+<rect x="470" y="180" width="170" height="55" rx="6" class="box"/>
+<text x="555" y="205" text-anchor="middle" class="lbl">Transport</text>
+<text x="555" y="222" text-anchor="middle" class="lblsm">reads/writes biodata</text>
+
+<rect x="690" y="180" width="170" height="55" rx="6" class="box"/>
+<text x="775" y="205" text-anchor="middle" class="lbl">HRMS / Staff</text>
+<text x="775" y="222" text-anchor="middle" class="lblsm">linked via class assignment</text>
+
+<rect x="330" y="320" width="360" height="60" rx="6" class="box"/>
+<text x="510" y="345" text-anchor="middle" class="lbl">Notification Preview &amp; Confirmation Layer</text>
+<text x="510" y="362" text-anchor="middle" class="lblsm">every module routes through here before any send</text>
+
+<line x1="115" y1="85" x2="115" y2="180" class="arrow"/>
+<line x1="200" y1="57" x2="250" y2="57" class="arrow"/>
+<line x1="420" y1="57" x2="470" y2="57" class="arrow"/>
+<line x1="640" y1="57" x2="690" y2="57" class="arrow"/>
+<line x1="555" y1="85" x2="555" y2="180" class="arrow"/>
+<line x1="555" y1="85" x2="335" y2="180" class="arrow"/>
+<line x1="555" y1="85" x2="775" y2="180" class="arrow"/>
+<line x1="200" y1="207" x2="510" y2="320" class="arrow"/>
+<line x1="420" y1="207" x2="480" y2="320" class="arrow"/>
+<line x1="640" y1="207" x2="560" y2="320" class="arrow"/>
+<line x1="775" y1="235" x2="600" y2="320" class="arrow"/>
+<line x1="775" y1="85" x2="600" y2="320" class="arrow"/>
+</svg>
+
+<table>
+<tr><th>Step</th><th>Flow</th></tr>
+<tr><td>1</td><td>Front Desk logs an enquiry → creates an Admissions lead (not a separate disconnected record)</td></tr>
+<tr><td>2</td><td>Admissions approval creates one Student Biodata Core record — this is the single source of truth every other module reads from and writes back to (name, DOB, class, guardian contacts, documents, medical notes, etc.)</td></tr>
+<tr><td>3</td><td>Fees, Attendance, Academics/Exams, Transport, and HRMS/Staff (via class assignment) all read the same biodata record rather than each module holding its own separate copy of "who this student is" — this is what "interlinked with the whole biodata" actually requires structurally</td></tr>
+<tr><td>4</td><td>Any module that needs to notify a parent/teacher/student routes through the single Notification Preview &amp; Confirmation Layer (Section B) — no module sends directly</td></tr>
+</table>
+
+<h2>E. The Injectable Patch Prompt (v3)</h2>
+<p>Paste this into GLM 5.2 alongside (or before) the v2 architectural prompt. This one is scoped to the concrete, confirmed defects.</p>
+
+<div class="promptbox">
+ROLE
+You are acting as a senior full-stack engineer with direct write access to the LearnX AI School ERP codebase (studentrelationshipsystem.space-z.ai). This prompt covers confirmed defects found by manually reviewing live screens, not hypothetical improvements. Treat every item below as a bug to fix or a missing layer to build, not a suggestion to consider.
+
+CONFIRMED DEFECT 1 — Double-Entry Books modal is wired to the wrong form
+In Finance → Financial & Accounting, the "Double-Entry Books" card opens a modal that is actually a Parent-Teacher Meeting scheduler (fields: Title with placeholder "Parent-Teacher Meeting Q1", a Type dropdown defaulting to "PTM", Date, Start Time, End Time, Venue/Mode, Participants). This has nothing to do with double-entry accounting.
+ACTION: Audit every "Open" action on every sub-module card in the Documents module (AI OCR, Auto-Categorize, Version Control, E-Signatures, Compliance Tracker, Bulk Upload, Smart Search), the Automation module (No-Code Workflows, AI Process Automation, Trigger Engine, Scheduler, Webhooks, Integration Hub, Audit Trail), and the Finance module (Double-Entry Books, Budget Tracker, Vendor Mgmt, GST Filing, AI Cash Forecast, Bank Reconciliation, Audit Trail). For each card: confirm the modal/screen it opens actually matches its stated purpose and writes to the correct underlying data model, not a shared generic "event" record. Fix every mismatch found. Do not assume only Double-Entry Books is affected — check all 21 cards individually and report findings for each.
+
+CONFIRMED DEFECT 2 — Every card description across those same 21 cards is a template placeholder
+All of them follow the exact pattern "AI-powered [feature name] with intelligent automation" with only the noun swapped. This is scaffolding text, not real feature documentation.
+ACTION: For each of the 21 cards, once its underlying functionality is confirmed correct (per Defect 1's audit), write a real, specific one-line description of what it actually does — no templated phrasing, no reused sentence structure across cards.
+
+CONFIRMED DEFECT 3 — No message preview before sending any parent/teacher/student notification
+Across Front Desk (visitor pass send), Attendance (absentee alert send), Fees (defaulter reminder send), and Admissions (status update to parent), every "Send via WhatsApp/SMS/Email" button dispatches immediately with no preview step. Staff cannot see the actual message text, the exact recipient list, or catch an error before something goes out to a parent.
+ACTION: Refactor every outbound-notification button in the application into a mandatory two-step flow:
+Step 1 (Preview, cannot be skipped): render the exact message text using the real template and real merged data for that specific recipient (or, for bulk actions, render each individual recipient's message, expandable — not one generic template shown once for a group). Show the exact recipient list by name, not just a count. Show which channel(s) will be used.
+Step 2 (Confirm and send): a separate, explicit action from "Preview." Only this step actually dispatches the message. After dispatch, the UI must show a real per-recipient delivery status (queued → sent → delivered → read/failed), not a static "sent" label that appears instantly regardless of actual delivery.
+This preview-and-confirm flow must become the single shared Notification Preview & Confirmation Layer that every module (Front Desk, Attendance, Fees, Admissions, and any other module found to send notifications) routes through — do not implement it separately per module.
+
+CONFIRMED DEFECT 4 — Role-scope claims exist only as a text banner, not enforcement
+The Command Center displays a banner stating what a School Admin sees and doesn't see, but this is presentational text, not a description of an enforced permission boundary.
+ACTION: Treat this banner's claim as a requirement to actually implement server-side: audit every API endpoint and confirm role-based row/column filtering is enforced at the query layer, not only reflected in UI copy. Test by attempting a cross-scope request (e.g. a Teacher-role token querying another teacher's class, or a Parent-role token querying another family's student) and confirm it is rejected.
+
+MISSING TRANSPARENCY — Dashboard automation counters have no drill-down
+The Command Center shows "247 AI tasks automated today," "84 smart predictions," "12 alerts sent" with no way to see what those actions actually were.
+ACTION: Build an Automation Activity Log (if not already planned per the separate v2 architecture prompt) so every counted action is a readable, timestamped row: what fired, what triggered it, what it did, and outcome. The Admissions module's AI Prospect Score display (92/100 broken down across academic readiness, social skills, demographic fit, extracurricular potential) is the transparency standard to replicate — every AI-driven number in the app should be explainable to this same level of detail, not just displayed as a raw count.
+
+STUDENT BIODATA INTERLINKING
+Confirm (or build, if not already the case) a single Student Biodata Core record per student that Admissions creates and that Attendance, Academics/Exams, Fees, Transport, and HRMS/Staff (via class assignment) all read from and write back to — rather than each module holding its own separate, potentially inconsistent copy of the student's core details (name, DOB, class, guardian contacts, documents, medical notes). Report on the current data model's actual structure before making changes, and only refactor if separate copies are confirmed to exist.
+
+OUTPUT EXPECTED FROM YOU (GLM 5.2)
+For each of the 21 sub-module cards: report whether it was found broken (like Double-Entry Books) or working correctly, and what was fixed if broken. For the notification preview refactor: confirm which modules' send buttons were converted to the preview-and-confirm flow and show a sample rendered preview for one real scenario (e.g. a fee defaulter reminder). For the role-scope audit: report the specific cross-scope test performed and its result. Do not report a module as "fixed" without describing what was actually wrong and what was actually changed.
+</div>
+
+<p class="meta">Filename convention: this is LearnX_ERP_Automation_MasterPrompt_v3_AuditPatch.html, layered on top of v2. Suggested next step: run this v3 patch first (fixes confirmed defects), then run the v2 architectural prompt for the multi-agent/Autopilot/Discovery Engine build-out on a now-solid foundation.</p>
+
+</body>
+</html>

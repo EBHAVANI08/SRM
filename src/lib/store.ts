@@ -65,6 +65,8 @@ export type ViewKey =
   | 'role-matrix'
   | 'roadmap'
   | 'ask-learnx-ai'
+  | 'agent-matrix'
+  | 'why-learnx'
 
 interface AppState {
   user: AuthUser | null

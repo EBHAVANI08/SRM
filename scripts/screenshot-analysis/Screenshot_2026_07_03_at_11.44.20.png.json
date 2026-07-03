@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "# Table Structure and Content Description\n\n## Table Header\n- **Column 1 Header**: \"Agent\"\n- **Column 2 Header**: \"Owns\"\n- **Column 3 Header**: \"Autonomous actions it can take without asking\"\n- **Column 4 Header**: \"Actions it must propose, not execute\"\n\n## Table Rows (10 total)\n\n### Row 1: Admissions Agent\n- **Agent**: \"Admissions Agent\"\n- **Owns**: \"Enquiry-to-enrolment pipeline\"\n- **Autonomous actions it can take without asking**: \"Auto-assign leads to counsellors, send acknowledgement, schedule follow-ups\"\n- **Actions it must propose, not execute**: \"Waiving admission criteria, seat allocation overrides\"\n\n### Row 2: Attendance Agent\n- **Agent**: \"Attendance Agent\"\n- **Owns**: \"Daily attendance, absence patterns\"\n- **Autonomous actions it can take without asking**: \"Notify parent same-day, recompute attendance %, flag pattern\"\n- **Actions it must propose, not execute**: \"Marking a student as chronically absent for disciplinary escalation\"\n\n### Row 3: Finance Agent\n- **Agent**: \"Finance Agent\"\n- **Owns**: \"Fees, dues, payment tracking\"\n- **Autonomous actions it can take without asking**: \"Send reminders, update dashboards, detect default-risk pattern\"\n- **Actions it must propose, not execute**: \"Applying late fees, waivers, payment plan changes\"\n\n### Row 4: Academic-Risk Agent\n- **Agent**: \"Academic-Risk Agent\"\n- **Owns**: \"Grades, performance trends\"\n- **Autonomous actions it can take without asking**: \"Compute ranks, flag underperformance, notify parent of result\"\n- **Actions it must propose, not execute**: \"Recommending grade retention, referring to counsellor for a specific intervention plan\"\n\n### Row 5: Communication Agent\n- **Agent**: \"Communication Agent\"\n- **Owns**: \"All outbound notifications\"\n- **Autonomous actions it can take without asking**: \"Route by channel, retry failed delivery, track acknowledgement\"\n- **Actions it must propose, not execute**: \"School-wide broadcast (requires an authorised human role to approve scope)\"\n\n### Row 6: Transport Agent\n- **Agent**: \"Transport Agent\"\n- **Owns**: \"Routes, delays, vehicle status\"\n- **Autonomous actions it can take without asking**: \"Notify affected route's parents, log incident\"\n- **Actions it must propose, not execute**: \"Rerouting a bus, cancelling a route\"\n\n### Row 7: HR/Staffing Agent\n- **Agent**: \"HR/Staffing Agent\"\n- **Owns**: \"Leave, substitution, payroll triggers\"\n- **Autonomous actions it can take without asking**: \"Check substitute availability, notify approver\"\n- **Actions it must propose, not execute**: \"Approving leave, changing payroll\"\n\n### Row 8: Safety Agent\n- **Agent**: \"Safety Agent\"\n- **Owns**: \"Incidents, emergency alerts\"\n- **Autonomous actions it can take without asking**: \"Scope and send the alert, timestamp, start acknowledgement tracking\"\n- **Actions it must propose, not execute**: \"Declaring a school-wide emergency (requires principal/admin confirmation)\"\n\n### Row 9: Concierge Agent\n- **Agent**: \"Concierge Agent\"\n- **Owns**: \"The chat interface each role actually talks to\"\n- **Autonomous actions it can take without asking**: \"Answer questions, take role-appropriate actions on request\"\n- **Actions it must propose, not execute**: \"Anything outside the requesting user's own role scope — hard-blocked, not just discouraged\"\n\n### Row 10: Discovery Agent\n- **Agent**: \"Discovery Agent\"\n- **Owns**: \"Watches for repeated manual patterns\"\n- **Autonomous actions it can take without asking**: \"Nothing directly — it only observes and proposes (see Section D)\"\n- **Actions it must propose, not execute**: \"Everything — by design, it never executes, only recommends\"",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1783097961,
+  "id": "202607040059053498edd916be4845",
+  "model": "glm-4.6v",
+  "object": "chat.completion",
+  "request_id": "202607040059053498edd916be4845",
+  "usage": {
+    "completion_tokens": 847,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 3324,
+    "prompt_tokens_details": {
+      "cached_tokens": 7
+    },
+    "total_tokens": 4171
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "# School Automation Trigger Matrix (expanded with autopilot behaviour and escalation)\n\n## Table Structure\n- **Table Header Row** (dark blue background, white text):\n  - Column 1: \"Trigger event\"\n  - Column 2: \"Autonomous action chain\"\n  - Column 3: \"Escalates to a human when\"\n\n## Table Rows (9 total)\n\n### Row 1: student.admitted\n- **Trigger event**: \"student.admitted\"\n- **Autonomous action chain**: \"ID/roll number → class/section assignment → fee schedule from template → parent account creation → welcome notification → transport enrolment if requested\"\n- **Escalates to a human when**: \"No matching class capacity available\"\n\n### Row 2: attendance.marked (absence)\n- **Trigger event**: \"attendance.marked (absence)\"\n- **Autonomous action chain**: \"Pattern detection → same-day parent notification → real-time attendance % update\"\n- **Escalates to a human when**: \"3+ consecutive absences unexplained, or class-wide attendance drops below threshold\"\n\n### Row 3: fee.due_approaching\n- **Trigger event**: \"fee.due_approaching\"\n- **Autonomous action chain**: \"Reminder cadence (T-7/T-3/T-0) → dashboard update → default-risk scoring\"\n- **Escalates to a human when**: \"Payment overdue beyond grace period, or default-risk score crosses threshold\"\n\n### Row 4: exam.graded\n- **Trigger event**: \"exam.graded\"\n- **Autonomous action chain**: \"Grade/rank/percentile computation → parent notification → academic-risk scoring\"\n- **Escalates to a human when**: \"Student falls below pass threshold or shows a declining trend over 2+ assessments\"\n\n### Row 5: transport.delay_or_incident\n- **Trigger event**: \"transport.delay_or_incident\"\n- **Autonomous action chain**: \"Route-scoped parent notification → reception/gate notification → incident log\"\n- **Escalates to a human when**: \"Any safety-classified incident, always\"\n\n### Row 6: staff.leave_requested\n- **Trigger event**: \"staff.leave_requested\"\n- **Autonomous action chain**: \"Route to approver by hierarchy → substitute-availability check\"\n- **Escalates to a human when**: \"No substitute available, or leave request conflicts with an exam/exam-duty schedule\"\n\n### Row 7: safety.incident_reported\n- **Trigger event**: \"safety.incident_reported\"\n- **Autonomous action chain**: \"Scoped alert with acknowledgement tracking → compliance log\"\n- **Escalates to a human when**: \"Always requires human (principal) confirmation before school-wide broadcast\"\n\n### Row 8: enquiry.logged\n- **Trigger event**: \"enquiry.logged\"\n- **Autonomous action chain**: \"Lead creation → counsellor assignment → follow-up scheduling\"\n- **Escalates to a human when**: \"Lead unresponsive after configured follow-up attempts\"\n\n### Row 9: licence.expiring\n- **Trigger event**: \"licence.expiring\"\n- **Autonomous action chain**: \"IT alert at T-30/T-7 with vendor/cost detail\"\n- **Escalates to a human when**: \"Renewal not actioned by T-3\"",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1783097957,
+  "id": "2026070400590670e43175d5a64814",
+  "model": "glm-4.6v",
+  "object": "chat.completion",
+  "request_id": "2026070400590670e43175d5a64814",
+  "usage": {
+    "completion_tokens": 687,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 3592,
+    "prompt_tokens_details": {
+      "cached_tokens": 8
+    },
+    "total_tokens": 4279
+  }
+}

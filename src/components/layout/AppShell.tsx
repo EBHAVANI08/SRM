@@ -14,6 +14,7 @@ import { FeesModule } from '@/components/dashboard/FeesModule'
 import { AdmissionsModule } from '@/components/dashboard/AdmissionsModule'
 import { Phase5Module } from '@/components/dashboard/Phase5Module'
 import { AskLearnXAILanding } from '@/components/dashboard/AskLearnXAILanding'
+import { DifferentiatorsModule } from '@/components/dashboard/DifferentiatorsModule'
 
 const AI_MODULE_KEYS = [
   'ai-question-paper',
@@ -39,6 +40,9 @@ const PHASE5_MODULE_KEYS = [
 
 type Phase5ViewKey = typeof PHASE5_MODULE_KEYS[number]
 
+const DIFFERENTIATOR_KEYS = ['agent-matrix', 'why-learnx'] as const
+type DifferentiatorViewKey = typeof DIFFERENTIATOR_KEYS[number]
+
 export function AppShell() {
   const isAuthenticated = useAppStore((s) => s.isAuthenticated)
   const currentView = useAppStore((s) => s.currentView)
@@ -55,6 +59,8 @@ export function AppShell() {
             <DashboardHome />
           ) : currentView === 'ask-learnx-ai' ? (
             <AskLearnXAILanding />
+          ) : (DIFFERENTIATOR_KEYS as readonly string[]).includes(currentView) ? (
+            <DifferentiatorsModule viewKey={currentView as DifferentiatorViewKey} />
           ) : AI_MODULE_KEYS.includes(currentView) ? (
             <AIPoweredModule moduleKey={currentView} />
           ) : currentView === 'front-desk' ? (
