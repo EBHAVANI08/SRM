@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
 import { MODULES } from '@/lib/modules'
+import { apiFetch, apiPost } from '@/lib/apiFetch'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -48,8 +49,16 @@ function useApi<T>(url: string | null): { data: T | null; loading: boolean; erro
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true)
     setError(null)
-    fetch(url)
-      .then((r) => r.json())
+    apiFetch(url)
+      .then(async (r) => {
+        const text = await r.text()
+        let parsed: any = null
+        try { parsed = JSON.parse(text) } catch { parsed = { raw: text } }
+        if (!r.ok || (parsed && parsed.success === false)) {
+          throw new Error(parsed?.error || `HTTP ${r.status}`)
+        }
+        return parsed
+      })
       .then((d) => { if (!cancelled) { setData(d); setLoading(false) } })
       .catch((e) => { if (!cancelled) { setError(e?.message || 'Failed to load'); setLoading(false) } })
     return () => { cancelled = true }

@@ -15,18 +15,26 @@ import { AdmissionsModule } from '@/components/dashboard/AdmissionsModule'
 import { Phase5Module } from '@/components/dashboard/Phase5Module'
 import { AskLearnXAILanding } from '@/components/dashboard/AskLearnXAILanding'
 import { DifferentiatorsModule } from '@/components/dashboard/DifferentiatorsModule'
+import { NotificationPreviewLauncher } from '@/components/dashboard/NotificationPreviewModal'
+import { AdmissionsModuleEnhanced } from '@/components/dashboard/AdmissionsModuleEnhanced'
+import { AttendanceModuleEnhanced } from '@/components/dashboard/AttendanceModuleEnhanced'
+import { DocumentsModuleEnhanced } from '@/components/dashboard/DocumentsModuleEnhanced'
+import { AcademicModuleEnhanced } from '@/components/dashboard/AcademicModuleEnhanced'
+import { ExamsModuleEnhanced } from '@/components/dashboard/ExamsModuleEnhanced'
+import { CurriculumBuilderModule } from '@/components/dashboard/CurriculumBuilderModule'
+import { AIQuestionPaperEnhanced } from '@/components/dashboard/AIQuestionPaperEnhanced'
+import { AICareerCounsellorEnhanced } from '@/components/dashboard/AICareerCounsellorEnhanced'
+import { FinanceModuleEnhanced } from '@/components/dashboard/FinanceModuleEnhanced'
+import { HealthModuleEnhanced } from '@/components/dashboard/HealthModuleEnhanced'
+import { HRMSModuleEnhanced, ConcernsModule, SISModule, DiaryModule, PhotoGalleryModule, PTMSchedulerModule, CertificateEngineModule, ActivitiesModule, AlumniModule } from '@/components/dashboard/NewModules'
 
 const AI_MODULE_KEYS = [
-  'ai-question-paper',
-  'ai-career',
   'ai-mock',
   'ai-safety',
   'ai-calendar',
   'ai-academic',
   'ai-behavior',
 ]
-
-const CUSTOM_MODULE_KEYS = ['front-desk']
 
 const PHASE5_MODULE_KEYS = [
   'automation-center',
@@ -68,11 +76,45 @@ export function AppShell() {
           ) : currentView === 'security' ? (
             <SecurityModule />
           ) : currentView === 'attendance' ? (
-            <AttendanceModule />
+            <AttendanceModuleEnhanced />
           ) : currentView === 'fees' ? (
             <FeesModule />
           ) : currentView === 'admissions' ? (
-            <AdmissionsModule />
+            <AdmissionsModuleEnhanced />
+          ) : currentView === 'documents' ? (
+            <DocumentsModuleEnhanced />
+          ) : currentView === 'academic' ? (
+            <AcademicModuleEnhanced />
+          ) : currentView === 'examinations' ? (
+            <ExamsModuleEnhanced />
+          ) : currentView === 'curriculum' ? (
+            <CurriculumBuilderModule />
+          ) : currentView === 'ai-question-paper' ? (
+            <AIQuestionPaperEnhanced />
+          ) : currentView === 'ai-career' ? (
+            <AICareerCounsellorEnhanced />
+          ) : currentView === 'finance' ? (
+            <FinanceModuleEnhanced />
+          ) : currentView === 'health' ? (
+            <HealthModuleEnhanced />
+          ) : currentView === 'hrms' ? (
+            <HRMSModuleEnhanced />
+          ) : currentView === 'concerns' ? (
+            <ConcernsModule />
+          ) : currentView === 'sis' ? (
+            <SISModule />
+          ) : currentView === 'diary' ? (
+            <DiaryModule />
+          ) : currentView === 'gallery' ? (
+            <PhotoGalleryModule />
+          ) : currentView === 'ptm' ? (
+            <PTMSchedulerModule />
+          ) : currentView === 'certificate' ? (
+            <CertificateEngineModule />
+          ) : currentView === 'activities' ? (
+            <ActivitiesModule />
+          ) : currentView === 'alumni' ? (
+            <AlumniModule />
           ) : (PHASE5_MODULE_KEYS as readonly string[]).includes(currentView) ? (
             <Phase5Module viewKey={currentView as Phase5ViewKey} />
           ) : (
@@ -81,6 +123,7 @@ export function AppShell() {
         </main>
       </div>
       <AIAssistant />
+      <NotificationPreviewLauncher />
     </div>
   )
 }

@@ -34,7 +34,7 @@ export function LoginScreen() {
       })
       const data = await res.json()
       if (data.success) {
-        login(data.user)
+        login({ ...data.user, token: data.token })
         toast.success(`Welcome back, ${data.user.name.split(' ')[0]}!`)
       } else {
         toast.error(data.error || 'Login failed. Try demo accounts.')

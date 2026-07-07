@@ -19,6 +19,7 @@ export interface AuthUser {
   avatar?: string
   schoolName?: string
   permissions?: string[]
+  token?: string
 }
 
 export type ViewKey =
