@@ -49,6 +49,7 @@ import {
 } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
 import { SectionHeader } from './SectionHeader'
+import { SafetyDemoPanel } from './SafetyDemoPanel'
 import { useNotificationPreview, type PreviewRecipient } from './NotificationPreviewModal'
 import { SafetyCameraFocus } from './SafetyCameraFocus'
 import { useAppStore } from '@/lib/store'
@@ -419,6 +420,11 @@ function SafetyModuleInner({ role }: { role: string }) {
       {/* Lockdown drill button (only for authorized roles) */}
       {['SUPER_ADMIN', 'SCHOOL_HEAD', 'ADMIN'].includes(role) && (
         <LockdownDrillBar onTriggered={refreshAll} />
+      )}
+
+      {/* Live Demo Panel — one-click scenario triggers for school demos */}
+      {['SUPER_ADMIN', 'SCHOOL_HEAD', 'ADMIN', 'IT_TEAM'].includes(role) && (
+        <SafetyDemoPanel onAlertCreated={refreshAll} />
       )}
 
       {/* Tabs */}

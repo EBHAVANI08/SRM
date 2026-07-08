@@ -191,10 +191,28 @@ export function SafetyAlertPopup() {
 
             {/* Body */}
             <div className="flex flex-col md:flex-row">
-              {/* Snapshot */}
-              <div className="md:w-1/2 bg-slate-900 aspect-video md:aspect-auto flex items-center justify-center">
+              {/* Snapshot with AI detection overlay */}
+              <div className="md:w-1/2 bg-slate-900 aspect-video md:aspect-auto flex items-center justify-center relative">
                 {current.snapshotUrl ? (
-                  <img src={current.snapshotUrl} alt="Alert snapshot" className="w-full h-full object-cover" />
+                  <>
+                    <img src={current.snapshotUrl} alt="Alert snapshot" className="w-full h-full object-cover" />
+                    {/* AI bounding-box overlay — positioned per detection type */}
+                    <AIDetectionOverlay
+                      detectionType={current.type}
+                      confidence={current.aiConfidence}
+                    />
+                    {/* "LIVE" indicator + timestamp */}
+                    <div className="absolute top-2 left-2 flex items-center gap-1.5 bg-black/60 backdrop-blur-sm rounded px-2 py-0.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                      <span className="text-[9px] font-bold text-white tracking-wider">LIVE</span>
+                    </div>
+                    <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-sm rounded px-2 py-0.5 text-[9px] font-mono text-white">
+                      {new Date(current.triggeredAt).toLocaleTimeString('en-IN', { hour12: false })}
+                    </div>
+                    <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-sm rounded px-2 py-0.5 text-[9px] font-mono text-white/80">
+                      CAM-{current.cameraId?.slice(-4) || 'DEMO'} · {current.location}
+                    </div>
+                  </>
                 ) : (
                   <div className="text-slate-500 text-xs text-center px-4">
                     <Volume2 className="w-8 h-8 mx-auto mb-2 opacity-40" />
@@ -283,5 +301,66 @@ export function SafetyAlertPopup() {
         </motion.div>
       )}
     </AnimatePresence>
+  )
+}
+
+
+/**
+ * AIDetectionOverlay — draws a red bounding-box overlay on the snapshot
+ * to visualize where the AI vision model detected the incident.
+ *
+ * Position is heuristic per detection type (matches the pre-generated
+ * CCTV demo snapshots). For real VLM-detected alerts, the bbox would
+ * come from the model's response and be stored on the alert record.
+ */
+const BBOX_BY_TYPE: Record<string, { left: number; top: number; width: number; height: number }> = {
+  VIOLENCE:       { left: 30, top: 35, width: 45, height: 50 },
+  WEAPON:         { left: 55, top: 45, width: 18, height: 30 },
+  FALL_MEDICAL:   { left: 35, top: 50, width: 25, height: 35 },
+  INTRUSION:      { left: 40, top: 25, width: 20, height: 60 },
+  SMOKE_FIRE:     { left: 25, top: 30, width: 35, height: 40 },
+  CROWD_DENSITY:  { left: 20, top: 30, width: 60, height: 50 },
+  UNKNOWN_FACE:   { left: 40, top: 30, width: 20, height: 35 },
+  DRILL:          { left: 25, top: 25, width: 50, height: 50 },
+}
+
+function AIDetectionOverlay({
+  detectionType,
+  confidence,
+}: {
+  detectionType: string
+  confidence: number | null
+}) {
+  const bbox = BBOX_BY_TYPE[detectionType] || { left: 30, top: 30, width: 40, height: 40 }
+  const label = detectionType.replace(/_/g, ' ')
+  const pct = confidence !== null && confidence !== undefined ? Math.round(confidence * 100) : null
+
+  return (
+    <div
+      className="absolute border-2 border-red-500 rounded-sm pointer-events-none"
+      style={{
+        left: `${bbox.left}%`,
+        top: `${bbox.top}%`,
+        width: `${bbox.width}%`,
+        height: `${bbox.height}%`,
+        boxShadow: '0 0 0 1px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(0,0,0,0.5)',
+        animation: 'pulse 1.5s ease-in-out infinite',
+      }}
+    >
+      {/* Label tag above the box */}
+      <span
+        className="absolute -top-4 left-0 text-[9px] font-bold text-white bg-red-500 px-1.5 py-0.5 rounded-sm whitespace-nowrap flex items-center gap-1"
+        style={{ animation: 'pulse 1.5s ease-in-out infinite' }}
+      >
+        <span className="w-1 h-1 rounded-full bg-white" />
+        {label}
+        {pct !== null && <span className="opacity-90">· {pct}%</span>}
+      </span>
+      {/* Corner ticks for that "targeting reticle" look */}
+      <span className="absolute -top-1 -left-1 w-2 h-2 border-t-2 border-l-2 border-red-400" />
+      <span className="absolute -top-1 -right-1 w-2 h-2 border-t-2 border-r-2 border-red-400" />
+      <span className="absolute -bottom-1 -left-1 w-2 h-2 border-b-2 border-l-2 border-red-400" />
+      <span className="absolute -bottom-1 -right-1 w-2 h-2 border-b-2 border-r-2 border-red-400" />
+    </div>
   )
 }
