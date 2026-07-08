@@ -401,7 +401,7 @@ export function applyScope(
       // Student model has no schoolId column (single-school deployment).
       // For resources that DO have schoolId, filter by it; for Student/parent,
       // return all (school scope is implicit).
-      const noSchoolIdResources: ResourceKey[] = ['student', 'parent']
+      const noSchoolIdResources: ResourceKey[] = ['student', 'parent', 'attendance']
       if (noSchoolIdResources.includes(resource)) {
         return { where: {}, allowed: true }
       }

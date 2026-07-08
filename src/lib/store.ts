@@ -68,6 +68,13 @@ export type ViewKey =
   | 'ask-learnx-ai'
   | 'agent-matrix'
   | 'why-learnx'
+  | 'concerns'
+  | 'sis'
+  | 'diary'
+  | 'gallery'
+  | 'ptm'
+  | 'certificate'
+  | 'teaching-plan'
 
 interface AppState {
   user: AuthUser | null

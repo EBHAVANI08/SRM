@@ -10,6 +10,7 @@ import {
   Settings, Sparkles, Search, Bell, LogOut, Bot,
   PanelLeftClose, PanelLeft, Zap,
   Cpu, BellRing, Lightbulb, GitBranch, Timer, Grid3x3, Map,
+  AlertTriangle, Image, Calendar,
 } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
 import { MODULES, ROLE_INFO } from '@/lib/modules'
@@ -22,6 +23,7 @@ const ICON_MAP: Record<string, any> = {
   Landmark, CalendarRange, FileQuestion, Compass, Siren, Target, Database,
   Settings, Sparkles, Bot,
   Cpu, BellRing, Lightbulb, GitBranch, Timer, Grid3x3, Map,
+  AlertTriangle, Image, Calendar,
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
