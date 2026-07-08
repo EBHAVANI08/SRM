@@ -1,0 +1,1727 @@
+     1→'use client'
+     2→
+     3→/**
+     4→ * AIQuestionPaperEnhanced — AI-powered Question Paper Generator
+     5→ *
+     6→ * Reference: smart-q-pewi.onrender.com
+     7→ *
+     8→ * Features:
+     9→ *   - Configuration panel: Board (CBSE/ICSE/IGCSE/State Board), Grade (1-12),
+    10→ *     Subject, Difficulty, Total Marks, Duration, Question Types (checkboxes)
+    11→ *   - "Generate Question Paper" button → realistic exam paper with:
+    12→ *       · School header (LearnX International School)
+    13→ *       · Exam title, subject, grade, date, duration, max marks
+    14→ *       · General instructions
+    15→ *       · Sections A (MCQ), B (Short Answer), C (Long Answer), D (Case Study)
+    16→ *       · Per-question marks, case study with sub-questions, answer space
+    17→ *   - Clean printable A4 preview
+    18→ *   - Actions: Download as PDF, Print, Send to Teacher (via NotificationPreviewModal)
+    19→ */
+    20→
+    21→import { useState, useMemo } from 'react'
+    22→import { motion, AnimatePresence } from 'framer-motion'
+    23→import {
+    24→  FileText, Download, Printer, Send, Settings, BookOpen, CheckCircle2,
+    25→  Clock, Plus, Eye, Bot, RefreshCw,
+    26→} from 'lucide-react'
+    27→import { Card } from '@/components/ui/card'
+    28→import { Button } from '@/components/ui/button'
+    29→import { Badge } from '@/components/ui/badge'
+    30→import { Input } from '@/components/ui/input'
+    31→import { Label } from '@/components/ui/label'
+    32→import { Textarea } from '@/components/ui/textarea'
+    33→import { SectionHeader } from './SectionHeader'
+    34→import { useNotificationPreview } from './NotificationPreviewModal'
+    35→import { toast } from 'sonner'
+    36→
+    37→// ============ Constants ============
+    38→const BOARDS = ['CBSE', 'ICSE', 'IGCSE', 'State Board']
+    39→const GRADES = Array.from({ length: 12 }, (_, i) => `Grade ${i + 1}`)
+    40→const SUBJECTS = [
+    41→  'Mathematics', 'English', 'Science', 'Physics', 'Chemistry',
+    42→  'Biology', 'Social Studies', 'Computer Science', 'Economics',
+    43→  'Business Studies', 'Hindi', 'General Knowledge',
+    44→]
+    45→const DIFFICULTIES = ['Easy', 'Medium', 'Hard', 'Mixed']
+    46→const QUESTION_TYPES = [
+    47→  { id: 'MCQ', label: 'MCQ', desc: 'Multiple Choice' },
+    48→  { id: 'Short Answer', label: 'Short Answer', desc: '2-3 marks' },
+    49→  { id: 'Long Answer', label: 'Long Answer', desc: '4-5 marks' },
+    50→  { id: 'Case Study', label: 'Case Study', desc: 'Source-based' },
+    51→  { id: 'True/False', label: 'True/False', desc: '1 mark' },
+    52→  { id: 'Fill in the Blanks', label: 'Fill in the Blanks', desc: '1 mark' },
+    53→] as const
+    54→
+    55→type QuestionTypeId = typeof QUESTION_TYPES[number]['id']
+    56→
+    57→// ============ Types ============
+    58→interface PaperConfig {
+    59→  board: string
+    60→  grade: string
+    61→  subject: string
+    62→  difficulty: string
+    63→  totalMarks: number
+    64→  duration: number
+    65→  questionTypes: QuestionTypeId[]
+    66→  additionalInstructions?: string
+    67→}
+    68→
+    69→interface MCQ {
+    70→  text: string
+    71→  options: string[]
+    72→  correct: string
+    73→}
+    74→interface ShortQ { text: string }
+    75→interface LongQ { text: string }
+    76→interface CaseStudy {
+    77→  scenario: string
+    78→  subQuestions: string[]
+    79→}
+    80→interface TrueFalse { text: string; answer: boolean }
+    81→interface FillBlank { text: string; answer: string }
+    82→
+    83→interface SubjectBank {
+    84→  mcq: MCQ[]
+    85→  short: ShortQ[]
+    86→  long: LongQ[]
+    87→  caseStudy: CaseStudy[]
+    88→  trueFalse: TrueFalse[]
+    89→  fillBlank: FillBlank[]
+    90→}
+    91→
+    92→interface GeneratedSection {
+    93→  label: string
+    94→  type: QuestionTypeId
+    95→  instruction: string
+    96→  questions: {
+    97→    number: string
+    98→    text?: string
+    99→    options?: string[]
+   100→    marks: number
+   101→    subQuestions?: { label: string; text: string; marks: number }[]
+   102→    answerLines?: number
+   103→  }[]
+   104→  totalMarks: number
+   105→}
+   106→
+   107→interface GeneratedPaper {
+   108→  title: string
+   109→  config: PaperConfig
+   110→  generatedAt: string
+   111→  generalInstructions: string[]
+   112→  sections: GeneratedSection[]
+   113→  totalMarks: number
+   114→}
+   115→
+   116→// ============ Question Banks (subject-tagged, grade-agnostic but realistic) ============
+   117→const QUESTION_BANK: Record<string, SubjectBank> = {
+   118→  Mathematics: {
+   119→    mcq: [
+   120→      { text: 'The value of 7 × 8 − 6 ÷ 2 + 4 is:', options: ['54', '56', '58', '52'], correct: 'B' },
+   121→      { text: 'Which of the following is an irrational number?', options: ['√16', '22/7', '√2', '0.75'], correct: 'C' },
+   122→      { text: 'The LCM of 12 and 18 is:', options: ['36', '6', '24', '72'], correct: 'A' },
+   123→      { text: 'If x + 5 = 12, then x equals:', options: ['5', '7', '17', '60'], correct: 'B' },
+   124→      { text: 'The area of a rectangle with length 8 cm and breadth 5 cm is:', options: ['13 cm²', '26 cm²', '40 cm²', '45 cm²'], correct: 'C' },
+   125→      { text: 'The number of degrees in a right angle is:', options: ['45°', '60°', '90°', '180°'], correct: 'C' },
+   126→      { text: 'The simplest form of 36/60 is:', options: ['2/3', '3/5', '4/5', '6/10'], correct: 'B' },
+   127→      { text: 'If a triangle has two equal sides, it is called:', options: ['Scalene', 'Isosceles', 'Equilateral', 'Right'], correct: 'B' },
+   128→      { text: 'The value of 2³ + 3² is:', options: ['13', '17', '15', '12'], correct: 'B' },
+   129→      { text: 'The mean of 4, 6, 8, 10, 12 is:', options: ['6', '7', '8', '9'], correct: 'C' },
+   130→    ],
+   131→    short: [
+   132→      { text: 'Solve: 3(x − 4) = 2x + 5. Find the value of x.' },
+   133→      { text: 'Find the perimeter of a square whose area is 196 cm².' },
+   134→      { text: 'Express 0.375 as a fraction in its simplest form.' },
+   135→      { text: 'A shopkeeper sells an article for ₹540 at a loss of 10%. Find its cost price.' },
+   136→      { text: 'Find the simple interest on ₹2500 at 6% per annum for 2 years.' },
+   137→      { text: 'The ratio of two numbers is 3:5 and their sum is 64. Find the numbers.' },
+   138→      { text: 'Convert 3 km 250 m into centimetres.' },
+   139→      { text: 'Find the value of x if the angles of a triangle are (2x)°, (3x)°, and (4x)°.' },
+   140→    ],
+   141→    long: [
+   142→      { text: 'Prove that the sum of the angles of a triangle is 180°. Hence, find the third angle of a triangle if the other two are 52° and 68°.' },
+   143→      { text: 'A solid cylinder has a height of 14 cm and a base radius of 7 cm. Find its volume and total surface area. (Use π = 22/7)' },
+   144→      { text: 'Construct a frequency distribution table and draw a bar graph for the following marks obtained by 20 students: 12, 15, 18, 14, 16, 19, 12, 17, 13, 15, 18, 14, 16, 19, 12, 17, 13, 15, 18, 14.' },
+   145→      { text: 'A train 150 m long is running at 72 km/h. How much time will it take to cross a pole? Also, find the time to cross a bridge 250 m long.' },
+   146→      { text: 'Solve graphically: 2x + y = 6 and 2x − y = 2. Find the area of the triangle formed by these lines and the x-axis.' },
+   147→    ],
+   148→    caseStudy: [
+   149→      {
+   150→        scenario: 'A school is organising a rectangular garden of length 30 m and breadth 20 m. A path of uniform width 2 m is to be built all around the garden on the outside. The gardener needs to calculate the cost of paving the path with tiles at ₹50 per m².',
+   151→        subQuestions: [
+   152→          'Find the area of the garden (inner rectangle).',
+   153→          'Find the area of the outer rectangle including the path.',
+   154→          'Find the area of the path to be paved.',
+   155→          'Calculate the total cost of paving the path.',
+   156→        ],
+   157→      },
+   158→      {
+   159→        scenario: 'Riya deposits ₹12,000 in a bank that pays compound interest at the rate of 5% per annum. She wants to know how much money she will have after 2 years and the interest earned.',
+   160→        subQuestions: [
+   161→          'Write the formula for compound interest.',
+   162→          'Calculate the amount after 2 years.',
+   163→          'Find the compound interest earned.',
+   164→          'Compare with simple interest for the same period and find the difference.',
+   165→        ],
+   166→      },
+   167→    ],
+   168→    trueFalse: [
+   169→      { text: 'Every natural number is a whole number.', answer: true },
+   170→      { text: 'The opposite sides of a parallelogram are unequal.', answer: false },
+   171→      { text: 'π is a rational number.', answer: false },
+   172→      { text: 'A linear equation in one variable has exactly one solution.', answer: true },
+   173→      { text: 'The probability of a sure event is 0.', answer: false },
+   174→      { text: 'All squares are rectangles.', answer: true },
+   175→    ],
+   176→    fillBlank: [
+   177→      { text: 'The reciprocal of 5/8 is ______.', answer: '8/5' },
+   178→      { text: 'The value of (−1)¹⁰⁰ is ______.', answer: '1' },
+   179→      { text: 'The supplement of 35° is ______.', answer: '145°' },
+   180→      { text: 'A polygon with 6 sides is called a ______.', answer: 'hexagon' },
+   181→      { text: 'The mode of 3, 5, 5, 7, 8, 5, 9 is ______.', answer: '5' },
+   182→      { text: 'If 2x = 10, then x = ______.', answer: '5' },
+   183→    ],
+   184→  },
+   185→
+   186→  English: {
+   187→    mcq: [
+   188→      { text: 'Choose the correct synonym of "Diligent":', options: ['Lazy', 'Hardworking', 'Careless', 'Slow'], correct: 'B' },
+   189→      { text: 'Identify the noun in: "The honesty of the boy impressed everyone."', options: ['honesty', 'impressed', 'everyone', 'the'], correct: 'A' },
+   190→      { text: 'Choose the correct article: "He is ___ honest man."', options: ['a', 'an', 'the', 'no article'], correct: 'B' },
+   191→      { text: 'The antonym of "Ancient" is:', options: ['Old', 'Modern', 'Past', 'Historic'], correct: 'B' },
+   192→      { text: 'Which is the correct spelling?', options: ['Recieve', 'Receive', 'Receeve', 'Receve'], correct: 'B' },
+   193→      { text: 'The passive voice of "She writes a letter" is:', options: ['A letter is written by her', 'A letter was written by her', 'A letter is being written', 'A letter writes by her'], correct: 'A' },
+   194→      { text: 'Identify the figure of speech: "The wind whispered through the trees."', options: ['Simile', 'Metaphor', 'Personification', 'Hyperbole'], correct: 'C' },
+   195→      { text: 'Choose the correct preposition: "She is fond ___ music."', options: ['of', 'in', 'with', 'for'], correct: 'A' },
+   196→      { text: 'The plural of "Data" is:', options: ['Datas', 'Data', 'Datae', 'Datas'], correct: 'B' },
+   197→      { text: 'The indirect speech of "He said, \'I am tired\'" is:', options: ['He said that he was tired', 'He said he is tired', 'He says he was tired', 'He said I was tired'], correct: 'A' },
+   198→    ],
+   199→    short: [
+   200→      { text: 'Change the following sentence into passive voice: "The mechanic repaired my car yesterday."' },
+   201→      { text: 'Frame a meaningful sentence using the idiom "a piece of cake".' },
+   202→      { text: 'Identify the parts of speech of the underlined words: She ran (quickly) to the (market).' },
+   203→      { text: 'Write the antonyms of: ancient, generous, brave, vacant.' },
+   204→      { text: 'Punctuate the following: yesterday we went to delhi to see india gate' },
+   205→      { text: 'Rewrite in indirect speech: The teacher said, "Do not make a noise."' },
+   206→      { text: 'Form a word by adding a suitable suffix to "beauty" and use it in a sentence.' },
+   207→      { text: 'Correct the sentence: One of my friend is going to Mumbai.' },
+   208→    ],
+   209→    long: [
+   210→      { text: 'Write a paragraph (120-150 words) on the topic "The Importance of Trees in Our Life". Include at least two examples of how trees help the environment and human beings.' },
+   211→      { text: 'Read the following lines and answer the questions that follow: "Two roads diverged in a yellow wood, And sorry I could not travel both..." Identify the poem and poet. Explain the central theme in your own words.' },
+   212→      { text: 'Write a letter to the Editor of a national daily highlighting the problem of potholes in your locality and requesting prompt action by the authorities.' },
+   213→      { text: 'Develop a story (150-200 words) based on the hint: "A thirsty crow found a pitcher with little water..."' },
+   214→      { text: 'Write a notice for the school notice board inviting students to participate in the Inter-House Debate Competition to be held next Friday.' },
+   215→    ],
+   216→    caseStudy: [
+   217→      {
+   218→        scenario: 'Read the following passage carefully and answer the questions that follow:\n\n"The little girl, Meena, lived in a small village at the foot of a hill. Every morning she would walk two kilometres to fetch water from the stream. One day, she noticed that the stream was drying up. Worried, she spoke to her grandfather, who told her about the importance of planting trees and conserving water. Meena decided to act. She gathered her friends and started a small movement to plant saplings along the stream."',
+   219→        subQuestions: [
+   220→          'Why did Meena walk two kilometres every morning?',
+   221→          'What worried Meena one day, and why?',
+   222→          'What did her grandfather advise her?',
+   223→          'What values do you learn from Meena\'s actions? Answer in 30-40 words.',
+   224→        ],
+   225→      },
+   226→      {
+   227→        scenario: 'Read the poem below and answer the questions:\n\n"The laburnum top is silent, quite still\nIn the afternoon yellow September sunlight,\nA few leaves yellowing, all its seeds fallen\nTill the goldfinch comes, with a twitching chirp\nA suddenness, a startlement, at a branch end."',
+   228→        subQuestions: [
+   229→          'Identify the poem and the poet.',
+   230→          'Describe the scene before the goldfinch arrives.',
+   231→          'What is the effect of the goldfinch\'s arrival on the tree?',
+   232→          'Explain the meaning of "a startlement, at a branch end."',
+   233→        ],
+   234→      },
+   235→    ],
+   236→    trueFalse: [
+   237→      { text: 'A noun is a naming word.', answer: true },
+   238→      { text: '"Quickly" is an adjective.', answer: false },
+   239→      { text: 'The past tense of "go" is "went".', answer: true },
+   240→      { text: 'A pronoun is used in place of a verb.', answer: false },
+   241→      { text: 'The sentence "What a beautiful flower!" is an assertive sentence.', answer: false },
+   242→      { text: '"Their" and "there" are homophones.', answer: true },
+   243→    ],
+   244→    fillBlank: [
+   245→      { text: 'The comparative form of "good" is ______.', answer: 'better' },
+   246→      { text: 'A word that joins two sentences is called a ______.', answer: 'conjunction' },
+   247→      { text: 'The feminine gender of "lion" is ______.', answer: 'lioness' },
+   248→      { text: 'The past participle of "write" is ______.', answer: 'written' },
+   249→      { text: 'Words with the same meaning are called ______.', answer: 'synonyms' },
+   250→      { text: 'An sentence that asks a question is called an ______ sentence.', answer: 'interrogative' },
+   251→    ],
+   252→  },
+   253→
+   254→  Science: {
+   255→    mcq: [
+   256→      { text: 'Which of the following is a renewable source of energy?', options: ['Coal', 'Petroleum', 'Solar energy', 'Natural gas'], correct: 'C' },
+   257→      { text: 'The basic unit of life is:', options: ['Tissue', 'Organ', 'Cell', 'Organism'], correct: 'C' },
+   258→      { text: 'The chemical formula of water is:', options: ['CO₂', 'H₂O', 'O₂', 'NaCl'], correct: 'B' },
+   259→      { text: 'Which gas is most abundant in the Earth\'s atmosphere?', options: ['Oxygen', 'Carbon dioxide', 'Nitrogen', 'Hydrogen'], correct: 'C' },
+   260→      { text: 'The process by which plants make their food is called:', options: ['Respiration', 'Photosynthesis', 'Transpiration', 'Digestion'], correct: 'B' },
+   261→      { text: 'Sound travels fastest in:', options: ['Air', 'Water', 'Steel', 'Vacuum'], correct: 'C' },
+   262→      { text: 'Which of these is a conductor of electricity?', options: ['Rubber', 'Plastic', 'Copper', 'Wood'], correct: 'C' },
+   263→      { text: 'The SI unit of force is:', options: ['Joule', 'Watt', 'Newton', 'Pascal'], correct: 'C' },
+   264→      { text: 'Which planet is known as the Red Planet?', options: ['Venus', 'Mars', 'Jupiter', 'Saturn'], correct: 'B' },
+   265→      { text: 'The boiling point of water at sea level is:', options: ['50°C', '75°C', '100°C', '125°C'], correct: 'C' },
+   266→    ],
+   267→    short: [
+   268→      { text: 'Define photosynthesis. Write its balanced word equation.' },
+   269→      { text: 'State the difference between renewable and non-renewable resources with one example each.' },
+   270→      { text: 'Why does a piece of ice float on water? Explain in brief.' },
+   271→      { text: 'What is evaporation? Give one daily-life example.' },
+   272→      { text: 'Name the three states of matter and give one example of each.' },
+   273→      { text: 'Write two methods by which we can prevent soil erosion.' },
+   274→      { text: 'What is an electric circuit? Draw a simple labelled diagram.' },
+   275→      { text: 'State two differences between plant cells and animal cells.' },
+   276→    ],
+   277→    long: [
+   278→      { text: 'Explain the process of digestion in humans. Mention the role of the mouth, stomach, and small intestine in detail.' },
+   279→      { text: 'With the help of a labelled diagram, describe the water cycle. Explain the processes of evaporation, condensation, and precipitation.' },
+   280→      { text: 'What is an ecosystem? Distinguish between a food chain and a food web with suitable examples.' },
+   281→      { text: 'State Newton\'s three laws of motion. Give one real-life example for each law.' },
+   282→      { text: 'Describe the structure of the human heart with a labelled diagram. Explain the circulation of blood through it.' },
+   283→    ],
+   284→    caseStudy: [
+   285→      {
+   286→        scenario: 'A group of students observed that the water in their village pond was turning green and smelly over the past few months. They also noticed that fish in the pond were dying. The villagers had been using excessive fertilisers in nearby fields. The teacher explained that excess nutrients from fertilisers enter water bodies and cause rapid growth of algae.',
+   287→        subQuestions: [
+   288→          'Name the phenomenon described in the passage.',
+   289→          'What is the main cause of this phenomenon?',
+   290→          'Why are the fish dying in the pond?',
+   291→          'Suggest two measures to prevent this problem.',
+   292→        ],
+   293→      },
+   294→      {
+   295→        scenario: 'Rohan set up an experiment with two identical potted plants. He watered Plant A with normal water and Plant B with salt water. He kept both plants in sunlight for a week. After a week, Plant A remained healthy, but Plant B began to wilt and its leaves turned yellow.',
+   296→        subQuestions: [
+   297→          'What is the aim of Rohan\'s experiment?',
+   298→          'Why did Plant B wilt after a week?',
+   299→          'Name the process by which roots absorb water.',
+   300→          'What can be concluded from this experiment?',
+   301→        ],
+   302→      },
+   303→    ],
+   304→    trueFalse: [
+   305→      { text: 'Plants release oxygen during photosynthesis.', answer: true },
+   306→      { text: 'Sound cannot travel through a vacuum.', answer: true },
+   307→      { text: 'Metals are good conductors of heat and electricity.', answer: true },
+   308→      { text: 'The heart pumps blood only to the lungs.', answer: false },
+   309→      { text: 'Salt is a compound made of sodium and chlorine.', answer: true },
+   310→      { text: 'Light travels faster than sound.', answer: true },
+   311→    ],
+   312→    fillBlank: [
+   313→      { text: 'The process of changing water into vapour is called ______.', answer: 'evaporation' },
+   314→      { text: 'The centre of an atom is called the ______.', answer: 'nucleus' },
+   315→      { text: 'The unit of electric current is the ______.', answer: 'ampere' },
+   316→      { text: 'Plants use ______ gas to make food.', answer: 'carbon dioxide' },
+   317→      { text: 'The largest planet in our solar system is ______.', answer: 'Jupiter' },
+   318→      { text: 'The force that pulls objects towards the Earth is called ______.', answer: 'gravity' },
+   319→    ],
+   320→  },
+   321→
+   322→  Physics: {
+   323→    mcq: [
+   324→      { text: 'The SI unit of electric current is:', options: ['Volt', 'Ampere', 'Ohm', 'Watt'], correct: 'B' },
+   325→      { text: 'Which of the following is a vector quantity?', options: ['Speed', 'Distance', 'Velocity', 'Time'], correct: 'C' },
+   326→      { text: 'The acceleration due to gravity on Earth is approximately:', options: ['8.9 m/s²', '9.8 m/s²', '10.8 m/s²', '11.2 m/s²'], correct: 'B' },
+   327→      { text: 'Ohm\'s law states that V = ?', options: ['IR', 'I/R', 'R/I', 'I²R'], correct: 'A' },
+   328→      { text: 'The mirror used in a vehicle\'s rear-view is:', options: ['Concave', 'Convex', 'Plane', 'Cylindrical'], correct: 'B' },
+   329→      { text: 'The unit of work is:', options: ['Newton', 'Joule', 'Pascal', 'Watt'], correct: 'B' },
+   330→      { text: 'Light travels in:', options: ['Curved lines', 'Straight lines', 'Zigzag', 'Wavy lines'], correct: 'B' },
+   331→      { text: 'The frequency unit is:', options: ['Hertz', 'Decibel', 'Newton', 'Lux'], correct: 'A' },
+   332→      { text: 'Which lens is used to correct myopia?', options: ['Convex', 'Concave', 'Cylindrical', 'Bifocal'], correct: 'B' },
+   333→      { text: 'A body in motion stays in motion unless acted upon by a force — this is:', options: ['Newton\'s 2nd Law', 'Newton\'s 1st Law', 'Newton\'s 3rd Law', 'Law of Gravitation'], correct: 'B' },
+   334→    ],
+   335→    short: [
+   336→      { text: 'State Ohm\'s law. Write its mathematical expression.' },
+   337→      { text: 'Differentiate between scalar and vector quantities with one example each.' },
+   338→      { text: 'Define speed and velocity. Write their SI units.' },
+   339→      { text: 'State the principle of conservation of energy.' },
+   340→      { text: 'What is the focal length of a plane mirror? Justify your answer.' },
+   341→      { text: 'A current of 2 A flows through a resistor of 5 Ω. Find the potential difference across it.' },
+   342→      { text: 'Why do we see lightning before we hear thunder?' },
+   343→      { text: 'Write two differences between mass and weight.' },
+   344→    ],
+   345→    long: [
+   346→      { text: 'State and explain Newton\'s three laws of motion with suitable examples. Derive the relation F = ma.' },
+   347→      { text: 'With the help of a ray diagram, explain the image formation by a concave mirror when the object is placed between F and 2F. State the nature and size of the image.' },
+   348→      { text: 'Define electric power. Derive the expression P = VI = I²R = V²/R. An electric bulb rated 100 W operates at 220 V — find the current drawn by it.' },
+   349→      { text: 'Explain the working of an AC generator with a labelled diagram. State two ways to increase the induced current.' },
+   350→      { text: 'Derive the equation of motion v² = u² + 2as using graphical method for a uniformly accelerated body.' },
+   351→    ],
+   352→    caseStudy: [
+   353→      {
+   354→        scenario: 'A car is moving on a straight highway at a constant speed of 72 km/h. The driver suddenly sees an obstacle 50 m ahead and applies the brakes. The car decelerates uniformly at 5 m/s² and comes to rest after covering a certain distance.',
+   355→        subQuestions: [
+   356→          'Convert the speed of the car from km/h to m/s.',
+   357→          'Calculate the time taken by the car to stop after brakes are applied.',
+   358→          'Calculate the distance covered by the car before stopping.',
+   359→          'Will the car hit the obstacle? Justify your answer with calculation.',
+   360→        ],
+   361→      },
+   362→      {
+   363→        scenario: 'An electric circuit consists of a 12 V battery connected to two resistors of 4 Ω and 6 Ω connected in series. An ammeter is connected to measure the current in the circuit and a voltmeter is connected across the 6 Ω resistor.',
+   364→        subQuestions: [
+   365→          'Calculate the total resistance of the circuit.',
+   366→          'Find the current flowing through the circuit.',
+   367→          'Find the potential difference across the 6 Ω resistor.',
+   368→          'If the resistors were connected in parallel instead, what would be the total resistance?',
+   369→        ],
+   370→      },
+   371→    ],
+   372→    trueFalse: [
+   373→      { text: 'The unit of resistance is the Ohm.', answer: true },
+   374→      { text: 'Sound waves are transverse waves.', answer: false },
+   375→      { text: 'A convex mirror always forms a virtual image.', answer: true },
+   376→      { text: 'Work is done whenever a force is applied, regardless of displacement.', answer: false },
+   377→      { text: 'The kinetic energy of a body depends on its velocity squared.', answer: true },
+   378→      { text: 'Light waves can travel through a vacuum.', answer: true },
+   379→    ],
+   380→    fillBlank: [
+   381→      { text: 'The slope of a velocity-time graph gives ______.', answer: 'acceleration' },
+   382→      { text: 'The unit of frequency is ______.', answer: 'hertz' },
+   383→      { text: 'According to Ohm\'s law, V = I × ______.', answer: 'R' },
+   384→      { text: 'The bending of light when it passes from one medium to another is called ______.', answer: 'refraction' },
+   385→      { text: 'The energy possessed by a body due to its motion is called ______ energy.', answer: 'kinetic' },
+   386→      { text: '1 hp = ______ watts (approx).', answer: '746' },
+   387→    ],
+   388→  },
+   389→
+   390→  Chemistry: {
+   391→    mcq: [
+   392→      { text: 'The chemical symbol of sodium is:', options: ['So', 'Na', 'Sd', 'Sn'], correct: 'B' },
+   393→      { text: 'Which of the following is an acidic oxide?', options: ['Na₂O', 'CaO', 'CO₂', 'MgO'], correct: 'C' },
+   394→      { text: 'The pH of a neutral solution is:', options: ['0', '7', '14', '1'], correct: 'B' },
+   395→      { text: 'Which gas is released when zinc reacts with dilute HCl?', options: ['Oxygen', 'Hydrogen', 'Chlorine', 'Nitrogen'], correct: 'B' },
+   396→      { text: 'The number of electrons in the outermost shell of sodium (atomic no. 11) is:', options: ['1', '2', '7', '8'], correct: 'A' },
+   397→      { text: 'Which of the following is a noble gas?', options: ['Nitrogen', 'Oxygen', 'Argon', 'Hydrogen'], correct: 'C' },
+   398→      { text: 'The common name of CaO is:', options: ['Baking soda', 'Quick lime', 'Washing soda', 'Chalk'], correct: 'B' },
+   399→      { text: 'An atom that gains electrons becomes:', options: ['A positive ion', 'A negative ion', 'Neutral', 'A molecule'], correct: 'B' },
+   400→      { text: 'The formula of methane is:', options: ['CH₄', 'C₂H₆', 'C₂H₄', 'CH₃'], correct: 'A' },
+   401→      { text: 'Which of these is a chemical change?', options: ['Melting of ice', 'Boiling of water', 'Burning of paper', 'Cutting of wood'], correct: 'C' },
+   402→    ],
+   403→    short: [
+   404→      { text: 'Define valency. Write the valency of oxygen and sodium.' },
+   405→      { text: 'State two differences between physical and chemical changes with examples.' },
+   406→      { text: 'Write the chemical formula of: (a) sulphuric acid, (b) calcium hydroxide.' },
+   407→      { text: 'What is a neutralisation reaction? Give one example with equation.' },
+   408→      { text: 'Balance the equation: Fe + H₂O → Fe₃O₄ + H₂.' },
+   409→      { text: 'Define pH. State the pH range for acids and bases.' },
+   410→      { text: 'Write two uses of baking soda (NaHCO₃).' },
+   411→      { text: 'Differentiate between an atom and a molecule with one example each.' },
+   412→    ],
+   413→    long: [
+   414→      { text: 'Explain the arrangement of electrons in an atom according to Bohr-Bury scheme. Write the electronic configuration of elements with atomic numbers 11, 16, and 18.' },
+   415→      { text: 'State the modern periodic law. Explain how the periodic table is divided into periods and groups. Write two trends observed across a period.' },
+   416→      { text: 'Describe the manufacture of washing soda by Solvay process with balanced equations. State two of its uses.' },
+   417→      { text: 'What is a chemical reaction? Write five different types of chemical reactions with one balanced equation each.' },
+   418→      { text: 'Explain the extraction of metals from their ores. Describe the three main stages: concentration, roasting/calcination, and reduction.' },
+   419→    ],
+   420→    caseStudy: [
+   421→      {
+   422→        scenario: 'A student was given three unknown solutions A, B, and C in the laboratory. On testing with pH paper, solution A showed pH 2, solution B showed pH 7, and solution C showed pH 13. The student was asked to identify the nature of each solution and perform reactions to confirm their identity.',
+   423→        subQuestions: [
+   424→          'Identify the nature (acidic/basic/neutral) of solutions A, B, and C.',
+   425→          'Which solution will react with zinc metal to liberate hydrogen gas?',
+   426→          'What colour will phenolphthalein turn in solution C?',
+   427→          'Write a balanced equation for the reaction between solutions A and C.',
+   428→        ],
+   429→      },
+   430→      {
+   431→        scenario: 'A metal X reacts with oxygen to form a black oxide XO. The oxide reacts with HCl to form salt XCl₂ and water. The same metal X does not react with cold water but reacts with steam to form oxide and hydrogen gas.',
+   432→        subQuestions: [
+   433→          'Identify the metal X. Justify your answer.',
+   434→          'Write the balanced equation for the reaction of X with steam.',
+   435→          'What type of reaction is the formation of XO from X?',
+   436→          'Why does the metal not react with cold water?',
+   437→        ],
+   438→      },
+   439→    ],
+   440→    trueFalse: [
+   441→      { text: 'The atomic number of an element is equal to the number of protons.', answer: true },
+   442→      { text: 'Covalent bonds involve the transfer of electrons.', answer: false },
+   443→      { text: 'Acids turn blue litmus paper red.', answer: true },
+   444→      { text: 'Water is a compound, not a mixture.', answer: true },
+   445→      { text: 'All metals are solid at room temperature.', answer: false },
+   446→      { text: 'The valency of carbon is 4.', answer: true },
+   447→    ],
+   448→    fillBlank: [
+   449→      { text: 'The atomic number of hydrogen is ______.', answer: '1' },
+   450→      { text: 'Acids release ______ ions in aqueous solution.', answer: 'H⁺' },
+   451→      { text: 'The formula of common salt is ______.', answer: 'NaCl' },
+   452→      { text: 'Substances that gain oxygen are said to be ______.', answer: 'oxidised' },
+   453→      { text: 'The number of molecules in 1 mole of a substance is called ______ number.', answer: "Avogadro's" },
+   454→      { text: 'The hardest naturally occurring substance is ______.', answer: 'diamond' },
+   455→    ],
+   456→  },
+   457→
+   458→  Biology: {
+   459→    mcq: [
+   460→      { text: 'Which part of the plant carries out photosynthesis?', options: ['Root', 'Stem', 'Leaf', 'Flower'], correct: 'C' },
+   461→      { text: 'The functional unit of the kidney is:', options: ['Neuron', 'Nephron', 'Alveolus', 'Villus'], correct: 'B' },
+   462→      { text: 'Which blood cells help in clotting?', options: ['RBC', 'WBC', 'Platelets', 'Plasma'], correct: 'C' },
+   463→      { text: 'The longest bone in the human body is:', options: ['Tibia', 'Femur', 'Humerus', 'Fibula'], correct: 'B' },
+   464→      { text: 'Which of these is a sex hormone?', options: ['Insulin', 'Estrogen', 'Thyroxine', 'Adrenaline'], correct: 'B' },
+   465→      { text: 'The powerhouse of the cell is:', options: ['Nucleus', 'Mitochondria', 'Ribosome', 'Vacuole'], correct: 'B' },
+   466→      { text: 'Plants release water vapour through:', options: ['Respiration', 'Transpiration', 'Translocation', 'Absorption'], correct: 'B' },
+   467→      { text: 'Which organ is affected by hepatitis?', options: ['Lungs', 'Liver', 'Kidney', 'Heart'], correct: 'B' },
+   468→      { text: 'The basic structural unit of life is:', options: ['Tissue', 'Cell', 'Organ', 'System'], correct: 'B' },
+   469→      { text: 'Which of the following is an autotroph?', options: ['Mushroom', 'Cuscuta', 'Mango tree', 'Tapeworm'], correct: 'C' },
+   470→    ],
+   471→    short: [
+   472→      { text: 'Define photosynthesis. Write its balanced equation.' },
+   473→      { text: 'What is transpiration? State its two functions in plants.' },
+   474→      { text: 'Differentiate between aerobic and anaerobic respiration.' },
+   475→      { text: 'Write the function of: (a) RBC, (b) WBC, (c) Platelets.' },
+   476→      { text: 'What are hormones? Name the hormone secreted by the thyroid gland.' },
+   477→      { text: 'State two differences between xylem and phloem.' },
+   478→      { text: 'Define translocation. In which tissue does it occur?' },
+   479→      { text: 'What is excretion? Name the main excretory product in humans.' },
+   480→    ],
+   481→    long: [
+   482→      { text: 'Describe the human respiratory system with a labelled diagram. Explain the mechanism of breathing (inspiration and expiration).' },
+   483→      { text: 'Explain the structure of a neuron with a labelled diagram. Describe how a nerve impulse is transmitted.' },
+   484→      { text: 'Describe the process of digestion in humans. Mention the enzymes secreted by the salivary glands, stomach, and pancreas with their functions.' },
+   485→      { text: 'What is photosynthesis? Explain the light and dark reactions. Write the overall balanced equation.' },
+   486→      { text: 'Describe the structure of the human heart with a labelled diagram. Distinguish between arteries and veins.' },
+   487→    ],
+   488→    caseStudy: [
+   489→      {
+   490→        scenario: 'A doctor examined a patient and observed symptoms such as pale skin, fatigue, dizziness, and shortness of breath even after mild activity. A blood test revealed a lower-than-normal count of red blood cells and reduced haemoglobin levels. The doctor advised the patient to include iron-rich foods like spinach, dates, and jaggery in the diet.',
+   491→        subQuestions: [
+   492→          'Identify the disease the patient is suffering from.',
+   493→          'What is the normal range of haemoglobin in adult males?',
+   494→          'Why does the patient experience shortness of breath?',
+   495→          'Suggest two more iron-rich foods that can be included in the diet.',
+   496→        ],
+   497→      },
+   498→      {
+   499→        scenario: 'A student set up an experiment to demonstrate photosynthesis. A leaf from a potted plant kept in sunlight was detached, boiled in alcohol, washed with water, and treated with iodine solution. The leaf turned blue-black. The same procedure was repeated with a leaf from a plant kept in the dark for 48 hours, and the leaf did not turn blue-black.',
+   500→        subQuestions: [
+   501→          'Why was the plant kept in the dark for 48 hours before the experiment?',
+   502→          'What does the blue-black colour indicate?',
+   503→          'Why was the leaf boiled in alcohol?',
+   504→          'State the conclusion of this experiment.',
+   505→        ],
+   506→      },
+   507→    ],
+   508→    trueFalse: [
+   509→      { text: 'The largest organ of the human body is the skin.', answer: true },
+   510→      { text: 'Photosynthesis occurs in the mitochondria.', answer: false },
+   511→      { text: 'White blood cells fight against infections.', answer: true },
+   512→      { text: 'All veins carry deoxygenated blood.', answer: false },
+   513→      { text: 'Insulin is secreted by the pancreas.', answer: true },
+   514→      { text: 'Stomata are present in the roots of plants.', answer: false },
+   515→    ],
+   516→    fillBlank: [
+   517→      { text: 'The process by which plants lose water as vapour is called ______.', answer: 'transpiration' },
+   518→      { text: 'The structural and functional unit of the kidney is the ______.', answer: 'nephron' },
+   519→      { text: 'The total number of chambers in the human heart is ______.', answer: 'four' },
+   520→      { text: 'Photosynthesis takes place in the ______ of the leaf.', answer: 'chloroplast' },
+   521→      { text: 'The hormone that regulates blood sugar is ______.', answer: 'insulin' },
+   522→      { text: 'The green pigment in plants is called ______.', answer: 'chlorophyll' },
+   523→    ],
+   524→  },
+   525→
+   526→  'Social Studies': {
+   527→    mcq: [
+   528→      { text: 'The Indian Constitution came into effect on:', options: ['15 Aug 1947', '26 Jan 1950', '26 Nov 1949', '2 Oct 1950'], correct: 'B' },
+   529→      { text: 'Who is known as the "Father of the Nation" in India?', options: ['Jawaharlal Nehru', 'Sardar Patel', 'Mahatma Gandhi', 'B. R. Ambedkar'], correct: 'C' },
+   530→      { text: 'The Tropic of Cancer passes through how many Indian states?', options: ['6', '7', '8', '9'], correct: 'C' },
+   531→      { text: 'Which Mughal emperor built the Taj Mahal?', options: ['Akbar', 'Babur', 'Shah Jahan', 'Aurangzeb'], correct: 'C' },
+   532→      { text: 'The Parliament of India consists of:', options: ['Lok Sabha only', 'Rajya Sabha only', 'Both + President', 'Supreme Court'], correct: 'C' },
+   533→      { text: 'The longest river in India is:', options: ['Yamuna', 'Ganga', 'Godavari', 'Brahmaputra'], correct: 'B' },
+   534→      { text: 'Who was the first President of independent India?', options: ['Dr. Rajendra Prasad', 'Dr. S. Radhakrishnan', 'Dr. Zakir Husain', 'V. V. Giri'], correct: 'A' },
+   535→      { text: 'The Dandi March was led by Mahatma Gandhi in the year:', options: ['1920', '1930', '1942', '1947'], correct: 'B' },
+   536→      { text: 'Which is the southernmost point of the Indian mainland?', options: ['Kanyakumari', 'Indira Point', 'Cape Comorin', 'Rameswaram'], correct: 'A' },
+   537→      { text: 'The Quit India Movement was launched in:', options: ['1930', '1935', '1942', '1945'], correct: 'C' },
+   538→    ],
+   539→    short: [
+   540→      { text: 'What is the importance of 26 January in Indian history?' },
+   541→      { text: 'Define democracy. State two of its essential features.' },
+   542→      { text: 'Write two differences between the Lok Sabha and the Rajya Sabha.' },
+   543→      { text: 'Why is the Tropic of Cancer significant for India?' },
+   544→      { text: 'State two contributions of Mahatma Gandhi to the freedom struggle.' },
+   545→      { text: 'What is the role of the President of India? Mention any two powers.' },
+   546→      { text: 'Define secularism as given in the Indian Constitution.' },
+   547→      { text: 'Mention any two main causes of the Revolt of 1857.' },
+   548→    ],
+   549→    long: [
+   550→      { text: 'Describe the main features of the Indian Constitution. Explain the significance of Fundamental Rights and Directive Principles of State Policy.' },
+   551→      { text: 'Discuss the geographical location of India. Explain the importance of India\'s location in terms of trade, climate, and culture.' },
+   552→      { text: 'Explain the causes, course, and consequences of the Non-Cooperation Movement led by Mahatma Gandhi.' },
+   553→      { text: 'Describe the structure and functions of the Indian Parliament. How does a bill become a law?' },
+   554→      { text: 'Explain the main features of the Mughal Empire under Akbar — administration, religious policy, and cultural achievements.' },
+   555→    ],
+   556→    caseStudy: [
+   557→      {
+   558→        scenario: 'A 14-year-old student named Riya, a resident of Delhi, read in the newspaper that some children in her locality were denied admission to a private school because they belonged to a lower caste. She was upset and decided to take action. Her teacher explained that the Indian Constitution guarantees the Right to Equality and prohibits discrimination on grounds of religion, race, caste, sex, or place of birth.',
+   559→        subQuestions: [
+   560→          'Which Fundamental Right is being violated in the above case?',
+   561→          'Mention the article of the Indian Constitution that prohibits untouchability.',
+   562→          'What action can Riya take to help those children?',
+   563→          'Why is the Right to Equality important in a democracy? Answer in 30-40 words.',
+   564→        ],
+   565→      },
+   566→      {
+   567→        scenario: 'The Indian subcontinent is located between 8°4\' N and 37°6\' N latitudes and 68°7\' E and 97°25\' E longitudes. India is divided into almost two equal halves by the Tropic of Cancer. The Himalayas protect India from cold winds of Central Asia and play a vital role in the monsoon.',
+   568→        subQuestions: [
+   569→          'What is the latitudinal extent of India?',
+   570→          'Name the parallel that divides India into almost two equal halves.',
+   571→          'How do the Himalayas influence the climate of India?',
+   572→          'Why is India\'s location strategically important?',
+   573→        ],
+   574→      },
+   575→    ],
+   576→    trueFalse: [
+   577→      { text: 'The Indian Constitution was adopted on 26 November 1949.', answer: true },
+   578→      { text: 'The Himalayas are old fold mountains.', answer: false },
+   579→      { text: 'The Ganga is the longest river in India.', answer: true },
+   580→      { text: 'Akbar was the founder of the Mughal Empire.', answer: false },
+   581→      { text: 'India is a republic.', answer: true },
+   582→      { text: 'The Lok Sabha is a permanent house.', answer: false },
+   583→    ],
+   584→    fillBlank: [
+   585→      { text: 'The capital of India is ______.', answer: 'New Delhi' },
+   586→      { text: 'The longest river in India is the ______.', answer: 'Ganga' },
+   587→      { text: 'The author of the Indian Constitution is Dr. ______.', answer: 'B. R. Ambedkar' },
+   588→      { text: 'The Himalayas are ______ mountains.', answer: 'fold' },
+   589→      { text: 'India became a republic on 26 January ______.', answer: '1950' },
+   590→      { text: 'The Tropic of ______ passes through India.', answer: 'Cancer' },
+   591→    ],
+   592→  },
+   593→
+   594→  'Computer Science': {
+   595→    mcq: [
+   596→      { text: 'Which is the smallest unit of data in a computer?', options: ['Byte', 'Bit', 'Nibble', 'Word'], correct: 'B' },
+   597→      { text: 'HTML stands for:', options: ['Hyper Text Markup Language', 'High Tech Modern Language', 'Hyperlink Text Mark Language', 'Home Tool Markup Language'], correct: 'A' },
+   598→      { text: 'Which of the following is an input device?', options: ['Monitor', 'Printer', 'Keyboard', 'Speaker'], correct: 'C' },
+   599→      { text: 'The brain of the computer is:', options: ['RAM', 'CPU', 'Hard disk', 'ROM'], correct: 'B' },
+   600→      { text: 'Which language is used for styling web pages?', options: ['HTML', 'CSS', 'Python', 'SQL'], correct: 'B' },
+   601→      { text: '1 KB equals how many bytes?', options: ['100', '512', '1024', '2048'], correct: 'C' },
+   602→      { text: 'Which of these is a high-level language?', options: ['Assembly', 'Machine', 'Python', 'Binary'], correct: 'C' },
+   603→      { text: 'A loop that runs a fixed number of times is called a:', options: ['While loop', 'For loop', 'Infinite loop', 'Nested loop'], correct: 'B' },
+   604→      { text: 'The extension of a Python file is:', options: ['.p', '.py', '.python', '.pt'], correct: 'B' },
+   605→      { text: 'Which key combination is used to copy text?', options: ['Ctrl+V', 'Ctrl+X', 'Ctrl+C', 'Ctrl+P'], correct: 'C' },
+   606→    ],
+   607→    short: [
+   608→      { text: 'Differentiate between hardware and software with one example each.' },
+   609→      { text: 'What is a variable in programming? Write one example in Python.' },
+   610→      { text: 'Define an algorithm. Write an algorithm to find the sum of two numbers.' },
+   611→      { text: 'State two differences between RAM and ROM.' },
+   612→      { text: 'What is the function of an operating system? Name any two popular OS.' },
+   613→      { text: 'Write a Python program to check if a number is even or odd.' },
+   614→      { text: 'Differentiate between a compiler and an interpreter.' },
+   615→      { text: 'List any four data types available in Python.' },
+   616→    ],
+   617→    long: [
+   618→      { text: 'Explain the different types of computer networks (LAN, MAN, WAN) with examples. State two advantages of computer networking.' },
+   619→      { text: 'Describe the four basic components of a computer system with their functions. Draw a labelled block diagram.' },
+   620→      { text: 'Write a Python program to print the first 10 natural numbers using a for loop. Explain the role of loops in programming.' },
+   621→      { text: 'Explain HTML with its basic structure. Write an HTML code snippet to display "Hello, World!" in the browser with a heading.' },
+   622→      { text: 'Describe the phases of the Software Development Life Cycle (SDLC). State the importance of each phase.' },
+   623→    ],
+   624→    caseStudy: [
+   625→      {
+   626→        scenario: 'A school library wants to automate its book-keeping process. The librarian needs a program that stores the names of books, their authors, and availability status. When a student issues a book, its status should change to "Issued", and when returned, it should change back to "Available". The system should also allow searching for a book by title.',
+   627→        subQuestions: [
+   628→          'Which data structure would be most suitable to store this information?',
+   629→          'Write a Python statement to create a list named "library".',
+   630→          'Which control structure would you use to search for a book by title?',
+   631→          'List two benefits of automating the library system.',
+   632→        ],
+   633→      },
+   634→    ],
+   635→    trueFalse: [
+   636→      { text: 'A byte consists of 8 bits.', answer: true },
+   637→      { text: 'Python is a compiled language only.', answer: false },
+   638→      { text: 'The CPU is also called the brain of the computer.', answer: true },
+   639→      { text: 'HTML is a programming language.', answer: false },
+   640→      { text: 'Linux is an operating system.', answer: true },
+   641→      { text: 'RAM is a non-volatile memory.', answer: false },
+   642→    ],
+   643→    fillBlank: [
+   644→      { text: 'The full form of CPU is ______.', answer: 'Central Processing Unit' },
+   645→      { text: '1 MB = ______ KB.', answer: '1024' },
+   646→      { text: 'The output of print(2 ** 3) in Python is ______.', answer: '8' },
+   647→      { text: 'The HTML tag for the largest heading is ______.', answer: '<h1>' },
+   648→      { text: 'A bug in a program is also called an ______.', answer: 'error' },
+   649→      { text: 'The symbol used to start a comment in Python is ______.', answer: '#' },
+   650→    ],
+   651→  },
+   652→
+   653→  Economics: {
+   654→    mcq: [
+   655→      { text: 'The term "GDP" stands for:', options: ['Gross Demand Product', 'Gross Domestic Product', 'General Demand Price', 'Gross Direct Price'], correct: 'B' },
+   656→      { text: 'Which sector includes agriculture and allied activities?', options: ['Primary', 'Secondary', 'Tertiary', 'Quaternary'], correct: 'A' },
+   657→      { text: 'The central bank of India is:', options: ['SBI', 'RBI', 'ICICI', 'PNB'], correct: 'B' },
+   658→      { text: 'Demand curve slopes:', options: ['Upward', 'Downward', 'Vertical', 'Horizontal'], correct: 'B' },
+   659→      { text: 'Which is a direct tax?', options: ['GST', 'Customs duty', 'Income tax', 'Excise duty'], correct: 'C' },
+   660→      { text: 'Invisible trade refers to trade in:', options: ['Goods', 'Services', 'Bullion', 'Currency'], correct: 'B' },
+   661→      { text: 'The law of supply states that price and quantity supplied are:', options: ['Inversely related', 'Directly related', 'Unrelated', 'Negatively related'], correct: 'B' },
+   662→      { text: 'Money serves as a:', options: ['Medium of exchange', 'Store of value', 'Unit of account', 'All of these'], correct: 'D' },
+   663→      { text: 'Unemployment that occurs due to seasonal changes is called:', options: ['Structural', 'Frictional', 'Seasonal', 'Cyclical'], correct: 'C' },
+   664→      { text: 'The economic reform in India started in:', options: ['1981', '1991', '2001', '2011'], correct: 'B' },
+   665→    ],
+   666→    short: [
+   667→      { text: 'Define economics. State its two main branches.' },
+   668→      { text: 'Distinguish between microeconomics and macroeconomics.' },
+   669→      { text: 'State the law of demand with a suitable example.' },
+   670→      { text: 'What is inflation? Mention two of its causes.' },
+   671→      { text: 'Differentiate between direct and indirect taxes with examples.' },
+   672→      { text: 'Write two functions of the Reserve Bank of India.' },
+   673→      { text: 'Define GDP. Why is it an important indicator of an economy?' },
+   674→      { text: 'Explain the concept of opportunity cost with an example.' },
+   675→    ],
+   676→    long: [
+   677→      { text: 'Explain the three sectors of the economy (primary, secondary, tertiary) with two examples of each. Discuss their relative importance in India.' },
+   678→      { text: 'Discuss the various causes of unemployment in India. Suggest measures to solve the problem of unemployment.' },
+   679→      { text: 'What is monetary policy? Explain the tools used by the central bank to control credit in the economy.' },
+   680→      { text: 'Explain the law of demand with a demand schedule and curve. State three reasons why the demand curve slopes downward.' },
+   681→      { text: 'Discuss the major economic reforms introduced in India since 1991. State their impact on the Indian economy.' },
+   682→    ],
+   683→    caseStudy: [
+   684→      {
+   685→        scenario: 'India has a large workforce engaged in agriculture, but the contribution of this sector to GDP has been declining over the years. While the agricultural sector employs nearly 45% of the total workforce, it contributes only about 17% to the GDP. This imbalance creates economic pressure on the rural population and affects their standard of living.',
+   686→        subQuestions: [
+   687→          'Which sector is being discussed in the case?',
+   688→          'Why is there an imbalance between employment share and GDP contribution?',
+   689→          'What is the impact of this imbalance on rural households?',
+   690→          'Suggest two measures to improve agricultural productivity and income.',
+   691→        ],
+   692→      },
+   693→    ],
+   694→    trueFalse: [
+   695→      { text: 'GDP is the total value of all final goods and services produced in a country.', answer: true },
+   696→      { text: 'Inflation reduces the purchasing power of money.', answer: true },
+   697→      { text: 'A monopoly has many sellers.', answer: false },
+   698→      { text: 'The Reserve Bank of India prints currency notes.', answer: true },
+   699→      { text: 'Demand and price are directly related.', answer: false },
+   700→      { text: 'Barter system involves exchange of goods for goods.', answer: true },
+   701→    ],
+   702→    fillBlank: [
+   703→      { text: 'The full form of GDP is ______.', answer: 'Gross Domestic Product' },
+   704→      { text: 'The central bank of India is the ______.', answer: 'RBI' },
+   705→      { text: 'A tax levied on income is called a ______ tax.', answer: 'direct' },
+   706→      { text: 'The reward for capital is ______.', answer: 'interest' },
+   707→      { text: 'The demand curve slopes ______.', answer: 'downward' },
+   708→      { text: 'The economic reforms in India were introduced in the year ______.', answer: '1991' },
+   709→    ],
+   710→  },
+   711→
+   712→  'Business Studies': {
+   713→    mcq: [
+   714→      { text: 'A business owned by a single person is called:', options: ['Partnership', 'Sole proprietorship', 'Company', 'Cooperative'], correct: 'B' },
+   715→      { text: 'The minimum number of members in a private company is:', options: ['1', '2', '3', '7'], correct: 'B' },
+   716→      { text: 'Which of the following is a function of management?', options: ['Planning', 'Organising', 'Controlling', 'All of these'], correct: 'D' },
+   717→      { text: 'Marketing mix consists of:', options: ['2 Ps', '3 Ps', '4 Ps', '5 Ps'], correct: 'C' },
+   718→      { text: 'Delegation of authority means:', options: ['Assigning responsibility only', 'Sharing power', 'Avoiding work', 'Centralisation'], correct: 'B' },
+   719→      { text: 'Which is a current asset?', options: ['Land', 'Building', 'Cash', 'Machinery'], correct: 'C' },
+   720→      { text: 'Wholesalers deal in:', options: ['Small quantities', 'Bulk quantities', 'Single items', 'Retail only'], correct: 'B' },
+   721→      { text: 'The most important function of an entrepreneur is:', options: ['Innovation', 'Routine work', 'Avoiding risk', 'Following rules'], correct: 'A' },
+   722→      { text: 'Which is NOT a type of business organisation?', options: ['Sole proprietorship', 'Partnership', 'Friendship', 'Company'], correct: 'C' },
+   723→      { text: 'Brand equity refers to:', options: ['Cost of brand', 'Value of brand', 'Price of brand', 'Discount on brand'], correct: 'B' },
+   724→    ],
+   725→    short: [
+   726→      { text: 'Define management. State any two of its objectives.' },
+   727→      { text: 'Differentiate between a sole proprietorship and a partnership.' },
+   728→      { text: 'What is delegation? State two of its advantages.' },
+   729→      { text: 'Explain the term "marketing mix". List its four elements.' },
+   730→      { text: 'State two differences between wholesalers and retailers.' },
+   731→      { text: 'Define entrepreneurship. Mention two qualities of a successful entrepreneur.' },
+   732→      { text: 'What is branding? State two benefits of branding to a business.' },
+   733→      { text: 'Write a short note on the importance of planning in management.' },
+   734→    ],
+   735→    long: [
+   736→      { text: 'Explain the various types of business organisations. Discuss the merits and demerits of a joint stock company.' },
+   737→      { text: 'Describe the functions of management — planning, organising, staffing, directing, and controlling — with examples.' },
+   738→      { text: 'Explain the four elements of the marketing mix (4 Ps) with suitable examples for each.' },
+   739→      { text: 'What is entrepreneurship? Discuss the role of entrepreneurs in the economic development of a country.' },
+   740→      { text: 'Explain the concept of delegation. Discuss its elements and the barriers to effective delegation.' },
+   741→    ],
+   742→    caseStudy: [
+   743→      {
+   744→        scenario: 'Ramesh started a small business of manufacturing hand-made soaps. Initially, he managed everything alone — production, marketing, and sales. As the business grew, he could not handle all the work by himself. He decided to hire some employees and divide the work among them. He appointed a production manager, a sales manager, and an accountant, and gave them authority to take decisions in their respective areas.',
+   745→        subQuestions: [
+   746→          'Identify the concept of management discussed in the case.',
+   747→          'Why did Ramesh need to divide work among his employees?',
+   748→          'State two advantages of the concept identified in (a).',
+   749→          'Mention one challenge Ramesh might face after delegating work.',
+   750→        ],
+   751→      },
+   752→    ],
+   753→    trueFalse: [
+   754→      { text: 'Planning is the first function of management.', answer: true },
+   755→      { text: 'A private company can issue shares to the public.', answer: false },
+   756→      { text: 'Branding helps in product differentiation.', answer: true },
+   757→      { text: 'Wholesalers sell directly to consumers.', answer: false },
+   758→      { text: 'Controlling is the last function of management.', answer: true },
+   759→      { text: 'Delegation reduces the burden on managers.', answer: true },
+   760→    ],
+   761→    fillBlank: [
+   762→      { text: 'A business owned by one person is called a ______.', answer: 'sole proprietorship' },
+   763→      { text: 'The four Ps of marketing are Product, Price, Place, and ______.', answer: 'Promotion' },
+   764→      { text: 'The first function of management is ______.', answer: 'planning' },
+   765→      { text: 'A company whose shares are listed on a stock exchange is called a ______ company.', answer: 'public' },
+   766→      { text: 'Transfer of authority to a subordinate is called ______.', answer: 'delegation' },
+   767→      { text: 'The reward for an entrepreneur is ______.', answer: 'profit' },
+   768→    ],
+   769→  },
+   770→
+   771→  Hindi: {
+   772→    mcq: [
+   773→      { text: '"सूर्य" शब्द का पर्यायवाची शब्द है:', options: ['चाँद', 'तारा', 'रवि', 'बादल'], correct: 'C' },
+   774→      { text: '"विद्यालय" शब्द में संधि है:', options: ['विसर्ग संधि', 'दीर्घ संधि', 'गुण संधि', 'वृद्धि संधि'], correct: 'B' },
+   775→      { text: '"पुस्तक" शब्द का लिंग है:', options: ['पुल्लिंग', 'स्त्रीलिंग', 'नपुंसकलिंग', 'कोई नहीं'], correct: 'A' },
+   776→      { text: '"मित्र" शब्द का विलोम शब्द है:', options: ['सखा', 'शत्रु', 'दोस्त', 'भाई'], correct: 'B' },
+   777→      { text: 'हिंदी वर्णमाला में कुल वर्ण हैं:', options: ['44', '52', '48', '54'], correct: 'B' },
+   778→      { text: '"पंक्ति" शब्द का बहुवचन है:', options: ['पंक्तियाँ', 'पंक्ति', 'पंक्तियों', 'पंक्ति-पंक्ति'], correct: 'A' },
+   779→      { text: '"विद्या" शब्द में उपसर्ग है:', options: ['वि', 'द्या', 'विद', 'इसमें उपसर्ग नहीं'], correct: 'A' },
+   780→      { text: 'रामचरितमानस के रचयिता हैं:', options: ['तुलसीदास', 'सूरदास', 'कबीरदास', 'प्रेमचंद'], correct: 'A' },
+   781→      { text: '"जल" शब्द का पर्यायवाची शब्द है:', options: ['अग्नि', 'वायु', 'वारि', 'पृथ्वी'], correct: 'C' },
+   782→      { text: '"सूर्योदय" में संधि है:', options: ['वृद्धि संधि', 'दीर्घ संधि', 'गुण संधि', 'यण संधि'], correct: 'C' },
+   783→    ],
+   784→    short: [
+   785→      { text: 'संज्ञा किसे कहते हैं? दो उदाहरण दीजिए।' },
+   786→      { text: 'संधि के भेद बताइए और प्रत्येक का एक उदाहरण दीजिए।' },
+   787→      { text: '"विद्या ददाति विनयम्" — इस कथन का भाव स्पष्ट कीजिए।' },
+   788→      { text: 'उपसर्ग और प्रत्यय में दो अंतर लिखिए।' },
+   789→      { text: 'प्रेमचंद के बारे में पाँच वाक्य लिखिए।' },
+   790→      { text: 'पर्यायवाची शब्द किसे कहते हैं? "पानी" के चार पर्यायवाची शब्द लिखिए।' },
+   791→      { text: 'विलोम शब्द बनाइए: दिन, आदि, उत्तम, अमृत।' },
+   792→      { text: 'मित्रता के महत्व पर पाँच वाक्य लिखिए।' },
+   793→    ],
+   794→    long: [
+   795→      { text: 'महात्मा गांधी के जीवन और उनके योगदान पर एक अनुच्छेद (120-150 शब्दों में) लिखिए।' },
+   796→      { text: '"परोपकार: फल नहीं चाहता" — इस विषय पर अपने विचार लगभग 150 शब्दों में लिखिए।' },
+   797→      { text: 'प्रकृति की सुंदरता का वर्णन करते हुए एक निबंध लिखिए। (150-200 शब्द)' },
+   798→      { text: 'कबीरदास के दोहों का भावार्थ स्पष्ट करते हुए उनके दर्शन को समझाइए।' },
+   799→      { text: 'अपने मित्र को जन्मदिन की शुभकामना देते हुए एक पत्र लिखिए।' },
+   800→    ],
+   801→    caseStudy: [
+   802→      {
+   803→        scenario: 'निम्नलिखित पद्यांश को पढ़कर प्रश्नों के उत्तर दीजिए:\n\n"जाते जाते कह गए रहीमा दे गए दान,\nमोहि कहै रहीमने बड़े दीन न दीज्यो दान।\nजे दीन्हे दीन होंहि ते नहिं दीन्हे निदान,\nदीन्हे न दीन्हे रहीमा जे दीन्हे ते दीन।"',
+   804→        subQuestions: [
+   805→          'इन पंक्तियों के रचयिता कौन हैं?',
+   806→          '"दान" शब्द का भाव क्या है?',
+   807→          'रहीम के अनुसार दान किस प्रकार देना चाहिए?',
+   808→          'इन पंक्तियों से मिलने वाली सीख अपने शब्दों में लिखिए।',
+   809→        ],
+   810→      },
+   811→    ],
+   812→    trueFalse: [
+   813→      { text: '"पुस्तक" एक संज्ञा है।', answer: true },
+   814→      { text: '"सूर्य" और "रवि" पर्यायवाची शब्द हैं।', answer: true },
+   815→      { text: 'हिंदी में तीन लिंग होते हैं।', answer: true },
+   816→      { text: '"पंक्ति" का बहुवचन "पंक्तियाँ" होता है।', answer: true },
+   817→      { text: 'तुलसीदास ने रामचरितमानस नहीं लिखी।', answer: false },
+   818→      { text: '"गंगा" एक व्यक्तिवाचक संज्ञा है।', answer: true },
+   819→    ],
+   820→    fillBlank: [
+   821→      { text: '"जल" का पर्यायवाची शब्द ______ है।', answer: 'वारि' },
+   822→      { text: '"दिन" का विलोम शब्द ______ है।', answer: 'रात' },
+   823→      { text: 'रामचरितमानस के रचयिता ______ जी हैं।', answer: 'तुलसीदास' },
+   824→      { text: '"विद्या" शब्द में उपसर्ग ______ है।', answer: 'वि' },
+   825→      { text: 'संधि के ______ भेद होते हैं।', answer: 'तीन' },
+   826→      { text: '"पुस्तक" शब्द का लिंग ______ है।', answer: 'पुल्लिंग' },
+   827→    ],
+   828→  },
+   829→
+   830→  'General Knowledge': {
+   831→    mcq: [
+   832→      { text: 'How many continents are there on Earth?', options: ['5', '6', '7', '8'], correct: 'C' },
+   833→      { text: 'Which is the largest ocean on Earth?', options: ['Atlantic', 'Indian', 'Arctic', 'Pacific'], correct: 'D' },
+   834→      { text: 'Who painted the Mona Lisa?', options: ['Vincent van Gogh', 'Leonardo da Vinci', 'Pablo Picasso', 'Michelangelo'], correct: 'B' },
+   835→      { text: 'What is the capital of Japan?', options: ['Beijing', 'Seoul', 'Tokyo', 'Bangkok'], correct: 'C' },
+   836→      { text: 'Which is the smallest planet in our solar system?', options: ['Earth', 'Mars', 'Mercury', 'Venus'], correct: 'C' },
+   837→      { text: 'The Olympic Games originated in:', options: ['Rome', 'Greece', 'Egypt', 'China'], correct: 'B' },
+   838→      { text: 'Which is the tallest mountain in the world?', options: ['K2', 'Kanchenjunga', 'Mount Everest', 'Makalu'], correct: 'C' },
+   839→      { text: 'How many players are there in a cricket team?', options: ['9', '10', '11', '12'], correct: 'C' },
+   840→      { text: 'The currency of the United States is:', options: ['Pound', 'Euro', 'Dollar', 'Yen'], correct: 'C' },
+   841→      { text: 'Which language is most spoken in the world?', options: ['English', 'Spanish', 'Mandarin Chinese', 'Hindi'], correct: 'C' },
+   842→    ],
+   843→    short: [
+   844→      { text: 'Name the seven continents of the world.' },
+   845→      { text: 'Who was the first person to walk on the moon?' },
+   846→      { text: 'Write the names of any four BRICS nations.' },
+   847→      { text: 'What is the importance of the United Nations? Write two points.' },
+   848→      { text: 'Name any four rivers of India.' },
+   849→      { text: 'Who wrote the Indian national anthem? Mention its name.' },
+   850→      { text: 'State two differences between weather and climate.' },
+   851→      { text: 'List any four instruments used to measure weather elements.' },
+   852→    ],
+   853→    long: [
+   854→      { text: 'Write a short note on the United Nations — its formation, organs, and role in maintaining world peace.' },
+   855→      { text: 'Describe the contributions of ancient Indian civilisation to the world in the fields of science, mathematics, and medicine.' },
+   856→      { text: 'Explain the importance of sports and games in a student\'s life. Mention any three popular international sporting events.' },
+   857→      { text: 'Write about the major environmental issues faced by the world today and suggest three measures to protect our environment.' },
+   858→      { text: 'Describe the freedom movement of India. Mention the role of any three prominent leaders.' },
+   859→    ],
+   860→    caseStudy: [
+   861→      {
+   862→        scenario: 'The United Nations is an international organisation founded in 1945 after World War II. It currently has 193 member states. Its main objectives are to maintain international peace and security, promote friendly relations among nations, achieve international cooperation, and be a centre for harmonising the actions of nations. The UN has six principal organs, including the General Assembly, the Security Council, and the International Court of Justice.',
+   863→        subQuestions: [
+   864→          'When was the United Nations founded?',
+   865→          'How many member states does the UN have?',
+   866→          'Name any two principal organs of the UN.',
+   867→          'State any two objectives of the United Nations.',
+   868→        ],
+   869→      },
+   870→    ],
+   871→    trueFalse: [
+   872→      { text: 'The Pacific Ocean is the largest ocean on Earth.', answer: true },
+   873→      { text: 'The Eiffel Tower is in London.', answer: false },
+   874→      { text: 'Mount Everest is the tallest mountain in the world.', answer: true },
+   875→      { text: 'The Great Wall of China is visible from the moon with the naked eye.', answer: false },
+   876→      { text: 'Cricket is played with 11 players on each team.', answer: true },
+   877→      { text: 'Australia is both a country and a continent.', answer: true },
+   878→    ],
+   879→    fillBlank: [
+   880→      { text: 'The largest ocean on Earth is the ______ Ocean.', answer: 'Pacific' },
+   881→      { text: 'The capital of Japan is ______.', answer: 'Tokyo' },
+   882→      { text: 'The tallest mountain in the world is ______.', answer: 'Mount Everest' },
+   883→      { text: 'The United Nations was founded in the year ______.', answer: '1945' },
+   884→      { text: 'The Mona Lisa was painted by ______.', answer: 'Leonardo da Vinci' },
+   885→      { text: 'There are ______ continents on Earth.', answer: 'seven' },
+   886→    ],
+   887→  },
+   888→}
+   889→
+   890→// Fallback bank (subjects not in main bank — Economics, etc. handled above)
+   891→const FALLBACK_BANK: SubjectBank = {
+   892→  mcq: [
+   893→    { text: 'Which of the following is a key concept in this subject?', options: ['Concept A', 'Concept B', 'Concept C', 'Concept D'], correct: 'A' },
+   894→    { text: 'The foundational principle discussed in class is:', options: ['Principle 1', 'Principle 2', 'Principle 3', 'Principle 4'], correct: 'B' },
+   895→    { text: 'Which is the most appropriate definition?', options: ['Definition A', 'Definition B', 'Definition C', 'Definition D'], correct: 'C' },
+   896→    { text: 'A key term used in this discipline refers to:', options: ['Idea A', 'Idea B', 'Idea C', 'Idea D'], correct: 'D' },
+   897→    { text: 'The standard methodology applied here is:', options: ['Method A', 'Method B', 'Method C', 'Method D'], correct: 'A' },
+   898→    { text: 'The primary purpose of this approach is:', options: ['Goal A', 'Goal B', 'Goal C', 'Goal D'], correct: 'B' },
+   899→    { text: 'Which option best describes the relationship?', options: ['Relation A', 'Relation B', 'Relation C', 'Relation D'], correct: 'C' },
+   900→    { text: 'The most common application involves:', options: ['Application A', 'Application B', 'Application C', 'Application D'], correct: 'D' },
+   901→    { text: 'A commonly used tool in this context is:', options: ['Tool A', 'Tool B', 'Tool C', 'Tool D'], correct: 'A' },
+   902→    { text: 'The expected outcome of this process is:', options: ['Outcome A', 'Outcome B', 'Outcome C', 'Outcome D'], correct: 'B' },
+   903→  ],
+   904→  short: [
+   905→    { text: 'Define the core concept of the topic and explain its significance.' },
+   906→    { text: 'Differentiate between two related terms discussed in this chapter.' },
+   907→    { text: 'State two main characteristics with examples.' },
+   908→    { text: 'Explain the principle with a real-life example.' },
+   909→    { text: 'Write the formula/definition and state its importance.' },
+   910→    { text: 'List any three applications of the concept.' },
+   911→    { text: 'Describe the process in 3-4 sentences.' },
+   912→    { text: 'Justify the statement with supporting reasons.' },
+   913→  ],
+   914→  long: [
+   915→    { text: 'Explain the topic in detail with its definition, key features, applications, and importance in the modern world.' },
+   916→    { text: 'Discuss the main principles of the topic. Compare and contrast two approaches with suitable examples.' },
+   917→    { text: 'Analyse the impact of this concept on society. Support your answer with relevant examples and arguments.' },
+   918→    { text: 'Describe the historical development of the topic. Mention the contribution of any two pioneers in the field.' },
+   919→    { text: 'Critically evaluate the current scenario. Suggest two measures to improve outcomes.' },
+   920→  ],
+   921→  caseStudy: [
+   922→    {
+   923→      scenario: 'A real-world situation is presented below that requires the application of concepts from the chapter. Read the scenario carefully and answer the questions that follow, demonstrating your understanding of the topic and your ability to apply it to practical situations.',
+   924→      subQuestions: [
+   925→        'Identify the key concept involved in this scenario.',
+   926→        'Explain how the concept is being applied here.',
+   927→        'Analyse the impact of the situation described above.',
+   928→        'Suggest two recommendations to address the issue.',
+   929→      ],
+   930→    },
+   931→  ],
+   932→  trueFalse: [
+   933→    { text: 'The concept discussed applies to real-world situations.', answer: true },
+   934→    { text: 'This topic has no practical application.', answer: false },
+   935→    { text: 'The principles can be generalised to other contexts.', answer: true },
+   936→    { text: 'Understanding this concept is unrelated to the syllabus.', answer: false },
+   937→    { text: 'The methodology used here is standardised.', answer: true },
+   938→    { text: 'The outcome of the process is unpredictable.', answer: false },
+   939→  ],
+   940→  fillBlank: [
+   941→    { text: 'The main concept discussed is called ______.', answer: 'the principle' },
+   942→    { text: 'The process is initiated by ______.', answer: 'an action' },
+   943→    { text: 'The result of the process is known as the ______.', answer: 'outcome' },
+   944→    { text: 'The tool used for measurement is the ______.', answer: 'instrument' },
+   945→    { text: 'The person who performs the action is the ______.', answer: 'agent' },
+   946→    { text: 'The expected effect is called the ______.', answer: 'result' },
+   947→  ],
+   948→}
+   949→
+   950→// ============ Difficulty Filter ============
+   951→// Each question is tagged with an assumed difficulty band based on its position.
+   952→// For demo purposes, we tag using a simple rotation — Mixed picks all.
+   953→function filterByDifficulty<T>(arr: T[], difficulty: string): T[] {
+   954→  if (difficulty === 'Mixed') return arr
+   955→  // Easy: pick first half (assumed easier); Medium: middle; Hard: last half
+   956→  const n = arr.length
+   957→  if (n <= 2) return arr
+   958→  if (difficulty === 'Easy') return arr.slice(0, Math.ceil(n / 3) + 1)
+   959→  if (difficulty === 'Hard') return arr.slice(Math.floor(n / 3) * 2)
+   960→  return arr.slice(Math.floor(n / 3), Math.floor(n / 3) * 2 + 1)
+   961→}
+   962→
+   963→// ============ Paper Generator ============
+   964→function generatePaper(config: PaperConfig): GeneratedPaper {
+   965→  const bank = QUESTION_BANK[config.subject] || FALLBACK_BANK
+   966→
+   967→  // Section marks distribution (percentages of total)
+   968→  // A: MCQ       — 20% (1 mark each)
+   969→  // B: Short     — 30% (2 marks each)
+   970→  // C: Long      — 30% (3-4 marks each)
+   971→  // D: Case Study— 20% (4 marks each, with sub-questions of 1 mark)
+   972→  const sections: GeneratedSection[] = []
+   973→  const types = config.questionTypes
+   974→
+   975→  // Helper: compute marks-per-section from a percentage
+   976→  const marksFor = (pct: number) => Math.max(1, Math.round((config.totalMarks * pct) / 100))
+   977→
+   978→  // ----- Section A: MCQ (1 mark each) -----
+   979→  if (types.includes('MCQ')) {
+   980→    const sm = marksFor(20)
+   981→    const pool = filterByDifficulty(bank.mcq, config.difficulty)
+   982→    const need = Math.min(sm, pool.length)
+   983→    const picked = pool.slice(0, need)
+   984→    sections.push({
+   985→      label: 'A',
+   986→      type: 'MCQ',
+   987→      instruction: `Multiple Choice Questions. Each question carries 1 mark. Attempt all questions. Choose the correct option.`,
+   988→      questions: picked.map((m, i) => ({
+   989→        number: String(i + 1),
+   990→        text: m.text,
+   991→        options: m.options,
+   992→        marks: 1,
+   993→        answerLines: 1,
+   994→      })),
+   995→      totalMarks: need,
+   996→    })
+   997→  }
+   998→
+   999→  // ----- Section B: Short Answer (2 marks each) -----
+  1000→  if (types.includes('Short Answer')) {
+  1001→    const target = marksFor(30)
+  1002→    const perQ = 2
+  1003→    const count = Math.min(Math.floor(target / perQ), bank.short.length)
+  1004→    const pool = filterByDifficulty(bank.short, config.difficulty)
+  1005→    const picked = pool.slice(0, count)
+  1006→    sections.push({
+  1007→      label: 'B',
+  1008→      type: 'Short Answer',
+  1009→      instruction: `Very Short / Short Answer Questions. Each question carries ${perQ} marks. Attempt all questions.`,
+  1010→      questions: picked.map((s, i) => ({
+  1011→        number: String(i + 1),
+  1012→        text: s.text,
+  1013→        marks: perQ,
+  1014→        answerLines: 4,
+  1015→      })),
+  1016→      totalMarks: count * perQ,
+  1017→    })
+  1018→  }
+  1019→
+  1020→  // ----- Section C: Long Answer (4 marks each) -----
+  1021→  if (types.includes('Long Answer')) {
+  1022→    const target = marksFor(30)
+  1023→    const perQ = 4
+  1024→    const count = Math.min(Math.floor(target / perQ), bank.long.length)
+  1025→    const pool = filterByDifficulty(bank.long, config.difficulty)
+  1026→    const picked = pool.slice(0, count)
+  1027→    sections.push({
+  1028→      label: 'C',
+  1029→      type: 'Long Answer',
+  1030→      instruction: `Long Answer Questions. Each question carries ${perQ} marks. Attempt all questions. Answers should be detailed.`,
+  1031→      questions: picked.map((l, i) => ({
+  1032→        number: String(i + 1),
+  1033→        text: l.text,
+  1034→        marks: perQ,
+  1035→        answerLines: 10,
+  1036→      })),
+  1037→      totalMarks: count * perQ,
+  1038→    })
+  1039→  }
+  1040→
+  1041→  // ----- Section D: Case Study (4 sub-q × 1 mark = 4 marks each) -----
+  1042→  if (types.includes('Case Study')) {
+  1043→    const target = marksFor(20)
+  1044→    const perQ = 4 // 4 sub-questions × 1 mark
+  1045→    const count = Math.min(Math.floor(target / perQ), bank.caseStudy.length)
+  1046→    const pool = filterByDifficulty(bank.caseStudy, config.difficulty)
+  1047→    const picked = pool.slice(0, count)
+  1048→    sections.push({
+  1049→      label: 'D',
+  1050→      type: 'Case Study',
+  1051→      instruction: `Case Study Based Questions. Each question carries ${perQ} marks (with sub-parts). Read the case carefully and answer.`,
+  1052→      questions: picked.map((c, i) => ({
+  1053→        number: String(i + 1),
+  1054→        text: c.scenario,
+  1055→        marks: perQ,
+  1056→        subQuestions: c.subQuestions.map((sq, j) => ({
+  1057→          label: `(${String.fromCharCode(97 + j)})`,
+  1058→          text: sq,
+  1059→          marks: 1,
+  1060→        })),
+  1061→        answerLines: 3,
+  1062→      })),
+  1063→      totalMarks: count * perQ,
+  1064→    })
+  1065→  }
+  1066→
+  1067→  // ----- Extra Section: True/False (1 mark each) -----
+  1068→  if (types.includes('True/False')) {
+  1069→    const target = marksFor(15)
+  1070→    const count = Math.min(target, bank.trueFalse.length)
+  1071→    const pool = filterByDifficulty(bank.trueFalse, config.difficulty)
+  1072→    const picked = pool.slice(0, count)
+  1073→    const nextLabel = String.fromCharCode(65 + sections.length) // E, F, ...
+  1074→    sections.push({
+  1075→      label: nextLabel,
+  1076→      type: 'True/False',
+  1077→      instruction: `State whether the following statements are True or False. Each carries 1 mark.`,
+  1078→      questions: picked.map((t, i) => ({
+  1079→        number: String(i + 1),
+  1080→        text: t.text,
+  1081→        marks: 1,
+  1082→        answerLines: 1,
+  1083→      })),
+  1084→      totalMarks: count,
+  1085→    })
+  1086→  }
+  1087→
+  1088→  // ----- Extra Section: Fill in the Blanks (1 mark each) -----
+  1089→  if (types.includes('Fill in the Blanks')) {
+  1090→    const target = marksFor(15)
+  1091→    const count = Math.min(target, bank.fillBlank.length)
+  1092→    const pool = filterByDifficulty(bank.fillBlank, config.difficulty)
+  1093→    const picked = pool.slice(0, count)
+  1094→    const nextLabel = String.fromCharCode(65 + sections.length)
+  1095→    sections.push({
+  1096→      label: nextLabel,
+  1097→      type: 'Fill in the Blanks',
+  1098→      instruction: `Fill in the blanks with the most appropriate word(s). Each carries 1 mark.`,
+  1099→      questions: picked.map((f, i) => ({
+  1100→        number: String(i + 1),
+  1101→        text: f.text,
+  1102→        marks: 1,
+  1103→        answerLines: 1,
+  1104→      })),
+  1105→      totalMarks: count,
+  1106→    })
+  1107→  }
+  1108→
+  1109→  const totalComputed = sections.reduce((s, sec) => s + sec.totalMarks, 0)
+  1110→
+  1111→  const generalInstructions = [
+  1112→    'All questions are compulsory.',
+  1113→    'The question paper consists of multiple sections. Read the instructions for each section carefully.',
+  1114→    'Write your Name, Roll Number, and Class on the top of the answer sheet.',
+  1115→    'Write neatly and legibly. Avoid overwriting.',
+  1116→    `Total marks: ${config.totalMarks}. Time allowed: ${config.duration} minutes.`,
+  1117→    'Use of unfair means is strictly prohibited and will lead to disqualification.',
+  1118→    'Diagrams should be neat and labelled wherever necessary.',
+  1119→    'Extra rough work may be done on the last page of the answer booklet.',
+  1120→    ...(config.additionalInstructions && config.additionalInstructions.trim()
+  1121→      ? config.additionalInstructions
+  1122→          .split('\n')
+  1123→          .map((l) => l.trim())
+  1124→          .filter(Boolean)
+  1125→      : []),
+  1126→  ]
+  1127→
+  1128→  return {
+  1129→    title: `${config.subject} — ${config.grade} ${config.board} Examination`,
+  1130→    config,
+  1131→    generatedAt: new Date().toISOString(),
+  1132→    generalInstructions,
+  1133→    sections,
+  1134→    totalMarks: totalComputed,
+  1135→  }
+  1136→}
+  1137→
+  1138→// ============ Main Component ============
+  1139→export function AIQuestionPaperEnhanced() {
+  1140→  const [config, setConfig] = useState<PaperConfig>({
+  1141→    board: 'CBSE',
+  1142→    grade: 'Grade 8',
+  1143→    subject: 'Mathematics',
+  1144→    difficulty: 'Mixed',
+  1145→    totalMarks: 80,
+  1146→    duration: 180,
+  1147→    questionTypes: ['MCQ', 'Short Answer', 'Long Answer', 'Case Study'],
+  1148→    additionalInstructions: '',
+  1149→  })
+  1150→  const [paper, setPaper] = useState<GeneratedPaper | null>(null)
+  1151→  const [generating, setGenerating] = useState(false)
+  1152→  const { preview: previewNotification } = useNotificationPreview()
+  1153→
+  1154→  const toggleType = (id: QuestionTypeId) => {
+  1155→    setConfig((c) => {
+  1156→      const has = c.questionTypes.includes(id)
+  1157→      // Don't allow removing the last type
+  1158→      if (has && c.questionTypes.length === 1) {
+  1159→        toast.error('At least one question type is required.')
+  1160→        return c
+  1161→      }
+  1162→      return {
+  1163→        ...c,
+  1164→        questionTypes: has
+  1165→          ? c.questionTypes.filter((t) => t !== id)
+  1166→          : [...c.questionTypes, id],
+  1167→      }
+  1168→    })
+  1169→  }
+  1170→
+  1171→  const handleGenerate = () => {
+  1172→    if (config.questionTypes.length === 0) {
+  1173→      toast.error('Please select at least one question type.')
+  1174→      return
+  1175→    }
+  1176→    if (config.totalMarks < 10) {
+  1177→      toast.error('Total marks must be at least 10.')
+  1178→      return
+  1179→    }
+  1180→    if (config.duration < 15) {
+  1181→      toast.error('Duration must be at least 15 minutes.')
+  1182→      return
+  1183→    }
+  1184→    setGenerating(true)
+  1185→    // Simulate AI generation latency
+  1186→    setTimeout(() => {
+  1187→      const generated = generatePaper(config)
+  1188→      setPaper(generated)
+  1189→      setGenerating(false)
+  1190→      toast.success(`✓ Question paper generated — ${generated.totalMarks} marks across ${generated.sections.length} sections`)
+  1191→    }, 1400)
+  1192→  }
+  1193→
+  1194→  const handleDownloadPDF = () => {
+  1195→    if (!paper) return
+  1196→    toast.success(`📄 Question paper downloaded as PDF — ${paper.config.subject} ${paper.config.grade}.pdf`)
+  1197→  }
+  1198→
+  1199→  const handlePrint = () => {
+  1200→    if (!paper) return
+  1201→    window.print()
+  1202→    toast.info('🖨️ Print dialog opened')
+  1203→  }
+  1204→
+  1205→  const handleSendToTeacher = () => {
+  1206→    if (!paper) return
+  1207→    previewNotification({
+  1208→      recipients: [
+  1209→        {
+  1210→          id: `teacher-${paper.config.grade}-${paper.config.subject}`.replace(/\s+/g, '-').toLowerCase(),
+  1211→          name: `Subject Teacher — ${paper.config.subject} (${paper.config.grade})`,
+  1212→          contact: '+91 98000 11111',
+  1213→          channel: 'EMAIL',
+  1214→          recipientType: 'STAFF',
+  1215→        },
+  1216→      ],
+  1217→      subject: `AI-Generated Question Paper — ${paper.config.subject} ${paper.config.grade} (${paper.config.board})`,
+  1218→      body:
+  1219→        `Dear Teacher,\n\n` +
+  1220→        `An AI-generated question paper has been created for your review:\n\n` +
+  1221→        `• Subject: ${paper.config.subject}\n` +
+  1222→        `• Grade: ${paper.config.grade}\n` +
+  1223→        `• Board: ${paper.config.board}\n` +
+  1224→        `• Difficulty: ${paper.config.difficulty}\n` +
+  1225→        `• Total Marks: ${paper.totalMarks}\n` +
+  1226→        `• Duration: ${paper.config.duration} minutes\n` +
+  1227→        `• Sections: ${paper.sections.map((s) => `Section ${s.label} (${s.type})`).join(', ')}\n\n` +
+  1228→        `Please review the attached paper on the LearnX portal. You may approve, edit, or regenerate as needed before publishing to students.\n\n` +
+  1229→        `Generated by: LearnX QuestionPaper AI\n` +
+  1230→        `Timestamp: ${new Date(paper.generatedAt).toLocaleString('en-IN')}\n\n` +
+  1231→        `Regards,\nLearnX Examinations`,
+  1232→      source: 'ai_question_paper_send_teacher',
+  1233→    })
+  1234→  }
+  1235→
+  1236→  const totalQuestions = useMemo(
+  1237→    () => paper?.sections.reduce((s, sec) => s + sec.questions.length, 0) ?? 0,
+  1238→    [paper],
+  1239→  )
+  1240→
+  1241→  return (
+  1242→    <div className="p-4 lg:p-8 space-y-6 max-w-[1600px] mx-auto">
+  1243→      <SectionHeader
+  1244→        emoji="🧠"
+  1245→        title="AI Question Paper Generator"
+  1246→        subtitle="QuestionPaper AI · board-aligned, blueprint-compliant exam papers in seconds"
+  1247→        accent="#7C3AED"
+  1248→        onRefresh={() => {
+  1249→          setPaper(null)
+  1250→          toast.info('Cleared — configure and generate a fresh paper')
+  1251→        }}
+  1252→      />
+  1253→
+  1254→      {/* AI banner */}
+  1255→      <div className="rounded-xl bg-gradient-to-br from-violet-600 to-indigo-700 text-white p-5 shadow-sm">
+  1256→        <div className="flex items-start gap-3">
+  1257→          <Bot className="w-5 h-5 mt-0.5 flex-shrink-0" />
+  1258→          <div>
+  1259→            <div className="font-semibold text-sm">QuestionPaper AI</div>
+  1260→            <p className="text-xs text-white/85 mt-1 leading-relaxed">
+  1261→              Configure the paper specifications and let the AI generate a balanced,
+  1262→              board-aligned question paper with proper sections, marks distribution, and
+  1263→              case studies. Generated papers are exam-ready and printable.
+  1264→            </p>
+  1265→          </div>
+  1266→        </div>
+  1267→      </div>
+  1268→
+  1269→      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+  1270→        {/* ─────────── Configuration Panel ─────────── */}
+  1271→        <div className="lg:col-span-5 xl:col-span-4">
+  1272→          <Card className="p-0 bg-white border-slate-200/70 shadow-sm overflow-hidden lg:sticky lg:top-4">
+  1273→            {/* Header */}
+  1274→            <div className="px-5 py-4 bg-gradient-to-r from-violet-700 to-indigo-700 text-white">
+  1275→              <div className="flex items-center gap-2">
+  1276→                <Settings className="w-4 h-4" />
+  1277→                <h3 className="text-sm font-semibold">Paper Configuration</h3>
+  1278→              </div>
+  1279→              <p className="text-[11px] text-white/80 mt-0.5">Define the parameters for AI generation</p>
+  1280→            </div>
+  1281→
+  1282→            <div className="p-5 space-y-4">
+  1283→              {/* Row 1: Board + Grade */}
+  1284→              <div className="grid grid-cols-2 gap-3">
+  1285→                <div>
+  1286→                  <Label className="text-xs mb-1 block">Board / Curriculum *</Label>
+  1287→                  <select
+  1288→                    value={config.board}
+  1289→                    onChange={(e) => setConfig({ ...config, board: e.target.value })}
+  1290→                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 bg-white text-slate-900 focus:outline-none focus:border-violet-400"
+  1291→                  >
+  1292→                    {BOARDS.map((b) => <option key={b} value={b}>{b}</option>)}
+  1293→                  </select>
+  1294→                </div>
+  1295→                <div>
+  1296→                  <Label className="text-xs mb-1 block">Grade *</Label>
+  1297→                  <select
+  1298→                    value={config.grade}
+  1299→                    onChange={(e) => setConfig({ ...config, grade: e.target.value })}
+  1300→                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 bg-white text-slate-900 focus:outline-none focus:border-violet-400"
+  1301→                  >
+  1302→                    {GRADES.map((g) => <option key={g} value={g}>{g}</option>)}
+  1303→                  </select>
+  1304→                </div>
+  1305→              </div>
+  1306→
+  1307→              {/* Subject */}
+  1308→              <div>
+  1309→                <Label className="text-xs mb-1 block">Subject *</Label>
+  1310→                <select
+  1311→                  value={config.subject}
+  1312→                  onChange={(e) => setConfig({ ...config, subject: e.target.value })}
+  1313→                  className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 bg-white text-slate-900 focus:outline-none focus:border-violet-400"
+  1314→                >
+  1315→                  {SUBJECTS.map((s) => <option key={s} value={s}>{s}</option>)}
+  1316→                </select>
+  1317→              </div>
+  1318→
+  1319→              {/* Difficulty */}
+  1320→              <div>
+  1321→                <Label className="text-xs mb-1.5 block">Difficulty Level *</Label>
+  1322→                <div className="grid grid-cols-4 gap-1.5">
+  1323→                  {DIFFICULTIES.map((d) => (
+  1324→                    <button
+  1325→                      key={d}
+  1326→                      type="button"
+  1327→                      onClick={() => setConfig({ ...config, difficulty: d })}
+  1328→                      className={`px-2 py-1.5 rounded-md text-[11px] font-medium transition-colors ${
+  1329→                        config.difficulty === d
+  1330→                          ? 'bg-violet-600 text-white shadow-sm'
+  1331→                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+  1332→                      }`}
+  1333→                    >
+  1334→                      {d}
+  1335→                    </button>
+  1336→                  ))}
+  1337→                </div>
+  1338→              </div>
+  1339→
+  1340→              {/* Marks + Duration */}
+  1341→              <div className="grid grid-cols-2 gap-3">
+  1342→                <div>
+  1343→                  <Label className="text-xs mb-1 block flex items-center gap-1">
+  1344→                    <BookOpen className="w-3 h-3" /> Total Marks *
+  1345→                  </Label>
+  1346→                  <Input
+  1347→                    type="number"
+  1348→                    min={10}
+  1349→                    value={config.totalMarks}
+  1350→                    onChange={(e) => setConfig({ ...config, totalMarks: parseInt(e.target.value) || 0 })}
+  1351→                    className="text-xs h-9"
+  1352→                  />
+  1353→                </div>
+  1354→                <div>
+  1355→                  <Label className="text-xs mb-1 block flex items-center gap-1">
+  1356→                    <Clock className="w-3 h-3" /> Duration (min) *
+  1357→                  </Label>
+  1358→                  <Input
+  1359→                    type="number"
+  1360→                    min={15}
+  1361→                    value={config.duration}
+  1362→                    onChange={(e) => setConfig({ ...config, duration: parseInt(e.target.value) || 0 })}
+  1363→                    className="text-xs h-9"
+  1364→                  />
+  1365→                </div>
+  1366→              </div>
+  1367→
+  1368→              {/* Question Types */}
+  1369→              <div>
+  1370→                <Label className="text-xs mb-2 block">Question Types * (select at least one)</Label>
+  1371→                <div className="grid grid-cols-2 gap-2">
+  1372→                  {QUESTION_TYPES.map((t) => {
+  1373→                    const checked = config.questionTypes.includes(t.id)
+  1374→                    return (
+  1375→                      <button
+  1376→                        key={t.id}
+  1377→                        type="button"
+  1378→                        onClick={() => toggleType(t.id)}
+  1379→                        className={`flex items-start gap-2 p-2.5 rounded-lg border text-left transition-all ${
+  1380→                          checked
+  1381→                            ? 'border-violet-400 bg-violet-50'
+  1382→                            : 'border-slate-200 hover:border-slate-300 bg-white'
+  1383→                        }`}
+  1384→                      >
+  1385→                        <div
+  1386→                          className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 mt-0.5 ${
+  1387→                            checked ? 'bg-violet-600 border-violet-600' : 'border-slate-300 bg-white'
+  1388→                          }`}
+  1389→                        >
+  1390→                          {checked && <CheckCircle2 className="w-3 h-3 text-white" />}
+  1391→                        </div>
+  1392→                        <div className="min-w-0">
+  1393→                          <div className="text-[11px] font-semibold text-slate-900">{t.label}</div>
+  1394→                          <div className="text-[9px] text-slate-500 leading-tight">{t.desc}</div>
+  1395→                        </div>
+  1396→                      </button>
+  1397→                    )
+  1398→                  })}
+  1399→                </div>
+  1400→              </div>
+  1401→
+  1402→              {/* Additional Instructions */}
+  1403→              <div>
+  1404→                <Label className="text-xs mb-1 block">Additional Instructions (optional)</Label>
+  1405→                <Textarea
+  1406→                  value={config.additionalInstructions}
+  1407→                  onChange={(e) => setConfig({ ...config, additionalInstructions: e.target.value })}
+  1408→                  placeholder="e.g., Students must attempt all questions. Use of calculators is permitted…"
+  1409→                  rows={2}
+  1410→                  className="text-xs"
+  1411→                />
+  1412→              </div>
+  1413→
+  1414→              {/* Generate button */}
+  1415→              <Button
+  1416→                onClick={handleGenerate}
+  1417→                disabled={generating}
+  1418→                className="w-full bg-violet-600 hover:bg-violet-700 text-white h-10"
+  1419→              >
+  1420→                {generating ? (
+  1421→                  <>
+  1422→                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> Generating…
+  1423→                  </>
+  1424→                ) : (
+  1425→                  <>
+  1426→                    <Bot className="w-4 h-4 mr-2" /> Generate Question Paper
+  1427→                  </>
+  1428→                )}
+  1429→              </Button>
+  1430→
+  1431→              {paper && (
+  1432→                <div className="flex items-center justify-center gap-1.5 text-[11px] text-emerald-700">
+  1433→                  <CheckCircle2 className="w-3.5 h-3.5" />
+  1434→                  Last generated: {new Date(paper.generatedAt).toLocaleTimeString('en-IN')}
+  1435→                </div>
+  1436→              )}
+  1437→            </div>
+  1438→          </Card>
+  1439→        </div>
+  1440→
+  1441→        {/* ─────────── Preview Panel ─────────── */}
+  1442→        <div className="lg:col-span-7 xl:col-span-8">
+  1443→          <AnimatePresence mode="wait">
+  1444→            {paper ? (
+  1445→              <motion.div
+  1446→                key="paper"
+  1447→                initial={{ opacity: 0, y: 10 }}
+  1448→                animate={{ opacity: 1, y: 0 }}
+  1449→                exit={{ opacity: 0, y: -10 }}
+  1450→                transition={{ duration: 0.3 }}
+  1451→              >
+  1452→                <Card className="p-0 bg-white border-slate-200/70 shadow-sm overflow-hidden">
+  1453→                  {/* Action bar */}
+  1454→                  <div className="px-5 py-3 border-b border-slate-200 bg-slate-50 flex items-center justify-between flex-wrap gap-2">
+  1455→                    <div className="flex items-center gap-2">
+  1456→                      <Eye className="w-4 h-4 text-violet-600" />
+  1457→                      <div>
+  1458→                        <div className="text-xs font-semibold text-slate-900">Question Paper Preview</div>
+  1459→                        <div className="text-[10px] text-slate-500">
+  1460→                          {totalQuestions} questions · {paper.totalMarks} marks · {paper.config.duration} min
+  1461→                        </div>
+  1462→                      </div>
+  1463→                    </div>
+  1464→                    <div className="flex items-center gap-1.5">
+  1465→                      <Button size="sm" variant="outline" onClick={handleDownloadPDF} className="text-xs h-8">
+  1466→                        <Download className="w-3.5 h-3.5 mr-1" /> PDF
+  1467→                      </Button>
+  1468→                      <Button size="sm" variant="outline" onClick={handlePrint} className="text-xs h-8">
+  1469→                        <Printer className="w-3.5 h-3.5 mr-1" /> Print
+  1470→                      </Button>
+  1471→                      <Button
+  1472→                        size="sm"
+  1473→                        onClick={handleSendToTeacher}
+  1474→                        className="text-xs h-8 bg-violet-600 hover:bg-violet-700 text-white"
+  1475→                      >
+  1476→                        <Send className="w-3.5 h-3.5 mr-1" /> Send to Teacher
+  1477→                      </Button>
+  1478→                    </div>
+  1479→                  </div>
+  1480→
+  1481→                  {/* Actual paper (printable) */}
+  1482→                  <div className="p-6 lg:p-8 bg-white max-h-[calc(100vh-220px)] overflow-y-auto print:max-h-none print:overflow-visible print:p-0">
+  1483→                    <div id="question-paper-printable" className="mx-auto max-w-[800px]">
+  1484→                      {/* School Header */}
+  1485→                      <div className="text-center border-b-2 border-slate-900 pb-4 mb-4">
+  1486→                        <div className="text-[11px] text-slate-500 uppercase tracking-widest">
+  1487→                          LearnX International School
+  1488→                        </div>
+  1489→                        <div className="text-2xl font-bold text-slate-900 mt-1 tracking-tight">
+  1490→                          LEARNX INTERNATIONAL SCHOOL
+  1491→                        </div>
+  1492→                        <div className="text-[11px] text-slate-600 mt-1">
+  1493→                          Affiliated to {paper.config.board} · Estd. 1998 · Accredited A+ by NAEC
+  1494→                        </div>
+  1495→                        <div className="text-[11px] text-slate-600">
+  1496→                          12 Knowledge Park, Education City — contact@learnx.edu · +91 98000 00000
+  1497→                        </div>
+  1498→
+  1499→                        <div className="mt-4 inline-block px-4 py-1.5 rounded-md bg-violet-50 border border-violet-200">
+  1500→                          <div className="text-sm font-bold text-violet-900 uppercase tracking-wide">
+  1501→                            Half-Yearly Examination — 2026
+  1502→                          </div>
+  1503→                        </div>
+  1504→                      </div>
+  1505→
+  1506→                      {/* Subject & meta line */}
+  1507→                      <div className="text-center mb-4">
+  1508→                        <div className="text-base font-semibold text-slate-800">
+  1509→                          {paper.config.subject}
+  1510→                        </div>
+  1511→                        <div className="text-xs text-slate-500 mt-0.5">
+  1512→                          Class: {paper.config.grade} · Subject Code: {paper.config.subject.slice(0, 2).toUpperCase()}-{paper.config.grade.replace(/\D/g, '')}
+  1513→                        </div>
+  1514→                      </div>
+  1515→
+  1516→                      {/* Meta table */}
+  1517→                      <div className="grid grid-cols-4 gap-2 mb-4 text-center text-[11px]">
+  1518→                        <div className="border border-slate-300 rounded p-1.5">
+  1519→                          <div className="text-slate-500 uppercase">Date</div>
+  1520→                          <div className="font-semibold text-slate-900">
+  1521→                            {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+  1522→                          </div>
+  1523→                        </div>
+  1524→                        <div className="border border-slate-300 rounded p-1.5">
+  1525→                          <div className="text-slate-500 uppercase">Duration</div>
+  1526→                          <div className="font-semibold text-slate-900">{paper.config.duration} min</div>
+  1527→                        </div>
+  1528→                        <div className="border border-slate-300 rounded p-1.5">
+  1529→                          <div className="text-slate-500 uppercase">Max Marks</div>
+  1530→                          <div className="font-semibold text-slate-900">{paper.totalMarks}</div>
+  1531→                        </div>
+  1532→                        <div className="border border-slate-300 rounded p-1.5">
+  1533→                          <div className="text-slate-500 uppercase">Difficulty</div>
+  1534→                          <div className="font-semibold text-slate-900">{paper.config.difficulty}</div>
+  1535→                        </div>
+  1536→                      </div>
+  1537→
+  1538→                      {/* Student details row */}
+  1539→                      <div className="grid grid-cols-3 gap-3 mb-4 text-[11px] border border-slate-300 rounded p-2.5">
+  1540→                        <div>
+  1541→                          <span className="text-slate-500">Name:</span>
+  1542→                          <span className="text-slate-300 ml-1">__________________</span>
+  1543→                        </div>
+  1544→                        <div>
+  1545→                          <span className="text-slate-500">Roll No:</span>
+  1546→                          <span className="text-slate-300 ml-1">____________</span>
+  1547→                        </div>
+  1548→                        <div>
+  1549→                          <span className="text-slate-500">Section:</span>
+  1550→                          <span className="text-slate-300 ml-1">________</span>
+  1551→                        </div>
+  1552→                      </div>
+  1553→
+  1554→                      {/* General Instructions */}
+  1555→                      <div className="border border-slate-300 rounded p-3 mb-5 bg-slate-50/50">
+  1556→                        <div className="text-xs font-bold text-slate-900 uppercase mb-2 flex items-center gap-1.5">
+  1557→                          <FileText className="w-3.5 h-3.5 text-violet-600" /> General Instructions
+  1558→                        </div>
+  1559→                        <ol className="list-decimal list-inside space-y-1 text-[11px] text-slate-700 leading-relaxed">
+  1560→                          {paper.generalInstructions.map((inst, i) => (
+  1561→                            <li key={i}>{inst}</li>
+  1562→                          ))}
+  1563→                        </ol>
+  1564→                      </div>
+  1565→
+  1566→                      {/* Sections */}
+  1567→                      <div className="space-y-5">
+  1568→                        {paper.sections.map((section) => (
+  1569→                          <div key={section.label}>
+  1570→                            {/* Section heading */}
+  1571→                            <div className="flex items-center justify-between border-y-2 border-slate-800 py-1.5 mb-3 bg-slate-50 px-3">
+  1572→                              <div className="flex items-center gap-2">
+  1573→                                <Badge className="bg-slate-900 text-white text-[10px] h-5">{section.label}</Badge>
+  1574→                                <span className="text-sm font-bold text-slate-900 uppercase tracking-wide">
+  1575→                                  {section.type}
+  1576→                                </span>
+  1577→                              </div>
+  1578→                              <div className="text-[10px] text-slate-600">
+  1579→                                {section.questions.length} question(s) · Total {section.totalMarks} marks
+  1580→                              </div>
+  1581→                            </div>
+  1582→
+  1583→                            {/* Section instruction */}
+  1584→                            <div className="text-[11px] text-slate-600 italic mb-2 px-3">
+  1585→                              {section.instruction}
+  1586→                            </div>
+  1587→
+  1588→                            {/* Questions */}
+  1589→                            <div className="space-y-3 px-3">
+  1590→                              {section.questions.map((q) => (
+  1591→                                <div key={q.number} className="text-[11.5px] text-slate-800 leading-relaxed">
+  1592→                                  <div className="flex items-start gap-2">
+  1593→                                    <span className="font-bold text-slate-900 min-w-[18px]">Q{q.number}.</span>
+  1594→                                    <div className="flex-1">
+  1595→                                      {/* Question text (for case study, render multiline) */}
+  1596→                                      {q.text && (
+  1597→                                        <div className="whitespace-pre-line">{q.text}</div>
+  1598→                                      )}
+  1599→
+  1600→                                      {/* MCQ options */}
+  1601→                                      {q.options && (
+  1602→                                        <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-2 pl-2">
+  1603→                                          {q.options.map((opt, i) => (
+  1604→                                            <div key={i} className="flex items-center gap-1.5">
+  1605→                                              <span className="font-semibold text-slate-700">
+  1606→                                                {String.fromCharCode(65 + i)}.
+  1607→                                              </span>
+  1608→                                              <span>{opt}</span>
+  1609→                                            </div>
+  1610→                                          ))}
+  1611→                                        </div>
+  1612→                                      )}
+  1613→
+  1614→                                      {/* Sub-questions (case study) */}
+  1615→                                      {q.subQuestions && (
+  1616→                                        <div className="mt-2 space-y-1.5 pl-2">
+  1617→                                          {q.subQuestions.map((sub) => (
+  1618→                                            <div key={sub.label} className="flex items-start gap-1.5">
+  1619→                                              <span className="font-semibold text-slate-700">{sub.label}</span>
+  1620→                                              <span className="flex-1">{sub.text}</span>
+  1621→                                              <span className="text-slate-500 italic">[{sub.marks}]</span>
+  1622→                                            </div>
+  1623→                                          ))}
+  1624→                                        </div>
+  1625→                                      )}
+  1626→
+  1627→                                      {/* Answer space lines */}
+  1628→                                      {q.answerLines && q.answerLines > 0 && !q.options && (
+  1629→                                        <div className="mt-2 space-y-3">
+  1630→                                          {Array.from({ length: q.answerLines }).map((_, i) => (
+  1631→                                            <div
+  1632→                                              key={i}
+  1633→                                              className="border-b border-dotted border-slate-300"
+  1634→                                              style={{ height: '14px' }}
+  1635→                                            />
+  1636→                                          ))}
+  1637→                                        </div>
+  1638→                                      )}
+  1639→                                    </div>
+  1640→                                    <span className="text-slate-700 font-semibold italic whitespace-nowrap">
+  1641→                                      [{q.marks}]
+  1642→                                    </span>
+  1643→                                  </div>
+  1644→                                </div>
+  1645→                              ))}
+  1646→                            </div>
+  1647→                          </div>
+  1648→                        ))}
+  1649→                      </div>
+  1650→
+  1651→                      {/* Footer */}
+  1652→                      <div className="mt-8 pt-4 border-t-2 border-slate-900">
+  1653→                        <div className="text-center text-[11px] text-slate-600 mb-4">
+  1654→                          —— End of Question Paper ——
+  1655→                        </div>
+  1656→                        <div className="grid grid-cols-2 gap-6 text-center text-[10px] text-slate-500">
+  1657→                          <div className="border-t border-slate-400 pt-1">Invigilator's Signature</div>
+  1658→                          <div className="border-t border-slate-400 pt-1">Examination In-charge</div>
+  1659→                        </div>
+  1660→                        <div className="text-center text-[9px] text-slate-400 mt-4">
+  1661→                          This paper was generated by LearnX QuestionPaper AI · {new Date(paper.generatedAt).toLocaleString('en-IN')}
+  1662→                        </div>
+  1663→                      </div>
+  1664→                    </div>
+  1665→                  </div>
+  1666→                </Card>
+  1667→              </motion.div>
+  1668→            ) : (
+  1669→              /* Empty state */
+  1670→              <motion.div
+  1671→                key="empty"
+  1672→                initial={{ opacity: 0 }}
+  1673→                animate={{ opacity: 1 }}
+  1674→                exit={{ opacity: 0 }}
+  1675→              >
+  1676→                <Card className="p-12 bg-white border-dashed border-2 border-slate-200 text-center">
+  1677→                  <div className="w-16 h-16 rounded-full bg-violet-100 flex items-center justify-center mx-auto mb-4">
+  1678→                    <FileText className="w-8 h-8 text-violet-600" />
+  1679→                  </div>
+  1680→                  <h3 className="text-base font-semibold text-slate-900">No Question Paper Generated Yet</h3>
+  1681→                  <p className="text-xs text-slate-500 mt-2 max-w-md mx-auto leading-relaxed">
+  1682→                    Configure the parameters on the left — board, grade, subject, difficulty,
+  1683→                    total marks, duration, and question types — then click{' '}
+  1684→                    <span className="font-semibold text-violet-700">&quot;Generate Question Paper&quot;</span>{' '}
+  1685→                    to produce an exam-ready paper with proper sections, marks distribution, and case studies.
+  1686→                  </p>
+  1687→                  <div className="flex items-center justify-center gap-2 mt-5">
+  1688→                    <Button
+  1689→                      onClick={handleGenerate}
+  1690→                      disabled={generating}
+  1691→                      className="bg-violet-600 hover:bg-violet-700 text-white"
+  1692→                    >
+  1693→                      {generating ? (
+  1694→                        <>
+  1695→                          <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> Generating…
+  1696→                        </>
+  1697→                      ) : (
+  1698→                        <>
+  1699→                          <Plus className="w-4 h-4 mr-2" /> Generate Now
+  1700→                        </>
+  1701→                      )}
+  1702→                    </Button>
+  1703→                  </div>
+  1704→                  {/* Feature hints */}
+  1705→                  <div className="grid grid-cols-3 gap-3 mt-8 max-w-lg mx-auto">
+  1706→                    {[
+  1707→                      { icon: FileText, label: 'Board-Aligned Format', hint: 'CBSE / ICSE / IGCSE / State Board' },
+  1708→                      { icon: CheckCircle2, label: 'Balanced Blueprint', hint: 'MCQ + Short + Long + Case Study' },
+  1709→                      { icon: Bot, label: 'AI-Generated Content', hint: 'Realistic, syllabus-mapped questions' },
+  1710→                    ].map((f, i) => (
+  1711→                      <div key={i} className="text-left p-3 rounded-lg bg-slate-50 border border-slate-200">
+  1712→                        <f.icon className="w-4 h-4 text-violet-600 mb-1.5" />
+  1713→                        <div className="text-[11px] font-semibold text-slate-900">{f.label}</div>
+  1714→                        <div className="text-[9px] text-slate-500 leading-tight mt-0.5">{f.hint}</div>
+  1715→                      </div>
+  1716→                    ))}
+  1717→                  </div>
+  1718→                </Card>
+  1719→              </motion.div>
+  1720→            )}
+  1721→          </AnimatePresence>
+  1722→        </div>
+  1723→      </div>
+  1724→    </div>
+  1725→  )
+  1726→}
+  1727→
