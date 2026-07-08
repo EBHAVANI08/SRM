@@ -348,7 +348,7 @@ export const MODULES: ModuleConfig[] = [
     color: 'from-sky-500 to-sky-700',
     accent: '#0EA5E9',
     aiPowered: true,
-    availableTo: ['SUPER_ADMIN', 'ADMIN', 'IT_TEAM', 'SCHOOL_HEAD'],
+    availableTo: ['SUPER_ADMIN', 'ADMIN', 'IT_TEAM', 'SCHOOL_HEAD', 'TEACHER'],
     features: ['CCTV AI Analytics', 'Intrusion Detection', 'Fire/Smoke Alerts', 'Data Encryption', 'DPDP/GDPR Compliance', 'Audit Logs', 'Role-Based Access'],
     stats: [
       { label: 'CCTV Cameras', value: '184', trend: 'All Online' },

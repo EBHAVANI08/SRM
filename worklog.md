@@ -177,3 +177,39 @@ Stage Summary:
 - 2 lib files upgraded: agentRegistry.ts (added owns/autonomousActions/proposeOnlyActions to all 14 agents), discoveryEngine.ts (learning-loop dedup fix + Prisma bug fixes)
 - 1 lib file fixed: schoolDayAutopilot.ts (3 schoolId-on-non-existent-column bugs)
 - Validation: 15/15 screenshot-spec tests PASS. Lint: 0 errors. Build: success. 50 API routes (was 48).
+
+---
+Task ID: safety-module-v2
+Agent: main (Super Z)
+Task: Build the complete Safety module per user spec — 9 new Prisma models, ~25 API routes, VLM detection, tamper-evident audit chain, camera focus with mic/siren/alarm/PA, face-recognition attendance, behavior reports, visitor management, lockdown drill, heat map, scheduled attendance, behavior trend alerts, two-way PA, mobile push config, role-gated views for all 8 roles, on-prem relay agent spec (architecture decision A+C). Also fix duplicate "Ask LearnX AI" h1 + remove heavy blue gradient.
+
+Work Log:
+- Surveyed existing repo (DB schema, API pattern, auth/middleware, component library, roles) via Explore subagent
+- Fixed AskLearnXAILanding.tsx — replaced custom blue-gradient header with house-standard <SectionHeader>, removed duplicate <h1>, verified in browser
+- Extended prisma/schema.prisma with 9 new models (SafetyZone, SafetyCamera, SafetyDetectionConfig, SafetyAuditLog, SafetyEscalationRule, SafetyVisitor, SafetyBehaviorReport, SafetyDrill, SafetyScheduledAttendance) + additive fields on existing SafetyAlert + Class.safetyZones back-relation
+- Ran bun run db:push — schema applied cleanly to SQLite
+- Built src/lib/safety/ layer: crypto.ts (AES-256-GCM for camera credentials), auditChain.ts (SHA-256 hash-chained, tamper-detectable), detectionAdapter.ts (pluggable interface), vlmAdapter.ts (z-ai-web-dev-sdk VLM), manualAdapter.ts, cameraProbe.ts (relay + direct HTTP_MJPEG + RTSP syntax check), service.ts (createSafetyAlert, reviewSafetyAlert, escalateSafetyAlert, dispatchAlertNotifications, triggerLockdownDrill, sendCameraCommand)
+- Built 25+ API routes under /api/safety/*: cameras CRUD + test-connection + siren/alarm/pa/mic, alerts CRUD + review/escalate, audit-log + verify, analytics/summary, escalation-rules, zones, visitors + check-in/out, behavior/reports + send + trend-sweep, drill/trigger + end, attendance/schedule + run/[id] + sweep, heatmap, detection/sweep
+- All routes enforce guardQuery('safety_alert', action, user) for server-side role-scope enforcement; all writes call publishEvent + appendSafetyAudit; notifications go through comms.ts sendCommunication() with SAFETY category (15/30/60-min auto-escalation)
+- Rewrote SafetyModule.tsx (1936 → ~2100 lines) — replaced all mock data with apiGet/apiPost/apiFetch calls; 11 role-gated tabs (overview, cameras, detection, attendance, behavior, visitors, drill, heatmap, audit, zones, rules); all buttons write to real API
+- Built SafetyAlertPopup.tsx — global popup mounted in AppShell, polls /api/safety/alerts?status=ACTIVE every 10s, shows modal with snapshot + Confirm/Dismiss/Escalate buttons that write to API
+- Built SafetyCameraFocus.tsx — full-screen camera focus modal with Mic/Siren/Alarm/PA buttons that POST to real API endpoints; honest "relay required" error state when no relay configured; includes "Local test speaker" using Web Audio API for UX testing without hardware
+- Wired SafetyAlertPopup into AppShell.tsx (1-line addition, no other changes to AppShell)
+- Added TEACHER to security module's availableTo in modules.ts (per spec: teachers see read-only alerts for their classroom)
+- Added ParentStudentTransparencyView for PARENT/STUDENT roles — shows only a privacy/transparency notice, no camera feeds or incident details (per spec section 1.2)
+- Built scripts/safety-relay-agent/relay-agent.ts (~300 LOC) + README.md — Node/Bun service for Raspberry Pi that bridges cloud to LAN cameras + local speakers/mic via ffmpeg/aplay/espeak/arecord
+- End-to-end smoke tests passed: zone create → camera create (credentials encrypted, stripped from response) → alert create → review (confirm) → audit chain verify (valid=True, 4 entries) → manual DB tamper → audit chain verify (valid=False, broken at tampered entry with expected vs actual hash) → all 25+ API endpoints return 200 with proper role-scope filtering
+- Role-gating verified in browser: School Head sees all 11 tabs; Teacher sees only 4 tabs (overview, attendance, behavior, zones); Parent/Student see transparency notice only
+- bun run lint → 0 errors; bun run build → success; all safety routes compiled
+
+Stage Summary:
+- 9 new Prisma models + additive fields on SafetyAlert + Class back-relation
+- 25+ new API routes under /api/safety/* — all JWT-protected via existing middleware, all role-scope-enforced via guardQuery, all write paths audit-chained
+- 6 new lib files under src/lib/safety/ (crypto, auditChain, detectionAdapter, vlmAdapter, manualAdapter, cameraProbe, service)
+- 2 new components (SafetyAlertPopup, SafetyCameraFocus) + complete rewrite of SafetyModule.tsx (real API-driven, 11 tabs, role-gated)
+- 1 new entry in modules.ts (TEACHER added to security module's availableTo)
+- 1-line addition to AppShell.tsx (mount SafetyAlertPopup)
+- On-prem relay agent spec (relay-agent.ts + README.md) under scripts/safety-relay-agent/
+- VLM detection is the FIRST VLM usage in the codebase — uses zai.chat.completions.createVision() per VLM skill docs
+- Honest fallbacks everywhere: no relay configured → clear "relay required" error (never fake success); no snapshot available → empty detection array (never fabricate); PUSH channel → logged but transport not yet wired (TODO in comms.ts)
+- Acceptance criteria met: every button writes to real API; audit hash-chain verification detects tampering; role-gating enforced both client-side (tab visibility) and server-side (guardQuery); no other module's files touched except the shared modules.ts (added TEACHER to security's availableTo) and AppShell.tsx (1-line popup mount)

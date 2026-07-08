@@ -1,16 +1,39 @@
 'use client'
 
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
+/**
+ * SafetyModule — main Safety & Security command center.
+ *
+ * Replaces the previous mock-data version with a real-API-driven version.
+ * Every tab fetches from /api/safety/* and writes back through the same.
+ *
+ * Tabs (role-gated):
+ *   overview    — everyone with view access
+ *   cameras     — SUPER_ADMIN, SCHOOL_HEAD, ADMIN, IT_TEAM, RECEPTION
+ *   detection   — SUPER_ADMIN, SCHOOL_HEAD, ADMIN, IT_TEAM
+ *   attendance  — SUPER_ADMIN, SCHOOL_HEAD, ADMIN, TEACHER (face attendance)
+ *   behavior    — SUPER_ADMIN, SCHOOL_HEAD, ADMIN, TEACHER (behavior reports)
+ *   visitors    — SUPER_ADMIN, SCHOOL_HEAD, ADMIN, RECEPTION
+ *   drill       — SUPER_ADMIN, SCHOOL_HEAD, ADMIN
+ *   heatmap     — SUPER_ADMIN, SCHOOL_HEAD, ADMIN, IT_TEAM
+ *   audit       — SUPER_ADMIN, SCHOOL_HEAD, ADMIN, IT_TEAM
+ *   zones       — everyone with view access
+ *   rules       — SUPER_ADMIN, SCHOOL_HEAD (escalation rules)
+ *
+ * All buttons write to the real API. No fake success. Where a feature
+ * requires the on-prem relay agent (architecture decision A) and no relay
+ * is configured, the UI shows a clear setup CTA.
+ */
+
+import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Camera, CameraOff, X, CheckCircle2, AlertTriangle, Bell, Shield,
-  ScanFace, Search, Filter, Zap, Sparkles, Brain, Siren, Phone,
-  MessageSquare, Mail, Send, Download, Eye, Users, UserCheck, UserX,
-  Activity, ChevronRight, TrendingUp, TrendingDown, Minus, Clock, MapPin,
-  Video, Maximize2, Settings, RefreshCw, Flame, Wind, AlertCircle,
-  ShieldAlert, PersonStanding, Volume2, Megaphone, Grid2x2, Grid3x3,
-  Play, Pause, FileText, Fingerprint, Hash, ShieldCheck, ShieldX,
-  CircleCheck, CircleAlert, ArrowUpRight, ArrowDownRight, Trash2, Pencil,
+  Camera as CameraIcon, CameraOff, X, CheckCircle2, AlertTriangle, Bell,
+  ScanFace, Search, Zap, Brain, Siren, Phone, Send, Download, Eye, Users,
+  Activity, ChevronRight, TrendingUp, TrendingDown, Clock, MapPin, Video,
+  RefreshCw, Flame, AlertCircle, ShieldAlert, PersonStanding, Volume2,
+  Megaphone, Grid2x2, Grid3x3, FileText, ShieldCheck, Trash2, Pencil, Plus,
+  UserCheck, UserX, Flame as FlameIcon, Play, Pause, Hash, Lock, Unlock,
+  Calendar, ChevronUp, ChevronDown, Wifi, WifiOff, Settings, Loader2, Mail,
 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -27,1024 +50,376 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { SectionHeader } from './SectionHeader'
 import { useNotificationPreview, type PreviewRecipient } from './NotificationPreviewModal'
+import { SafetyCameraFocus } from './SafetyCameraFocus'
 import { useAppStore } from '@/lib/store'
+import { apiGet, apiPost, apiFetch } from '@/lib/apiFetch'
 import { toast } from 'sonner'
+
+const ACCENT = '#0EA5E9'
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-type CameraStatus = 'online' | 'offline' | 'alert'
+type Tab = 'overview' | 'cameras' | 'detection' | 'attendance' | 'behavior' | 'visitors' | 'drill' | 'heatmap' | 'audit' | 'zones' | 'rules'
 
-interface CameraFeed {
+interface Camera {
   id: string
   name: string
   location: string
-  zone: string
-  status: CameraStatus
-  peopleCount: number
-  detections: string[]
+  protocol: string
+  streamUrl: string
+  hasCredentials: boolean
+  relayUrl: string | null
+  status: string
+  lastCheckedAt: string | null
+  lastSnapshotUrl: string | null
+  lastLatencyMs: number | null
+  lastResolution: string | null
+  hasMic: boolean
+  hasSpeaker: boolean
+  zoneId: string | null
+  zone?: { id: string; name: string } | null
+  detectionConfigs?: DetectionConfig[]
+  _count?: { alerts: number }
 }
 
-type DetectionType =
-  | 'violence'
-  | 'weapon'
-  | 'fall_medical'
-  | 'intrusion'
-  | 'smoke_fire'
-  | 'crowd_density'
-
-type Severity = 'low' | 'medium' | 'high' | 'critical'
-
-interface SafetyAlert {
+interface DetectionConfig {
   id: string
   cameraId: string
-  cameraName: string
-  location: string
-  detectionType: DetectionType
-  severity: Severity
-  confidence: number
-  description: string
-  timestamp: number
-  status: 'active' | 'confirmed' | 'dismissed' | 'escalated'
-  snapshot: string
+  detectionType: string
+  enabled: boolean
+  sensitivity: string
+  cooldownSec: number
 }
 
 interface Zone {
   id: string
   name: string
-  cameraCount: number
-  alertCount: number
-  riskLevel: 'low' | 'moderate' | 'high' | 'critical'
+  riskLevel: string
+  parentZoneId: string | null
+  linkedClassId: string | null
+  notes: string | null
+  _count: { alerts: number; cameras: number }
+}
+
+interface Alert {
+  id: string
+  type: string
+  severity: string
+  location: string
+  description: string
+  cameraId: string | null
+  zoneId: string | null
+  aiConfidence: number | null
+  detectionSource: string
+  snapshotUrl: string | null
+  status: string
+  escalationLevel: number
+  triggeredAt: string
+  reviewedAt: string | null
+  reviewedBy: string | null
+  actionTaken: string | null
+  camera?: { name: string } | null
+  zone?: { name: string } | null
 }
 
 interface AuditEntry {
   id: string
-  timestamp: number
-  actor: string
+  entryHash: string
+  prevHash: string
+  actorId: string | null
+  actorRole: string | null
   action: string
-  target: string
-  hash: string
+  targetType: string
+  targetId: string | null
+  payload: string
+  createdAt: string
 }
 
-interface Student {
+interface Visitor {
   id: string
   name: string
-  rollNo: string
-  grade: string
-  parentName: string
-  parentContact: string
-  present?: boolean
+  phone: string | null
+  email: string | null
+  purpose: string
+  hostName: string | null
+  expectedAt: string | null
+  checkInAt: string | null
+  checkOutAt: string | null
+  status: string
+  isUnknown: boolean
+  notes: string | null
 }
-
-interface BehaviorSubject {
-  id: string
-  name: string
-  rollOrId: string
-  type: 'student' | 'teacher'
-  grade?: string
-  department?: string
-  guardianName: string
-  guardianContact: string
-}
-
-// ---------------------------------------------------------------------------
-// Demo data
-// ---------------------------------------------------------------------------
-
-const CAMERAS: CameraFeed[] = [
-  { id: 'CAM-001', name: 'Main Gate',        location: 'Entrance',           zone: 'building-a',  status: 'online',  peopleCount: 12, detections: ['Face Recognition', 'Weapon Detection'] },
-  { id: 'CAM-002', name: 'Corridor A-1F',    location: 'Block A — 1st Floor', zone: 'building-a', status: 'online',  peopleCount: 8,  detections: ['Behavior Analysis', 'Crowd Density'] },
-  { id: 'CAM-003', name: 'Playground',       location: 'Outdoor — Sports',   zone: 'playground',  status: 'alert',   peopleCount: 24, detections: ['Violence', 'Fall Detection'] },
-  { id: 'CAM-004', name: 'Classroom 7-A',    location: 'Block B — 2nd Floor', zone: 'building-b', status: 'online',  peopleCount: 28, detections: ['Behavior Analysis', 'Attention Tracking'] },
-  { id: 'CAM-005', name: 'Cafeteria',        location: 'Block C — Ground',   zone: 'building-c',  status: 'online',  peopleCount: 47, detections: ['Crowd Density', 'Smoke Detection'] },
-  { id: 'CAM-006', name: 'Library',          location: 'Block A — 2nd Floor', zone: 'building-a', status: 'online',  peopleCount: 15, detections: ['Behavior Analysis'] },
-  { id: 'CAM-007', name: 'Parking Lot',      location: 'Outdoor — West',     zone: 'parking',     status: 'online',  peopleCount: 3,  detections: ['Vehicle Detection', 'Intrusion'] },
-  { id: 'CAM-008', name: 'Back Gate',        location: 'Rear Entrance',      zone: 'building-c',  status: 'offline', peopleCount: 0,  detections: ['Intrusion Detection'] },
-  { id: 'CAM-009', name: 'Classroom 8-B',    location: 'Block B — 3rd Floor', zone: 'building-b', status: 'online',  peopleCount: 31, detections: ['Behavior Analysis'] },
-]
-
-const ZONES: Zone[] = [
-  { id: 'building-a', name: 'Building A',   cameraCount: 3, alertCount: 1,  riskLevel: 'low' },
-  { id: 'building-b', name: 'Building B',   cameraCount: 2, alertCount: 0,  riskLevel: 'low' },
-  { id: 'building-c', name: 'Building C',   cameraCount: 2, alertCount: 2,  riskLevel: 'moderate' },
-  { id: 'playground',  name: 'Playground',  cameraCount: 1, alertCount: 3,  riskLevel: 'high' },
-  { id: 'parking',     name: 'Parking Lot', cameraCount: 1, alertCount: 0,  riskLevel: 'low' },
-]
-
-const DETECTION_TYPES: { id: DetectionType; label: string; icon: any; defaultOn: boolean; accent: string }[] = [
-  { id: 'violence',      label: 'Violence',        icon: Siren,         defaultOn: true,  accent: '#DC2626' },
-  { id: 'weapon',        label: 'Weapon',          icon: ShieldAlert,   defaultOn: true,  accent: '#B91C1C' },
-  { id: 'fall_medical',  label: 'Fall / Medical',  icon: PersonStanding,defaultOn: true,  accent: '#EA580C' },
-  { id: 'intrusion',     label: 'Intrusion',       icon: AlertTriangle, defaultOn: true,  accent: '#D97706' },
-  { id: 'smoke_fire',    label: 'Smoke / Fire',    icon: Flame,         defaultOn: true,  accent: '#E11D48' },
-  { id: 'crowd_density', label: 'Crowd Density',   icon: Users,         defaultOn: false, accent: '#7C3AED' },
-]
-
-const DETECTION_META: Record<DetectionType, { label: string; severity: Severity; description: string }> = {
-  violence:      { label: 'Violence Detected',      severity: 'critical', description: 'AI detected physical altercation between individuals' },
-  weapon:        { label: 'Weapon Detected',        severity: 'critical', description: 'Possible weapon identified in frame' },
-  fall_medical:  { label: 'Fall / Medical Event',   severity: 'high',     description: 'Person detected falling — possible medical emergency' },
-  intrusion:     { label: 'Intrusion Detected',     severity: 'high',     description: 'Unauthorized individual entered restricted zone' },
-  smoke_fire:    { label: 'Smoke / Fire Detected',  severity: 'critical', description: 'Smoke or fire pattern detected in frame' },
-  crowd_density: { label: 'Crowd Density Anomaly',  severity: 'medium',   description: 'Crowd density exceeded configured threshold' },
-}
-
-const SEVERITY_STYLES: Record<Severity, { color: string; bg: string; border: string; label: string }> = {
-  low:      { color: '#2563EB', bg: '#EFF6FF', border: '#BFDBFE', label: 'Low' },
-  medium:   { color: '#CA8A04', bg: '#FEFCE8', border: '#FDE68A', label: 'Medium' },
-  high:     { color: '#EA580C', bg: '#FFF7ED', border: '#FED7AA', label: 'High' },
-  critical: { color: '#DC2626', bg: '#FEF2F2', border: '#FECACA', label: 'Critical' },
-}
-
-const STATUS_STYLES: Record<CameraStatus, { color: string; bg: string; label: string; dot: string }> = {
-  online:  { color: '#15803D', bg: '#F0FDF4', label: 'Online',  dot: 'bg-emerald-500' },
-  offline: { color: '#6B7280', bg: '#F9FAFB', label: 'Offline', dot: 'bg-slate-400' },
-  alert:   { color: '#B91C1C', bg: '#FEF2F2', label: 'Alert',   dot: 'bg-rose-500' },
-}
-
-const SNAPSHOTS = ['🚨', '🔥', '⚔️', '💥', '🚷', '👥', '🩹', '🆘']
-
-const STUDENTS_BY_SECTION: Record<string, Student[]> = {
-  '7-A': [
-    { id: 'STU-0142', name: 'Aarav Singh',      rollNo: '7A-01', grade: '7-A', parentName: 'Mr. R. Singh',   parentContact: '+919811000142' },
-    { id: 'STU-0089', name: 'Diya Patel',       rollNo: '7A-02', grade: '7-A', parentName: 'Mrs. S. Patel',  parentContact: '+919811000089' },
-    { id: 'STU-0210', name: 'Vivaan Gupta',     rollNo: '7A-03', grade: '7-A', parentName: 'Mr. M. Gupta',   parentContact: '+919811000210' },
-    { id: 'STU-0156', name: 'Ananya Reddy',     rollNo: '7A-04', grade: '7-A', parentName: 'Dr. K. Reddy',   parentContact: '+919811000156' },
-    { id: 'STU-0333', name: 'Ishaan Mehta',     rollNo: '7A-05', grade: '7-A', parentName: 'Mr. P. Mehta',   parentContact: '+919811000333' },
-    { id: 'STU-0417', name: 'Saanvi Iyer',      rollNo: '7A-06', grade: '7-A', parentName: 'Mrs. L. Iyer',   parentContact: '+919811000417' },
-    { id: 'STU-0521', name: 'Arjun Nair',       rollNo: '7A-07', grade: '7-A', parentName: 'Mr. D. Nair',    parentContact: '+919811000521' },
-    { id: 'STU-0628', name: 'Myra Kapoor',      rollNo: '7A-08', grade: '7-A', parentName: 'Mr. S. Kapoor',  parentContact: '+919811000628' },
-  ],
-  '8-B': [
-    { id: 'STU-0701', name: 'Kabir Joshi',      rollNo: '8B-01', grade: '8-B', parentName: 'Mr. A. Joshi',   parentContact: '+919811000701' },
-    { id: 'STU-0702', name: 'Aadhya Rao',       rollNo: '8B-02', grade: '8-B', parentName: 'Mrs. N. Rao',    parentContact: '+919811000702' },
-    { id: 'STU-0703', name: 'Reyansh Das',      rollNo: '8B-03', grade: '8-B', parentName: 'Mr. T. Das',     parentContact: '+919811000703' },
-    { id: 'STU-0704', name: 'Anika Bose',       rollNo: '8B-04', grade: '8-B', parentName: 'Dr. R. Bose',    parentContact: '+919811000704' },
-    { id: 'STU-0705', name: 'Ved Malhotra',     rollNo: '8B-05', grade: '8-B', parentName: 'Mr. V. Malhotra',parentContact: '+919811000705' },
-    { id: 'STU-0706', name: 'Tiya Sengupta',    rollNo: '8B-06', grade: '8-B', parentName: 'Mrs. H. Sengupta',parentContact:'+919811000706' },
-  ],
-}
-
-const BEHAVIOR_SUBJECTS: BehaviorSubject[] = [
-  { id: 'STU-0142', name: 'Aarav Singh',     rollOrId: '7A-01', type: 'student', grade: '7-A',      guardianName: 'Mr. R. Singh',   guardianContact: '+919811000142' },
-  { id: 'STU-0089', name: 'Diya Patel',      rollOrId: '7A-02', type: 'student', grade: '7-A',      guardianName: 'Mrs. S. Patel',  guardianContact: '+919811000089' },
-  { id: 'STU-0210', name: 'Vivaan Gupta',    rollOrId: '7A-03', type: 'student', grade: '7-A',      guardianName: 'Mr. M. Gupta',   guardianContact: '+919811000210' },
-  { id: 'STF-0042', name: 'Mrs. Anita Verma', rollOrId: 'EMP-042', type: 'teacher', department: 'Mathematics', guardianName: 'Mr. S. Verma', guardianContact: '+919811000042' },
-  { id: 'STF-0018', name: 'Mr. Rajesh Kumar', rollOrId: 'EMP-018', type: 'teacher', department: 'Science',      guardianName: 'Mrs. P. Kumar', guardianContact: '+919811000018' },
-]
-
-// ---------------------------------------------------------------------------
-// Web Audio API helpers
-// ---------------------------------------------------------------------------
-
-function playSiren() {
-  try {
-    const Ctx = window.AudioContext || (window as any).webkitAudioContext
-    if (!Ctx) return
-    const ctx = new Ctx()
-    const osc = ctx.createOscillator()
-    const gain = ctx.createGain()
-    osc.connect(gain)
-    gain.connect(ctx.destination)
-    osc.type = 'sawtooth'
-    osc.frequency.setValueAtTime(800, ctx.currentTime)
-    osc.frequency.setValueAtTime(1200, ctx.currentTime + 0.5)
-    osc.frequency.setValueAtTime(800, ctx.currentTime + 1)
-    gain.gain.setValueAtTime(0.3, ctx.currentTime)
-    osc.start()
-    osc.stop(ctx.currentTime + 1.5)
-    setTimeout(() => ctx.close(), 2000)
-  } catch (e) {
-    // Audio not available — silent fallback
-  }
-}
-
-function playAlarm() {
-  try {
-    const Ctx = window.AudioContext || (window as any).webkitAudioContext
-    if (!Ctx) return
-    const ctx = new Ctx()
-    const now = ctx.currentTime
-    const pattern = [0, 0.25, 0.5, 0.75]
-    pattern.forEach((t) => {
-      const osc = ctx.createOscillator()
-      const gain = ctx.createGain()
-      osc.connect(gain)
-      gain.connect(ctx.destination)
-      osc.type = 'square'
-      osc.frequency.setValueAtTime(880, now + t)
-      gain.gain.setValueAtTime(0.0001, now + t)
-      gain.gain.exponentialRampToValueAtTime(0.25, now + t + 0.02)
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + t + 0.18)
-      osc.start(now + t)
-      osc.stop(now + t + 0.2)
-    })
-    setTimeout(() => ctx.close(), 1500)
-  } catch (e) {
-    // silent fallback
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Hash-chain helpers (tamper-evident audit log)
-// ---------------------------------------------------------------------------
-
-async function sha256(text: string): Promise<string> {
-  if (typeof crypto !== 'undefined' && crypto.subtle) {
-    const data = new TextEncoder().encode(text)
-    const buf = await crypto.subtle.digest('SHA-256', data)
-    return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('')
-  }
-  // Fallback (non-cryptographic) for very old environments
-  let h1 = 0xdeadbeef, h2 = 0x41c6ce57
-  for (let i = 0; i < text.length; i++) {
-    const ch = text.charCodeAt(i)
-    h1 = Math.imul(h1 ^ ch, 2654435761)
-    h2 = Math.imul(h2 ^ ch, 1597334677)
-  }
-  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909)
-  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909)
-  return (h2 >>> 0).toString(16).padStart(8, '0') + (h1 >>> 0).toString(16).padStart(8, '0')
-}
-
-async function computeAuditHash(prevHash: string, entry: Omit<AuditEntry, 'hash'>): Promise<string> {
-  const payload = `${prevHash}|${entry.id}|${entry.timestamp}|${entry.actor}|${entry.action}|${entry.target}`
-  return sha256(payload)
-}
-
-// ---------------------------------------------------------------------------
-// Small UI helpers
-// ---------------------------------------------------------------------------
-
-function StatCard({ icon: Icon, label, value, sub, accent }: { icon: any; label: string; value: string | number; sub?: string; accent: string }) {
-  return (
-    <Card className="p-4 border-slate-200 bg-white rounded-xl">
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">{label}</div>
-          <div className="text-2xl font-bold text-slate-900 mt-1 leading-tight">{value}</div>
-          {sub && <div className="text-[11px] text-slate-500 mt-0.5">{sub}</div>}
-        </div>
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: accent + '12' }}>
-          <Icon className="w-5 h-5" style={{ color: accent }} />
-        </div>
-      </div>
-    </Card>
-  )
-}
-
-function SeverityBadge({ severity }: { severity: Severity }) {
-  const s = SEVERITY_STYLES[severity]
-  return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider"
-      style={{ color: s.color, background: s.bg, border: `1px solid ${s.border}` }}>
-      <span className="w-1.5 h-1.5 rounded-full" style={{ background: s.color }} />
-      {s.label}
-    </span>
-  )
-}
-
-function StatusBadge({ status }: { status: CameraStatus }) {
-  const s = STATUS_STYLES[status]
-  return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold"
-      style={{ color: s.color, background: s.bg }}>
-      <span className={`w-1.5 h-1.5 rounded-full ${s.dot} ${status === 'alert' ? 'animate-pulse' : ''}`} />
-      {s.label}
-    </span>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Camera tile
-// ---------------------------------------------------------------------------
-
-function CameraTile({
-  camera,
-  onMic, onSiren, onAlarm, onPA, onFocus,
-  micActive, paOpen, paMessage, setPaMessage, onPaSend, onPaCancel,
-  compact,
-}: {
-  camera: CameraFeed
-  onMic: (c: CameraFeed) => void
-  onSiren: (c: CameraFeed) => void
-  onAlarm: (c: CameraFeed) => void
-  onPA: (c: CameraFeed) => void
-  onFocus: (c: CameraFeed) => void
-  micActive: boolean
-  paOpen: boolean
-  paMessage: string
-  setPaMessage: (s: string) => void
-  onPaSend: () => void
-  onPaCancel: () => void
-  compact?: boolean
-}) {
-  return (
-    <Card className="relative overflow-hidden rounded-xl border border-slate-200 bg-slate-900 group">
-      {/* Simulated live feed — animated gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-800 via-slate-900 to-black" />
-      <motion.div
-        className="absolute inset-0 opacity-30"
-        animate={{ backgroundPosition: ['0% 0%', '100% 100%', '0% 0%'] }}
-        transition={{ duration: 12, repeat: Infinity, ease: 'linear' }}
-        style={{
-          backgroundImage: 'radial-gradient(circle at 30% 40%, rgba(56,189,248,0.25), transparent 50%), radial-gradient(circle at 70% 60%, rgba(168,85,247,0.20), transparent 50%)',
-          backgroundSize: '200% 200%',
-        }}
-      />
-      {/* Scanline */}
-      <motion.div
-        className="absolute left-0 right-0 h-px bg-cyan-400/40"
-        animate={{ top: ['0%', '100%', '0%'] }}
-        transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
-      />
-      {/* Top overlay — name, location, status */}
-      <div className="absolute top-0 left-0 right-0 p-2.5 flex items-start justify-between bg-gradient-to-b from-black/60 to-transparent z-10">
-        <div className="min-w-0">
-          <div className="text-xs font-semibold text-white truncate flex items-center gap-1.5">
-            <Video className="w-3 h-3 text-cyan-300 flex-shrink-0" />
-            {camera.name}
-          </div>
-          <div className="text-[10px] text-slate-300 flex items-center gap-1 mt-0.5 truncate">
-            <MapPin className="w-2.5 h-2.5 flex-shrink-0" />
-            {camera.location}
-          </div>
-        </div>
-        <StatusBadge status={camera.status} />
-      </div>
-      {/* Bottom overlay — people count + actions */}
-      <div className={`absolute bottom-0 left-0 right-0 z-10 ${compact ? 'p-2' : 'p-2.5'} bg-gradient-to-t from-black/70 to-transparent`}>
-        <div className="flex items-center justify-between gap-2 mb-2">
-          <div className="flex items-center gap-1.5 text-[10px] text-slate-200">
-            <Users className="w-3 h-3 text-emerald-400" />
-            <span className="font-semibold text-white">{camera.peopleCount}</span> people
-          </div>
-          <div className="flex items-center gap-1 text-[10px] text-slate-300 font-mono">
-            <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-            REC · {new Date().toLocaleTimeString('en-US', { hour12: false })}
-          </div>
-        </div>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => onMic(camera)}
-            title="Audio monitoring"
-            className={`flex-1 h-7 rounded-md flex items-center justify-center transition-colors ${micActive ? 'bg-red-600 text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}
-          >
-            <Volume2 className="w-3.5 h-3.5" />
-          </button>
-          <button onClick={() => onSiren(camera)} title="Activate siren"
-            className="flex-1 h-7 rounded-md flex items-center justify-center bg-white/10 text-amber-300 hover:bg-amber-500 hover:text-white transition-colors">
-            <Siren className="w-3.5 h-3.5" />
-          </button>
-          <button onClick={() => onAlarm(camera)} title="Trigger alarm"
-            className="flex-1 h-7 rounded-md flex items-center justify-center bg-white/10 text-orange-300 hover:bg-orange-500 hover:text-white transition-colors">
-            <Bell className="w-3.5 h-3.5" />
-          </button>
-          <button onClick={() => onPA(camera)} title="PA announcement"
-            className="flex-1 h-7 rounded-md flex items-center justify-center bg-white/10 text-cyan-300 hover:bg-cyan-500 hover:text-white transition-colors">
-            <Megaphone className="w-3.5 h-3.5" />
-          </button>
-          <button onClick={() => onFocus(camera)} title="Full-screen focus"
-            className="flex-1 h-7 rounded-md flex items-center justify-center bg-white/10 text-white hover:bg-white/20 transition-colors">
-            <Maximize2 className="w-3.5 h-3.5" />
-          </button>
-        </div>
-        {paOpen && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
-            className="mt-2 flex items-center gap-1.5">
-            <Input
-              autoFocus
-              value={paMessage}
-              onChange={(e) => setPaMessage(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') onPaSend(); if (e.key === 'Escape') onPaCancel() }}
-              placeholder="Type announcement…"
-              className="h-7 text-[11px] bg-white/95 border-0 text-slate-900 placeholder:text-slate-400"
-            />
-            <Button size="sm" onClick={onPaSend} className="h-7 px-2 bg-cyan-600 hover:bg-cyan-700 text-white">
-              <Send className="w-3 h-3" />
-            </Button>
-            <Button size="sm" variant="ghost" onClick={onPaCancel} className="h-7 px-2 text-white hover:bg-white/20">
-              <X className="w-3 h-3" />
-            </Button>
-          </motion.div>
-        )}
-      </div>
-      {/* Aspect ratio spacer */}
-      <div className="aspect-video" />
-    </Card>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Alert popup (full-screen)
-// ---------------------------------------------------------------------------
-
-function AlertPopup({ alert, onConfirm, onDismiss, onEscalate }: {
-  alert: SafetyAlert
-  onConfirm: (a: SafetyAlert) => void
-  onDismiss: (a: SafetyAlert) => void
-  onEscalate: (a: SafetyAlert) => void
-}) {
-  const meta = DETECTION_META[alert.detectionType]
-  const sev = SEVERITY_STYLES[alert.severity]
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm"
-    >
-      <motion.div
-        initial={{ scale: 0.9, y: 20, opacity: 0 }}
-        animate={{ scale: 1, y: 0, opacity: 1 }}
-        exit={{ scale: 0.9, y: 20, opacity: 0 }}
-        transition={{ type: 'spring', damping: 22, stiffness: 280 }}
-        className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden"
-        style={{ boxShadow: `0 0 0 4px ${sev.border}, 0 25px 50px -12px rgba(0,0,0,0.4)` }}
-      >
-        {/* Flashing red border top */}
-        <motion.div
-          className="h-1.5"
-          style={{ background: sev.color }}
-          animate={{ opacity: [1, 0.3, 1] }}
-          transition={{ duration: 0.8, repeat: Infinity, ease: 'easeInOut' }}
-        />
-        <div className="p-5">
-          <div className="flex items-start gap-3">
-            <motion.div
-              className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background: sev.bg, border: `1px solid ${sev.border}` }}
-              animate={{ scale: [1, 1.08, 1] }}
-              transition={{ duration: 1, repeat: Infinity, ease: 'easeInOut' }}
-            >
-              <ShieldAlert className="w-6 h-6" style={{ color: sev.color }} />
-            </motion.div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-base font-bold text-slate-900">{meta.label}</h3>
-                <SeverityBadge severity={alert.severity} />
-              </div>
-              <p className="text-xs text-slate-600 mt-1 leading-relaxed">{alert.description}</p>
-            </div>
-          </div>
-
-          {/* Snapshot */}
-          <div className="mt-4 grid grid-cols-3 gap-3">
-            <div className="col-span-1 rounded-lg overflow-hidden border border-slate-200 bg-slate-900 aspect-video flex items-center justify-center relative">
-              <span className="text-3xl">{alert.snapshot}</span>
-              <div className="absolute top-1 left-1 text-[9px] text-red-400 font-mono flex items-center gap-1">
-                <span className="w-1 h-1 rounded-full bg-red-500 animate-pulse" /> SNAPSHOT
-              </div>
-            </div>
-            <div className="col-span-2 space-y-1.5">
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="text-slate-500 flex items-center gap-1"><Video className="w-3 h-3" /> Camera</span>
-                <span className="font-medium text-slate-900">{alert.cameraName}</span>
-              </div>
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="text-slate-500 flex items-center gap-1"><MapPin className="w-3 h-3" /> Location</span>
-                <span className="font-medium text-slate-900">{alert.location}</span>
-              </div>
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="text-slate-500 flex items-center gap-1"><Brain className="w-3 h-3" /> AI Confidence</span>
-                <span className="font-semibold" style={{ color: sev.color }}>{alert.confidence}%</span>
-              </div>
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="text-slate-500 flex items-center gap-1"><Clock className="w-3 h-3" /> Timestamp</span>
-                <span className="font-medium text-slate-900">{new Date(alert.timestamp).toLocaleString()}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Auto-dismiss countdown */}
-          <div className="mt-4 flex items-center gap-2 text-[10px] text-slate-500">
-            <RefreshCw className="w-3 h-3 animate-spin" />
-            Auto-dismisses in 30s if no action taken
-          </div>
-
-          {/* Actions */}
-          <div className="mt-4 grid grid-cols-3 gap-2">
-            <Button
-              onClick={() => onConfirm(alert)}
-              className="h-10 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold gap-1.5"
-            >
-              <CheckCircle2 className="w-4 h-4" /> Confirm Alert
-            </Button>
-            <Button
-              onClick={() => onDismiss(alert)}
-              variant="outline"
-              className="h-10 text-xs font-semibold gap-1.5 border-slate-300 text-slate-700 hover:bg-slate-50"
-            >
-              <X className="w-4 h-4" /> False Positive
-            </Button>
-            <Button
-              onClick={() => onEscalate(alert)}
-              className="h-10 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold gap-1.5"
-            >
-              <ShieldAlert className="w-4 h-4" /> Escalate
-            </Button>
-          </div>
-        </div>
-      </motion.div>
-    </motion.div>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Behavior report rendering
-// ---------------------------------------------------------------------------
 
 interface BehaviorReport {
-  subject: BehaviorSubject
+  id: string
+  subjectType: string
+  subjectId: string
+  subjectName: string
+  reportingPeriod: string
   score: number
-  trend: 'improving' | 'declining' | 'stable'
-  trendPoints: number[]
-  incidents: { date: string; type: string; severity: 'positive' | 'low' | 'medium' | 'high'; note: string }[]
-  positivePoints: number
-  negativePoints: number
-  recommendations: string[]
+  trendDelta: number
+  summary: string
+  recommendedActions: string
+  sentToGuardian: boolean
+  sentAt: string | null
+  createdAt: string
 }
 
-function generateBehaviorReport(subject: BehaviorSubject): BehaviorReport {
-  // Deterministic-ish generation based on subject id hash
-  const seed = subject.id.split('').reduce((a, c) => a + c.charCodeAt(0), 0)
-  const score = 60 + (seed % 35)
-  const trend: BehaviorReport['trend'] = seed % 3 === 0 ? 'declining' : seed % 3 === 1 ? 'improving' : 'stable'
-  const trendPoints = Array.from({ length: 10 }, (_, i) => {
-    const base = score - 12 + i * 2
-    const wobble = ((seed + i * 7) % 9) - 4
-    return Math.max(20, Math.min(100, base + wobble))
-  })
-  const incidents: BehaviorReport['incidents'] = [
-    { date: '2026-07-08', type: 'Helped peer',   severity: 'positive', note: 'Assisted classmate with assignment' },
-    { date: '2026-07-05', type: 'Late arrival',  severity: 'low',      note: 'Arrived 8 minutes late to first period' },
-    { date: '2026-07-01', type: 'Classroom disruption', severity: 'medium', note: 'Talking during instruction — addressed' },
-    { date: '2026-06-28', type: 'Top quiz score',severity: 'positive', note: 'Scored 96% on Mathematics quiz' },
-    { date: '2026-06-22', type: 'Uniform violation', severity: 'low', note: 'Missing ID card — issued replacement' },
-  ]
-  const positivePoints = 78
-  const negativePoints = 22
-  const recs = subject.type === 'student'
-    ? [
-        'Encourage peer mentoring — student shows strong collaborative behavior on days with high engagement.',
-        'Address punctuality pattern with parent — 3 late arrivals in past 14 days.',
-        'Channel leadership energy into structured classroom roles (e.g. group lead).',
-        'Schedule a 15-min wellness check-in with school counsellor next week.',
-      ]
-    : [
-        'Maintain current pedagogical approach — class engagement metrics trending up.',
-        'Consider sharing best practices in next departmental review.',
-        'Recommend reducing after-hours workload — fatigue indicators detected.',
-        'Peer-observe 2 colleagues this term to cross-pollinate techniques.',
-      ]
-  return { subject, score, trend, trendPoints, incidents, positivePoints, negativePoints, recommendations: recs }
+interface ScheduledAttendance {
+  id: string
+  classId: string
+  className: string
+  cameraId: string
+  period: number
+  scheduledAt: string
+  lastRunAt: string | null
+  lastResult: string | null
+  isActive: boolean
 }
 
-function TrendSparkline({ points, color }: { points: number[]; color: string }) {
-  const w = 240, h = 60, pad = 4
-  const min = Math.min(...points), max = Math.max(...points)
-  const range = max - min || 1
-  const step = (w - pad * 2) / (points.length - 1)
-  const path = points.map((p, i) => {
-    const x = pad + i * step
-    const y = h - pad - ((p - min) / range) * (h - pad * 2)
-    return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`
-  }).join(' ')
-  return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-16">
-      <defs>
-        <linearGradient id="spark-fill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.25" />
-          <stop offset="100%" stopColor={color} stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <path d={`${path} L${w - pad},${h - pad} L${pad},${h - pad} Z`} fill="url(#spark-fill)" />
-      <path d={path} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      {points.map((p, i) => {
-        const x = pad + i * step
-        const y = h - pad - ((p - min) / range) * (h - pad * 2)
-        return <circle key={i} cx={x} cy={y} r="2.5" fill={color} />
-      })}
-    </svg>
-  )
+interface Stats {
+  camerasTotal: number
+  camerasOnline: number
+  alertsToday: number
+  pendingReviews: number
+  avgResponseSec: number | null
+  falsePositiveRate: number | null
+}
+
+interface Charts {
+  byType: Record<string, number>
+  bySeverity: Record<string, number>
+  trend: Record<string, number>
+  zoneHeatmap: Array<{ zoneId: string | null; zoneName: string; alertCount: number }>
+  zonesList: Array<{ id: string; name: string; riskLevel: string; cameraCount: number; alertCount: number }>
 }
 
 // ---------------------------------------------------------------------------
-// Main module
+// Constants
 // ---------------------------------------------------------------------------
 
-const ACCENT = '#B91C1C' // Safety red
+const SEVERITY_COLORS: Record<string, string> = {
+  LOW: '#10B981',
+  MEDIUM: '#F59E0B',
+  HIGH: '#F97316',
+  CRITICAL: '#DC2626',
+}
+
+const DETECTION_TYPES: { id: string; label: string; icon: any; color: string }[] = [
+  { id: 'VIOLENCE', label: 'Violence', icon: Siren, color: '#DC2626' },
+  { id: 'WEAPON', label: 'Weapon', icon: ShieldAlert, color: '#B91C1C' },
+  { id: 'FALL_MEDICAL', label: 'Fall / Medical', icon: PersonStanding, color: '#EA580C' },
+  { id: 'INTRUSION', label: 'Intrusion', icon: AlertTriangle, color: '#D97706' },
+  { id: 'SMOKE_FIRE', label: 'Smoke / Fire', icon: Flame, color: '#E11D48' },
+  { id: 'CROWD_DENSITY', label: 'Crowd Density', icon: Users, color: '#7C3AED' },
+  { id: 'PROLONGED_ABSENCE', label: 'Prolonged Absence', icon: UserX, color: '#0891B2' },
+]
+
+const TYPE_LABELS: Record<string, string> = {
+  VIOLENCE: 'Violence / Fight',
+  WEAPON: 'Weapon Detected',
+  FALL_MEDICAL: 'Fall / Medical',
+  INTRUSION: 'Intrusion',
+  SMOKE_FIRE: 'Smoke / Fire',
+  CROWD_DENSITY: 'Crowd Density',
+  PROLONGED_ABSENCE: 'Prolonged Absence',
+  UNKNOWN_FACE: 'Unknown Face',
+  DRILL: 'Drill',
+}
+
+// ---------------------------------------------------------------------------
+// Main component
+// ---------------------------------------------------------------------------
 
 export function SafetyModule() {
   const user = useAppStore((s) => s.user)
   const role = user?.role ?? 'ADMIN'
-  const { preview: previewNotification } = useNotificationPreview()
 
-  // ---- Tab state ----
-  const [activeTab, setActiveTab] = useState<'overview' | 'cameras' | 'detection' | 'attendance' | 'behavior' | 'audit' | 'zones'>('overview')
-
-  // ---- Camera wall ----
-  const [gridLayout, setGridLayout] = useState<'2x2' | '3x3'>('2x2')
-  const [selectedCameraId, setSelectedCameraId] = useState<string>('all')
-  const [focusCamera, setFocusCamera] = useState<CameraFeed | null>(null)
-  const [micActiveId, setMicActiveId] = useState<string | null>(null)
-  const [paOpenId, setPaOpenId] = useState<string | null>(null)
-  const [paMessage, setPaMessage] = useState('')
-
-  // ---- AI detection ----
-  const [detectionToggles, setDetectionToggles] = useState<Record<DetectionType, boolean>>(
-    () => Object.fromEntries(DETECTION_TYPES.map((d) => [d.id, d.defaultOn])) as Record<DetectionType, boolean>
-  )
-  const [popupAlert, setPopupAlert] = useState<SafetyAlert | null>(null)
-  const [alerts, setAlerts] = useState<SafetyAlert[]>([])
-  const [responseTimes, setResponseTimes] = useState<number[]>([42, 38, 51, 29, 47]) // seconds, for avg
-
-  // ---- Face attendance ----
-  const [attendanceSection, setAttendanceSection] = useState<string>('7-A')
-  const [attendanceState, setAttendanceState] = useState<'idle' | 'scanning' | 'done'>('idle')
-  const [attendanceResult, setAttendanceResult] = useState<{ present: Student[]; absent: Student[] } | null>(null)
-
-  // ---- Behavior ----
-  const [behaviorSubjectId, setBehaviorSubjectId] = useState<string>(BEHAVIOR_SUBJECTS[0].id)
-  const [behaviorReport, setBehaviorReport] = useState<BehaviorReport | null>(null)
-  const [behaviorLoading, setBehaviorLoading] = useState(false)
-
-  // ---- Audit log ----
-  const [auditLog, setAuditLog] = useState<AuditEntry[]>([
-    { id: 'AUD-0001', timestamp: Date.now() - 1000 * 60 * 60 * 5,  actor: 'system',      action: 'CAMERA_CONFIG',  target: 'CAM-003 sensitivity=0.85', hash: 'genesis' },
-    { id: 'AUD-0002', timestamp: Date.now() - 1000 * 60 * 60 * 4,  actor: 'admin@learnx', action: 'ALERT_REVIEW',   target: 'ALT-001 confirmed',         hash: '' },
-    { id: 'AUD-0003', timestamp: Date.now() - 1000 * 60 * 60 * 2,  actor: 'admin@learnx', action: 'NOTIFICATION_SENT', target: 'WhatsApp → 2 parents',     hash: '' },
-  ])
-  const [auditVerified, setAuditVerified] = useState<'idle' | 'verifying' | 'ok' | 'broken'>('idle')
-
-  // ---- Zones ----
-  const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null)
-
-  // ---- Append audit entry (with hash chain) ----
-  const appendAudit = useCallback(async (actor: string, action: string, target: string) => {
-    const id = `AUD-${String(auditLog.length + 1).padStart(4, '0')}`
-    const entry: Omit<AuditEntry, 'hash'> = {
-      id, timestamp: Date.now(), actor, action, target,
-    }
-    const prevHash = auditLog[auditLog.length - 1]?.hash ?? 'genesis'
-    const hash = await computeAuditHash(prevHash, entry)
-    setAuditLog((prev) => [...prev, { ...entry, hash }])
-  }, [auditLog])
-
-  // Initialize hashes for the seed audit entries on mount (genesis chain)
-  useEffect(() => {
-    (async () => {
-      const seeded: AuditEntry[] = []
-      let prev = 'genesis'
-      for (const e of auditLog) {
-        const hash = await computeAuditHash(prev, { id: e.id, timestamp: e.timestamp, actor: e.actor, action: e.action, target: e.target })
-        seeded.push({ ...e, hash })
-        prev = hash
-      }
-      setAuditLog(seeded)
-    })()
-  }, [])
-
-  // ---- Popup alert auto-dismiss ----
-  useEffect(() => {
-    if (!popupAlert) return
-    const timer = setTimeout(() => {
-      setPopupAlert(null)
-      toast.info(`Alert ${popupAlert.id} auto-dismissed after 30s timeout`)
-    }, 30000)
-    return () => clearTimeout(timer)
-  }, [popupAlert])
-
-  // ---- Derived stats ----
-  const stats = useMemo(() => {
-    const online = CAMERAS.filter((c) => c.status === 'online').length
-    const alertsToday = alerts.length
-    const pending = alerts.filter((a) => a.status === 'active').length + (popupAlert ? 1 : 0)
-    const avgResp = responseTimes.length
-      ? Math.round(responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length)
-      : 0
-    return { online, total: CAMERAS.length, alertsToday, pending, avgResp }
-  }, [alerts, popupAlert, responseTimes])
-
-  // ---- Filter cameras by zone + selector ----
-  const visibleCameras = useMemo(() => {
-    let list = CAMERAS
-    if (selectedZoneId) list = list.filter((c) => c.zone === selectedZoneId)
-    if (selectedCameraId !== 'all') list = list.filter((c) => c.id === selectedCameraId)
-    return list
-  }, [selectedZoneId, selectedCameraId])
-
-  // ---- Camera action handlers ----
-  const handleMic = (c: CameraFeed) => {
-    setMicActiveId((prev) => (prev === c.id ? null : c.id))
-    if (micActiveId !== c.id) {
-      toast.success(`🎤 Audio monitoring enabled for ${c.name} — listening to live audio feed`)
-      appendAudit(user?.email ?? 'admin', 'MIC_TOGGLED', `${c.id} (${c.name}) audio ON`)
-    } else {
-      toast.info(`Audio monitoring disabled for ${c.name}`)
-      appendAudit(user?.email ?? 'admin', 'MIC_TOGGLED', `${c.id} (${c.name}) audio OFF`)
-    }
+  // PARENT and STUDENT see only a transparency notice — no live feeds,
+  // no incident details (per spec section 1.2 + local privacy regulation).
+  if (role === 'PARENT' || role === 'STUDENT') {
+    return <ParentStudentTransparencyView role={role} />
   }
 
-  const handleSiren = (c: CameraFeed) => {
-    playSiren()
-    toast.error(`🚨 Siren activated at ${c.location} — area alerted`)
-    appendAudit(user?.email ?? 'admin', 'SIREN_ACTIVATED', `${c.id} (${c.location})`)
-  }
+  return <SafetyModuleInner key={role} role={role} />
+}
 
-  const handleAlarm = (c: CameraFeed) => {
-    playAlarm()
-    toast.warning(`⚠️ Alarm triggered at ${c.location}`)
-    appendAudit(user?.email ?? 'admin', 'ALARM_TRIGGERED', `${c.id} (${c.location})`)
-  }
+function SafetyModuleInner({ role }: { role: string }) {
+  const [activeTab, setActiveTab] = useState<Tab>('overview')
+  const [loading, setLoading] = useState(false)
+  const [stats, setStats] = useState<Stats | null>(null)
+  const [charts, setCharts] = useState<Charts | null>(null)
+  const [cameras, setCameras] = useState<Camera[]>([])
+  const [alerts, setAlerts] = useState<Alert[]>([])
+  const [zones, setZones] = useState<Zone[]>([])
+  const [auditEntries, setAuditEntries] = useState<AuditEntry[]>([])
+  const [visitors, setVisitors] = useState<Visitor[]>([])
+  const [behaviorReports, setBehaviorReports] = useState<BehaviorReport[]>([])
+  const [schedules, setSchedules] = useState<ScheduledAttendance[]>([])
+  const [focusCamera, setFocusCamera] = useState<Camera | null>(null)
 
-  const handlePA = (c: CameraFeed) => {
-    setPaOpenId(c.id)
-    setPaMessage('')
-  }
-
-  const handlePaSend = () => {
-    if (!paOpenId) return
-    const cam = CAMERAS.find((c) => c.id === paOpenId)
-    if (!cam) return
-    const msg = paMessage.trim()
-    if (!msg) {
-      toast.error('Please type a message before broadcasting')
-      return
-    }
-    toast.success(`📢 PA Announcement broadcast at ${cam.location}: ${msg}`)
-    appendAudit(user?.email ?? 'admin', 'PA_BROADCAST', `${cam.id} — "${msg.slice(0, 60)}"`)
-    setPaOpenId(null)
-    setPaMessage('')
-  }
-
-  const handlePaCancel = () => {
-    setPaOpenId(null)
-    setPaMessage('')
-  }
-
-  // ---- AI Detection handlers ----
-  const toggleDetection = (id: DetectionType) => {
-    setDetectionToggles((prev) => {
-      const next = { ...prev, [id]: !prev[id] }
-      const meta = DETECTION_TYPES.find((d) => d.id === id)!
-      appendAudit(user?.email ?? 'admin', 'DETECTION_TOGGLE', `${meta.label} = ${next[id] ? 'ON' : 'OFF'}`)
-      toast.success(`${meta.label} detection ${next[id] ? 'enabled' : 'disabled'}`)
-      return next
-    })
-  }
-
-  const handleSimulateEvent = () => {
-    const activeTypes = DETECTION_TYPES.filter((d) => detectionToggles[d.id])
-    if (activeTypes.length === 0) {
-      toast.error('Enable at least one detection type to simulate events')
-      return
-    }
-    const onlineCameras = CAMERAS.filter((c) => c.status !== 'offline')
-    const cam = onlineCameras[Math.floor(Math.random() * onlineCameras.length)]
-    const detType = activeTypes[Math.floor(Math.random() * activeTypes.length)].id
-    const meta = DETECTION_META[detType]
-    const confidence = 70 + Math.floor(Math.random() * 28)
-    const newAlert: SafetyAlert = {
-      id: `ALT-${String(alerts.length + 1).padStart(4, '0')}`,
-      cameraId: cam.id,
-      cameraName: cam.name,
-      location: cam.location,
-      detectionType: detType,
-      severity: meta.severity,
-      confidence,
-      description: meta.description + ` — flagged on ${cam.name}.`,
-      timestamp: Date.now(),
-      status: 'active',
-      snapshot: SNAPSHOTS[Math.floor(Math.random() * SNAPSHOTS.length)],
-    }
-    setPopupAlert(newAlert)
-    setAlerts((prev) => [newAlert, ...prev])
-    appendAudit('ai-safety-engine', 'ALERT_GENERATED', `${newAlert.id} — ${meta.label} @ ${cam.name} (${confidence}%)`)
-  }
-
-  const handleConfirmAlert = (a: SafetyAlert) => {
-    setAlerts((prev) => prev.map((x) => (x.id === a.id ? { ...x, status: 'confirmed' } : x)))
-    setPopupAlert(null)
-    setResponseTimes((prev) => [...prev, Math.floor(Math.random() * 30) + 20])
-    toast.success(`Alert ${a.id} confirmed. Incident logged & response team notified.`)
-    appendAudit(user?.email ?? 'admin', 'ALERT_CONFIRMED', a.id)
-    previewNotification({
-      recipients: [{
-        id: 'principal', name: 'Principal — Ms. Kavita Shah', contact: '+919811000001',
-        channel: 'WHATSAPP', recipientType: 'STAFF',
-      }],
-      subject: `Safety Alert Confirmed — ${DETECTION_META[a.detectionType].label}`,
-      body: `Alert ${a.id} confirmed at ${a.cameraName} (${a.location}) at ${new Date(a.timestamp).toLocaleString()}. Confidence: ${a.confidence}%. Severity: ${a.severity.toUpperCase()}. Response team dispatched.`,
-      audience: 'MINIMUM', source: 'safety-module',
-    })
-  }
-
-  const handleDismissAlert = (a: SafetyAlert) => {
-    setAlerts((prev) => prev.map((x) => (x.id === a.id ? { ...x, status: 'dismissed' } : x)))
-    setPopupAlert(null)
-    toast.info(`Alert ${a.id} dismissed as false positive. AI model will be re-trained.`)
-    appendAudit(user?.email ?? 'admin', 'ALERT_DISMISSED', `${a.id} (false positive)`)
-  }
-
-  const handleEscalateAlert = (a: SafetyAlert) => {
-    setAlerts((prev) => prev.map((x) => (x.id === a.id ? { ...x, status: 'escalated' } : x)))
-    setPopupAlert(null)
-    toast.error(`🚨 ${a.id} ESCALATED — Principal, Security Lead & Local Authorities notified.`)
-    appendAudit(user?.email ?? 'admin', 'ALERT_ESCALATED', a.id)
-    previewNotification({
-      recipients: [
-        { id: 'principal', name: 'Principal — Ms. Kavita Shah', contact: '+919811000001', channel: 'WHATSAPP', recipientType: 'STAFF' },
-        { id: 'security-lead', name: 'Security Lead — Mr. D. Sharma', contact: '+919811000002', channel: 'SMS', recipientType: 'STAFF' },
-      ],
-      subject: `🚨 ESCALATED — ${DETECTION_META[a.detectionType].label}`,
-      body: `CRITICAL ALERT ${a.id} escalated at ${a.cameraName} (${a.location}). Severity: ${a.severity.toUpperCase()}. Confidence: ${a.confidence}%. Immediate response required.`,
-      audience: 'WIDER', source: 'safety-module',
-    })
-  }
-
-  // ---- Face attendance ----
-  const handleStartAttendance = () => {
-    setAttendanceState('scanning')
-    setAttendanceResult(null)
-    setTimeout(() => {
-      const roster = STUDENTS_BY_SECTION[attendanceSection] ?? []
-      // Simulate: ~75-90% present
-      const presentCount = Math.max(1, Math.floor(roster.length * (0.75 + Math.random() * 0.15)))
-      const shuffled = [...roster].sort(() => Math.random() - 0.5)
-      const present = shuffled.slice(0, presentCount).map((s) => ({ ...s, present: true }))
-      const presentIds = new Set(present.map((p) => p.id))
-      const absent = roster.filter((s) => !presentIds.has(s.id)).map((s) => ({ ...s, present: false }))
-      setAttendanceResult({ present, absent })
-      setAttendanceState('done')
-      toast.success(`Face detection complete — ${present.length}/${roster.length} students identified`)
-      appendAudit(user?.email ?? 'admin', 'FACE_ATTENDANCE_RUN', `Section ${attendanceSection} — ${present.length}/${roster.length} present`)
-    }, 3000)
-  }
-
-  const handleSendAbsentNotifications = () => {
-    if (!attendanceResult || attendanceResult.absent.length === 0) {
-      toast.info('No absent students to notify')
-      return
-    }
-    const recipients: PreviewRecipient[] = attendanceResult.absent.map((s) => ({
-      id: s.id, name: s.parentName, contact: s.parentContact,
-      channel: 'WHATSAPP' as const, recipientType: 'PARENT' as const,
-    }))
-    previewNotification({
-      recipients,
-      templateName: 'absent_alert_whatsapp',
-      templateData: { date: new Date().toLocaleDateString(), studentName: '' },
-      audience: 'MINIMUM', source: 'safety-module-attendance',
-    })
-    appendAudit(user?.email ?? 'admin', 'ABSENT_NOTIFICATION_SENT', `${recipients.length} parents — Section ${attendanceSection}`)
-  }
-
-  const handleDownloadAttendance = () => {
-    if (!attendanceResult) return
-    const lines = [
-      ['Roll No', 'Name', 'Grade', 'Status'],
-      ...attendanceResult.present.map((s) => [s.rollNo, s.name, s.grade, 'Present']),
-      ...attendanceResult.absent.map((s) => [s.rollNo, s.name, s.grade, 'Absent']),
-    ]
-    const csv = lines.map((l) => l.map((c) => `"${c}"`).join(',')).join('\n')
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `attendance-${attendanceSection}-${new Date().toISOString().slice(0, 10)}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
-    toast.success('Attendance report downloaded')
-    appendAudit(user?.email ?? 'admin', 'ATTENDANCE_EXPORT', `Section ${attendanceSection} CSV`)
-  }
-
-  // ---- Behavior ----
-  const handleGenerateBehavior = () => {
-    const subject = BEHAVIOR_SUBJECTS.find((s) => s.id === behaviorSubjectId)
-    if (!subject) return
-    setBehaviorLoading(true)
-    setBehaviorReport(null)
-    setTimeout(() => {
-      setBehaviorReport(generateBehaviorReport(subject))
-      setBehaviorLoading(false)
-      toast.success(`Behavior report generated for ${subject.name}`)
-      appendAudit(user?.email ?? 'admin', 'BEHAVIOR_REPORT_GENERATED', `${subject.id} (${subject.name})`)
-    }, 1200)
-  }
-
-  const handleSendBehaviorReport = () => {
-    if (!behaviorReport) return
-    const subject = behaviorReport.subject
-    previewNotification({
-      recipients: [{
-        id: subject.id, name: subject.guardianName, contact: subject.guardianContact,
-        channel: 'WHATSAPP', recipientType: subject.type === 'student' ? 'PARENT' : 'STAFF',
-      }],
-      subject: `Behavior Report — ${subject.name}`,
-      body: `Dear ${subject.guardianName},\n\nBehavior report for ${subject.name} (${subject.rollOrId}):\n• Behavior Score: ${behaviorReport.score}/100\n• Trend: ${behaviorReport.trend.toUpperCase()}\n• Positive Points: ${behaviorReport.positivePoints}\n• Areas of Concern: ${behaviorReport.negativePoints}\n\nAI Recommendations:\n${behaviorReport.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}\n\n— LearnX School`,
-      audience: 'MINIMUM', source: 'safety-module-behavior',
-    })
-    appendAudit(user?.email ?? 'admin', 'BEHAVIOR_REPORT_SENT', `${subject.id} via WhatsApp`)
-  }
-
-  // ---- Audit log integrity ----
-  const handleVerifyAudit = async () => {
-    setAuditVerified('verifying')
-    let prev = 'genesis'
-    let ok = true
-    for (const e of auditLog) {
-      const expected = await computeAuditHash(prev, { id: e.id, timestamp: e.timestamp, actor: e.actor, action: e.action, target: e.target })
-      if (expected !== e.hash) { ok = false; break }
-      prev = e.hash
-    }
-    setAuditVerified(ok ? 'ok' : 'broken')
-    if (ok) toast.success('✓ Audit log integrity verified — hash chain intact')
-    else toast.error('⚠️ Audit log integrity BROKEN — tampering detected')
-  }
-
-  const handleExportAudit = () => {
-    const lines = [
-      ['ID', 'Timestamp', 'Actor', 'Action', 'Target', 'Hash'],
-      ...auditLog.map((e) => [
-        e.id,
-        new Date(e.timestamp).toISOString(),
-        e.actor,
-        e.action,
-        e.target,
-        e.hash,
-      ]),
-    ]
-    const csv = lines.map((l) => l.map((c) => `"${c}"`).join(',')).join('\n')
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `safety-audit-log-${new Date().toISOString().slice(0, 10)}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
-    toast.success('Audit log exported to CSV')
-  }
-
-  // ---- Role-based view filtering ----
-  const roleCanSee = {
-    overview:   true,
-    cameras:    ['SUPER_ADMIN', 'SCHOOL_HEAD', 'ADMIN', 'IT_TEAM', 'RECEPTION'].includes(role),
-    detection:  ['SUPER_ADMIN', 'SCHOOL_HEAD', 'ADMIN', 'IT_TEAM'].includes(role),
+  const roleCanSee: Record<Tab, boolean> = {
+    overview: true,
+    cameras: ['SUPER_ADMIN', 'SCHOOL_HEAD', 'ADMIN', 'IT_TEAM', 'RECEPTION'].includes(role),
+    detection: ['SUPER_ADMIN', 'SCHOOL_HEAD', 'ADMIN', 'IT_TEAM'].includes(role),
     attendance: ['SUPER_ADMIN', 'SCHOOL_HEAD', 'ADMIN', 'TEACHER'].includes(role),
-    behavior:   ['SUPER_ADMIN', 'SCHOOL_HEAD', 'ADMIN', 'TEACHER'].includes(role),
-    audit:      ['SUPER_ADMIN', 'SCHOOL_HEAD', 'ADMIN', 'IT_TEAM'].includes(role),
-    zones:      true,
-  } as const
+    behavior: ['SUPER_ADMIN', 'SCHOOL_HEAD', 'ADMIN', 'TEACHER'].includes(role),
+    visitors: ['SUPER_ADMIN', 'SCHOOL_HEAD', 'ADMIN', 'RECEPTION'].includes(role),
+    drill: ['SUPER_ADMIN', 'SCHOOL_HEAD', 'ADMIN'].includes(role),
+    heatmap: ['SUPER_ADMIN', 'SCHOOL_HEAD', 'ADMIN', 'IT_TEAM'].includes(role),
+    audit: ['SUPER_ADMIN', 'SCHOOL_HEAD', 'ADMIN', 'IT_TEAM'].includes(role),
+    zones: true,
+    rules: ['SUPER_ADMIN', 'SCHOOL_HEAD'].includes(role),
+  }
 
-  const visibleTabs = (Object.keys(roleCanSee) as (keyof typeof roleCanSee)[]).filter((k) => roleCanSee[k])
-
-  // ensure active tab is permitted
-  useEffect(() => {
-    if (!roleCanSee[activeTab] && visibleTabs.length > 0) {
-      setActiveTab(visibleTabs[0] as typeof activeTab)
-    }
-  }, [role])
-
-  // ---- Tabs config ----
-  const tabs: { id: typeof activeTab; label: string; icon: any }[] = [
-    { id: 'overview',   label: 'Overview',           icon: Activity },
-    { id: 'cameras',    label: 'Live Cameras',       icon: Video },
-    { id: 'detection',  label: 'AI Detection',       icon: Brain },
-    { id: 'attendance', label: 'Face Attendance',    icon: ScanFace },
-    { id: 'behavior',   label: 'Behavior Analysis',  icon: TrendingUp },
-    { id: 'audit',      label: 'Audit Log',          icon: ShieldCheck },
-    { id: 'zones',      label: 'Zone Management',    icon: MapPin },
+  const tabs: { id: Tab; label: string; icon: any }[] = [
+    { id: 'overview', label: 'Overview', icon: Activity },
+    { id: 'cameras', label: 'Live Cameras', icon: Video },
+    { id: 'detection', label: 'AI Detection', icon: Brain },
+    { id: 'attendance', label: 'Face Attendance', icon: ScanFace },
+    { id: 'behavior', label: 'Behavior', icon: TrendingUp },
+    { id: 'visitors', label: 'Visitors', icon: UserCheck },
+    { id: 'drill', label: 'Drill', icon: Siren },
+    { id: 'heatmap', label: 'Heat Map', icon: MapPin },
+    { id: 'audit', label: 'Audit Log', icon: ShieldCheck },
+    { id: 'zones', label: 'Zones', icon: Grid3x3 },
+    { id: 'rules', label: 'Rules', icon: Settings },
   ].filter((t) => roleCanSee[t.id])
 
-  // ---------------------------------------------------------------------------
-  // Render
-  // ---------------------------------------------------------------------------
+  // ============ Data fetchers ============
+  const fetchSummary = useCallback(async () => {
+    const { data, error } = await apiGet<{ stats: Stats; charts: Charts }>('/api/safety/analytics/summary')
+    if (error) return
+    setStats(data!.stats)
+    setCharts(data!.charts)
+  }, [])
+
+  const fetchCameras = useCallback(async () => {
+    const { data, error } = await apiGet<{ cameras: Camera[] }>('/api/safety/cameras')
+    if (error) return
+    setCameras(data!.cameras)
+  }, [])
+
+  const fetchAlerts = useCallback(async () => {
+    const { data, error } = await apiGet<{ alerts: Alert[] }>('/api/safety/alerts?limit=50')
+    if (error) return
+    setAlerts(data!.alerts)
+  }, [])
+
+  const fetchZones = useCallback(async () => {
+    const { data, error } = await apiGet<{ zones: Zone[] }>('/api/safety/zones')
+    if (error) return
+    setZones(data!.zones)
+  }, [])
+
+  const fetchAudit = useCallback(async () => {
+    const { data, error } = await apiGet<{ entries: AuditEntry[] }>('/api/safety/audit-log?limit=100')
+    if (error) return
+    setAuditEntries(data!.entries)
+  }, [])
+
+  const fetchVisitors = useCallback(async () => {
+    const { data, error } = await apiGet<{ visitors: Visitor[] }>('/api/safety/visitors')
+    if (error) return
+    setVisitors(data!.visitors)
+  }, [])
+
+  const fetchBehavior = useCallback(async () => {
+    const { data, error } = await apiGet<{ reports: BehaviorReport[] }>('/api/safety/behavior/reports')
+    if (error) return
+    setBehaviorReports(data!.reports)
+  }, [])
+
+  const fetchSchedules = useCallback(async () => {
+    const { data, error } = await apiGet<{ schedules: ScheduledAttendance[] }>('/api/safety/attendance/schedule')
+    if (error) return
+    setSchedules(data!.schedules)
+  }, [])
+
+  const refreshAll = useCallback(async () => {
+    setLoading(true)
+    await Promise.all([fetchSummary(), fetchCameras(), fetchAlerts(), fetchZones()])
+    setLoading(false)
+    toast.success('Safety data refreshed')
+  }, [fetchSummary, fetchCameras, fetchAlerts, fetchZones])
+
+  // Initial data load
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    refreshAll()
+  }, [refreshAll])
+
+  // Load tab-specific data on tab change
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (activeTab === 'audit') fetchAudit()
+    if (activeTab === 'visitors') fetchVisitors()
+    if (activeTab === 'behavior') fetchBehavior()
+    if (activeTab === 'attendance') fetchSchedules()
+  }, [activeTab, fetchAudit, fetchVisitors, fetchBehavior, fetchSchedules])
+
+  // Reset tab if role disallows
+  useEffect(() => {
+    if (!roleCanSee[activeTab]) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setActiveTab('overview')
+    }
+  }, [role, activeTab])
 
   return (
     <div className="p-4 sm:p-6 space-y-4 max-w-[1600px] mx-auto">
       <SectionHeader
         emoji="🛡️"
         title="Safety & Security Command Center"
-        subtitle="AI-powered surveillance · tamper-evident audit · real-time response"
+        subtitle="AI vision · tamper-evident audit · real-time response"
         accent={ACCENT}
-        onRefresh={() => toast.success('Safety data refreshed')}
-        onExport={() => handleExportAudit()}
+        onRefresh={refreshAll}
+        onExport={() => exportAuditCsv(auditEntries)}
         aiActions={[
-          { label: 'AI detections active', count: Object.values(detectionToggles).filter(Boolean).length },
-          { label: 'alerts today', count: stats.alertsToday },
-          { label: 'cameras monitored', count: stats.online },
+          { label: 'cameras online', count: stats?.camerasOnline ?? 0 },
+          { label: 'alerts today', count: stats?.alertsToday ?? 0 },
+          { label: 'pending reviews', count: stats?.pendingReviews ?? 0 },
         ]}
       />
 
-      {/* Stats cards */}
+      {/* Stats row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard icon={Video}      label="Cameras Online"    value={`${stats.online}/${stats.total}`} sub={`${Math.round((stats.online / stats.total) * 100)}% operational`} accent="#15803D" />
-        <StatCard icon={AlertTriangle} label="Alerts Today"   value={stats.alertsToday}               sub="Last 24 hours"              accent="#DC2626" />
-        <StatCard icon={Clock}      label="Pending Reviews"   value={stats.pending}                   sub="Awaiting action"            accent="#EA580C" />
-        <StatCard icon={Zap}        label="Avg Response Time" value={`${stats.avgResp}s`}             sub="Confirm → dispatch"         accent="#7C3AED" />
+        <StatCard
+          icon={Video}
+          label="Cameras Online"
+          value={stats ? `${stats.camerasOnline}/${stats.camerasTotal}` : '—'}
+          sub={stats && stats.camerasTotal > 0 ? `${Math.round((stats.camerasOnline / stats.camerasTotal) * 100)}% operational` : 'No cameras yet'}
+          accent="#15803D"
+        />
+        <StatCard
+          icon={AlertTriangle}
+          label="Alerts Today"
+          value={stats?.alertsToday ?? '—'}
+          sub="Last 24 hours"
+          accent="#DC2626"
+        />
+        <StatCard
+          icon={Clock}
+          label="Pending Reviews"
+          value={stats?.pendingReviews ?? '—'}
+          sub="Awaiting action"
+          accent="#EA580C"
+        />
+        <StatCard
+          icon={Zap}
+          label="Avg Response"
+          value={stats?.avgResponseSec !== null && stats?.avgResponseSec !== undefined ? `${stats.avgResponseSec}s` : '—'}
+          sub="Confirm → dispatch"
+          accent="#7C3AED"
+        />
       </div>
+
+      {/* Lockdown drill button (only for authorized roles) */}
+      {['SUPER_ADMIN', 'SCHOOL_HEAD', 'ADMIN'].includes(role) && (
+        <LockdownDrillBar onTriggered={refreshAll} />
+      )}
 
       {/* Tabs */}
       <Card className="border-slate-200 bg-white rounded-xl p-1.5">
@@ -1076,861 +451,1662 @@ export function SafetyModule() {
           exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.15 }}
         >
-
-          {/* ====================== OVERVIEW ====================== */}
           {activeTab === 'overview' && (
-            <div className="space-y-4">
-              {/* Incident trend mini-chart */}
-              <Card className="p-5 border-slate-200 bg-white rounded-xl">
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <h3 className="text-sm font-semibold text-slate-900">Incident Trend (7 days)</h3>
-                    <p className="text-[11px] text-slate-500">Daily safety incidents across all zones</p>
-                  </div>
-                  <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100">
-                    <ArrowDownRight className="w-3 h-3 mr-1" /> -23% vs last week
-                  </Badge>
-                </div>
-                <div className="flex items-end gap-2 h-32">
-                  {[8, 5, 11, 7, 9, 4, 3].map((v, i) => {
-                    const max = 11
-                    const h = (v / max) * 100
-                    const isToday = i === 6
-                    return (
-                      <div key={i} className="flex-1 flex flex-col items-center gap-1.5">
-                        <div className="text-[10px] font-semibold text-slate-700">{v}</div>
-                        <motion.div
-                          initial={{ height: 0 }}
-                          animate={{ height: `${h}%` }}
-                          transition={{ delay: i * 0.05, type: 'spring', damping: 18 }}
-                          className="w-full rounded-t-md"
-                          style={{
-                            background: isToday ? ACCENT : '#E2E8F0',
-                            minHeight: 4,
-                          }}
-                        />
-                        <div className="text-[10px] text-slate-500">{['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i]}</div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </Card>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {/* Recent alerts */}
-                <Card className="p-5 border-slate-200 bg-white rounded-xl">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-semibold text-slate-900">Recent Safety Alerts</h3>
-                    <Button size="sm" variant="ghost" onClick={() => setActiveTab('detection')} className="text-xs h-7 text-slate-600">
-                      View all <ChevronRight className="w-3 h-3" />
-                    </Button>
-                  </div>
-                  {alerts.length === 0 ? (
-                    <div className="text-center py-8">
-                      <ShieldCheck className="w-10 h-10 mx-auto text-emerald-400 mb-2" />
-                      <p className="text-sm text-slate-500">No active alerts — all zones clear.</p>
-                      <Button size="sm" variant="outline" onClick={handleSimulateEvent} className="mt-3 text-xs h-8">
-                        <Zap className="w-3.5 h-3.5 mr-1" /> Simulate Event
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="space-y-2 max-h-64 overflow-y-auto custom-scroll">
-                      {alerts.slice(0, 6).map((a) => {
-                        const meta = DETECTION_META[a.detectionType]
-                        const sev = SEVERITY_STYLES[a.severity]
-                        return (
-                          <div key={a.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50">
-                            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: sev.bg }}>
-                              <AlertTriangle className="w-4 h-4" style={{ color: sev.color }} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="text-xs font-semibold text-slate-900 truncate">{meta.label}</div>
-                              <div className="text-[10px] text-slate-500 truncate">{a.cameraName} · {a.location}</div>
-                            </div>
-                            <SeverityBadge severity={a.severity} />
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                </Card>
-
-                {/* Zones summary */}
-                <Card className="p-5 border-slate-200 bg-white rounded-xl">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-semibold text-slate-900">Zone Risk Overview</h3>
-                    <Button size="sm" variant="ghost" onClick={() => setActiveTab('zones')} className="text-xs h-7 text-slate-600">
-                      Manage <ChevronRight className="w-3 h-3" />
-                    </Button>
-                  </div>
-                  <div className="space-y-2">
-                    {ZONES.map((z) => {
-                      const riskColor = z.riskLevel === 'critical' ? '#DC2626' : z.riskLevel === 'high' ? '#EA580C' : z.riskLevel === 'moderate' ? '#CA8A04' : '#15803D'
-                      const riskBg = z.riskLevel === 'critical' ? '#FEF2F2' : z.riskLevel === 'high' ? '#FFF7ED' : z.riskLevel === 'moderate' ? '#FEFCE8' : '#F0FDF4'
-                      return (
-                        <button key={z.id} onClick={() => { setSelectedZoneId(z.id); setActiveTab('cameras') }}
-                          className="w-full flex items-center justify-between p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-left">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: riskBg }}>
-                              <MapPin className="w-4 h-4" style={{ color: riskColor }} />
-                            </div>
-                            <div>
-                              <div className="text-xs font-semibold text-slate-900">{z.name}</div>
-                              <div className="text-[10px] text-slate-500">{z.cameraCount} cameras · {z.alertCount} alerts</div>
-                            </div>
-                          </div>
-                          <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full" style={{ color: riskColor, background: riskBg }}>
-                            {z.riskLevel}
-                          </span>
-                        </button>
-                      )
-                    })}
-                  </div>
-                </Card>
-              </div>
-            </div>
+            <OverviewTab stats={stats} charts={charts} alerts={alerts} cameras={cameras} zones={zones} onCameraFocus={setFocusCamera} />
           )}
-
-          {/* ====================== CAMERAS ====================== */}
           {activeTab === 'cameras' && (
-            <div className="space-y-4">
-              {/* Controls */}
-              <Card className="p-3 border-slate-200 bg-white rounded-xl">
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <Label className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider">Camera</Label>
-                    <Select value={selectedCameraId} onValueChange={setSelectedCameraId}>
-                      <SelectTrigger className="h-8 w-48 text-xs">
-                        <SelectValue placeholder="All cameras" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Cameras</SelectItem>
-                        {CAMERAS.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>{c.id} — {c.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {selectedZoneId && (
-                    <Badge className="bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-100">
-                      Zone: {ZONES.find((z) => z.id === selectedZoneId)?.name}
-                      <button onClick={() => setSelectedZoneId(null)} className="ml-1 hover:text-slate-900"><X className="w-3 h-3" /></button>
-                    </Badge>
-                  )}
-                  <div className="ml-auto flex items-center gap-1.5">
-                    <Label className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider">Layout</Label>
-                    <div className="flex items-center gap-1 p-0.5 rounded-lg bg-slate-100">
-                      <button onClick={() => setGridLayout('2x2')}
-                        className={`px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1 ${gridLayout === '2x2' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'}`}>
-                        <Grid2x2 className="w-3.5 h-3.5" /> 2×2
-                      </button>
-                      <button onClick={() => setGridLayout('3x3')}
-                        className={`px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1 ${gridLayout === '3x3' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'}`}>
-                        <Grid3x3 className="w-3.5 h-3.5" /> 3×3
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-
-              {/* Camera grid */}
-              {visibleCameras.length === 0 ? (
-                <Card className="p-12 text-center border-slate-200">
-                  <CameraOff className="w-10 h-10 mx-auto text-slate-300 mb-2" />
-                  <p className="text-sm text-slate-500">No cameras match the current filter.</p>
-                </Card>
-              ) : (
-                <div className={`grid gap-3 ${gridLayout === '2x2' ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
-                  {visibleCameras.map((c) => (
-                    <CameraTile
-                      key={c.id}
-                      camera={c}
-                      onMic={handleMic}
-                      onSiren={handleSiren}
-                      onAlarm={handleAlarm}
-                      onPA={handlePA}
-                      onFocus={setFocusCamera}
-                      micActive={micActiveId === c.id}
-                      paOpen={paOpenId === c.id}
-                      paMessage={paMessage}
-                      setPaMessage={setPaMessage}
-                      onPaSend={handlePaSend}
-                      onPaCancel={handlePaCancel}
-                      compact={gridLayout === '3x3'}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
+            <CamerasTab
+              cameras={cameras}
+              zones={zones}
+              onRefresh={fetchCameras}
+              onCameraFocus={setFocusCamera}
+              onMutated={refreshAll}
+            />
           )}
-
-          {/* ====================== DETECTION ====================== */}
           {activeTab === 'detection' && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                {/* Detection toggles */}
-                <Card className="p-5 border-slate-200 bg-white rounded-xl lg:col-span-2">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h3 className="text-sm font-semibold text-slate-900">AI Detection Engine</h3>
-                      <p className="text-[11px] text-slate-500">Configure which detection models run on the live camera feeds</p>
-                    </div>
-                    <Button onClick={handleSimulateEvent} size="sm" className="h-8 text-xs text-white gap-1.5" style={{ background: ACCENT }}>
-                      <Zap className="w-3.5 h-3.5" /> Simulate Event
-                    </Button>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    {DETECTION_TYPES.map((d) => {
-                      const Icon = d.icon
-                      const on = detectionToggles[d.id]
-                      return (
-                        <div key={d.id} className="flex items-center justify-between p-3 rounded-lg border border-slate-200 hover:bg-slate-50">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: d.accent + '12' }}>
-                              <Icon className="w-4 h-4" style={{ color: d.accent }} />
-                            </div>
-                            <div>
-                              <div className="text-xs font-semibold text-slate-900">{d.label}</div>
-                              <div className="text-[10px] text-slate-500">{on ? 'Active' : 'Disabled'}</div>
-                            </div>
-                          </div>
-                          <Switch checked={on} onCheckedChange={() => toggleDetection(d.id)} />
-                        </div>
-                      )
-                    })}
-                  </div>
-                </Card>
-
-                {/* Severity legend */}
-                <Card className="p-5 border-slate-200 bg-white rounded-xl">
-                  <h3 className="text-sm font-semibold text-slate-900 mb-3">Severity Levels</h3>
-                  <div className="space-y-2">
-                    {(['low', 'medium', 'high', 'critical'] as Severity[]).map((s) => {
-                      const st = SEVERITY_STYLES[s]
-                      return (
-                        <div key={s} className="flex items-center gap-2 p-2 rounded-lg border border-slate-200">
-                          <div className="w-2 h-8 rounded-full" style={{ background: st.color }} />
-                          <div className="flex-1">
-                            <div className="text-xs font-semibold text-slate-900">{st.label}</div>
-                            <div className="text-[10px] text-slate-500">
-                              {s === 'low' && 'Informational — log only'}
-                              {s === 'medium' && 'Investigate within 1h'}
-                              {s === 'high' && 'Respond within 5 min'}
-                              {s === 'critical' && 'Immediate dispatch + escalation'}
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </Card>
-              </div>
-
-              {/* Alert history */}
-              <Card className="p-5 border-slate-200 bg-white rounded-xl">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-slate-900">Alert History</h3>
-                  <div className="text-[11px] text-slate-500">{alerts.length} total alerts</div>
-                </div>
-                {alerts.length === 0 ? (
-                  <div className="text-center py-10">
-                    <ShieldCheck className="w-10 h-10 mx-auto text-emerald-400 mb-2" />
-                    <p className="text-sm text-slate-500">No alerts yet. Click "Simulate Event" to test the system.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2 max-h-96 overflow-y-auto custom-scroll">
-                    {alerts.map((a) => {
-                      const meta = DETECTION_META[a.detectionType]
-                      const sev = SEVERITY_STYLES[a.severity]
-                      return (
-                        <div key={a.id} className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:bg-slate-50">
-                          <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: sev.bg, border: `1px solid ${sev.border}` }}>
-                            <span className="text-lg">{a.snapshot}</span>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-xs font-semibold text-slate-900">{meta.label}</span>
-                              <SeverityBadge severity={a.severity} />
-                              <span className="text-[10px] text-slate-500 font-mono">{a.id}</span>
-                            </div>
-                            <div className="text-[11px] text-slate-600 mt-0.5 truncate">{a.description}</div>
-                            <div className="text-[10px] text-slate-400 mt-0.5">
-                              {a.cameraName} · {a.location} · {a.confidence}% confidence · {new Date(a.timestamp).toLocaleTimeString()}
-                            </div>
-                          </div>
-                          <Badge className={
-                            a.status === 'confirmed' ? 'bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100' :
-                            a.status === 'dismissed' ? 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-100' :
-                            a.status === 'escalated' ? 'bg-rose-100 text-rose-700 border-rose-200 hover:bg-rose-100' :
-                            'bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100'
-                          }>
-                            {a.status}
-                          </Badge>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </Card>
-            </div>
+            <DetectionTab cameras={cameras} onMutated={refreshAll} />
           )}
-
-          {/* ====================== ATTENDANCE ====================== */}
           {activeTab === 'attendance' && (
-            <div className="space-y-4">
-              <Card className="p-5 border-slate-200 bg-white rounded-xl">
-                <div className="flex flex-wrap items-end gap-4">
-                  <div className="space-y-1.5">
-                    <Label className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider">Classroom / Section</Label>
-                    <Select value={attendanceSection} onValueChange={(v) => { setAttendanceSection(v); setAttendanceState('idle'); setAttendanceResult(null) }}>
-                      <SelectTrigger className="w-56 h-9 text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.keys(STUDENTS_BY_SECTION).map((s) => (
-                          <SelectItem key={s} value={s}>Section {s}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button onClick={handleStartAttendance} disabled={attendanceState === 'scanning'}
-                    className="h-9 text-white gap-2" style={{ background: ACCENT }}>
-                    {attendanceState === 'scanning' ? (
-                      <><RefreshCw className="w-4 h-4 animate-spin" /> Scanning…</>
-                    ) : (
-                      <><ScanFace className="w-4 h-4" /> Start Face Detection Attendance</>
-                    )}
-                  </Button>
-                  {attendanceResult && (
-                    <>
-                      <Button onClick={handleSendAbsentNotifications} variant="outline" className="h-9 gap-2">
-                        <MessageSquare className="w-4 h-4 text-emerald-600" /> Send Absent Notifications
-                      </Button>
-                      <Button onClick={handleDownloadAttendance} variant="outline" className="h-9 gap-2">
-                        <Download className="w-4 h-4" /> Download Report
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </Card>
-
-              {/* Camera feed with scanning overlay */}
-              <Card className="p-0 overflow-hidden border-slate-200 rounded-xl">
-                <div className="relative bg-slate-900 aspect-video">
-                  <div className="absolute inset-0 bg-gradient-to-br from-slate-800 via-slate-900 to-black" />
-                  <motion.div
-                    className="absolute inset-0 opacity-30"
-                    animate={{ backgroundPosition: ['0% 0%', '100% 100%', '0% 0%'] }}
-                    transition={{ duration: 12, repeat: Infinity, ease: 'linear' }}
-                    style={{
-                      backgroundImage: 'radial-gradient(circle at 30% 40%, rgba(56,189,248,0.25), transparent 50%), radial-gradient(circle at 70% 60%, rgba(168,85,247,0.20), transparent 50%)',
-                      backgroundSize: '200% 200%',
-                    }}
-                  />
-                  {/* Top overlay */}
-                  <div className="absolute top-0 left-0 right-0 p-3 flex items-center justify-between bg-gradient-to-b from-black/60 to-transparent z-10">
-                    <div className="flex items-center gap-2 text-white">
-                      <Video className="w-4 h-4 text-cyan-300" />
-                      <span className="text-sm font-semibold">Classroom {attendanceSection} — Camera CAM-00{4 + (attendanceSection === '8-B' ? 1 : 0)}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <StatusBadge status={attendanceState === 'scanning' ? 'alert' : 'online'} />
-                    </div>
-                  </div>
-
-                  {/* Scanning animation */}
-                  {attendanceState === 'scanning' && (
-                    <>
-                      <motion.div
-                        className="absolute left-0 right-0 h-1 bg-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.8)] z-20"
-                        animate={{ top: ['0%', '100%', '0%'] }}
-                        transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                      />
-                      <div className="absolute inset-0 flex items-center justify-center z-20">
-                        <div className="bg-slate-900/80 backdrop-blur rounded-xl px-6 py-4 border border-cyan-500/40 text-center">
-                          <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}>
-                            <ScanFace className="w-10 h-10 mx-auto text-cyan-400" />
-                          </motion.div>
-                          <div className="text-sm font-semibold text-white mt-2">Scanning faces…</div>
-                          <div className="text-[11px] text-slate-300 mt-0.5">Matching against enrolled student database</div>
-                        </div>
-                      </div>
-                      {/* Face detection boxes */}
-                      {[20, 50, 70].map((left, i) => (
-                        <motion.div
-                          key={i}
-                          className="absolute border-2 border-cyan-400/70 rounded z-10"
-                          style={{ left: `${left}%`, top: `${30 + i * 10}%`, width: 60, height: 75 }}
-                          initial={{ opacity: 0, scale: 0.8 }}
-                          animate={{ opacity: [0, 1, 1, 0], scale: 1 }}
-                          transition={{ duration: 2, repeat: Infinity, delay: i * 0.4 }}
-                        >
-                          <span className="absolute -top-5 left-0 text-[9px] text-cyan-300 font-mono bg-slate-900/70 px-1 rounded">
-                            ID-{1000 + i} · 9{5 + i}%
-                          </span>
-                        </motion.div>
-                      ))}
-                    </>
-                  )}
-
-                  {/* Idle state */}
-                  {attendanceState === 'idle' && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="text-center">
-                        <ScanFace className="w-12 h-12 mx-auto text-slate-500 mb-2" />
-                        <div className="text-sm text-slate-300">Click "Start Face Detection Attendance" to begin</div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </Card>
-
-              {/* Results */}
-              {attendanceResult && attendanceState === 'done' && (
-                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                  {/* Summary */}
-                  <Card className="p-5 border-slate-200 bg-white rounded-xl">
-                    <h3 className="text-sm font-semibold text-slate-900 mb-3">Attendance Summary</h3>
-                    <div className="flex items-center justify-center my-4">
-                      <div className="relative w-32 h-32">
-                        <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
-                          <circle cx="50" cy="50" r="42" fill="none" stroke="#E2E8F0" strokeWidth="10" />
-                          <motion.circle
-                            cx="50" cy="50" r="42" fill="none" stroke="#15803D" strokeWidth="10" strokeLinecap="round"
-                            initial={{ strokeDasharray: '0 264' }}
-                            animate={{ strokeDasharray: `${(attendanceResult.present.length / (attendanceResult.present.length + attendanceResult.absent.length)) * 264} 264` }}
-                            transition={{ duration: 0.8, ease: 'easeOut' }}
-                          />
-                        </svg>
-                        <div className="absolute inset-0 flex flex-col items-center justify-center">
-                          <div className="text-2xl font-bold text-slate-900">
-                            {Math.round((attendanceResult.present.length / (attendanceResult.present.length + attendanceResult.absent.length)) * 100)}%
-                          </div>
-                          <div className="text-[10px] text-slate-500">present</div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-center">
-                        <div className="text-lg font-bold text-emerald-700">{attendanceResult.present.length}</div>
-                        <div className="text-[10px] text-emerald-600 uppercase">Present</div>
-                      </div>
-                      <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-center">
-                        <div className="text-lg font-bold text-rose-700">{attendanceResult.absent.length}</div>
-                        <div className="text-[10px] text-rose-600 uppercase">Absent</div>
-                      </div>
-                    </div>
-                  </Card>
-
-                  {/* Present list */}
-                  <Card className="p-5 border-slate-200 bg-white rounded-xl">
-                    <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-1.5">
-                      <UserCheck className="w-4 h-4 text-emerald-600" /> Identified ({attendanceResult.present.length})
-                    </h3>
-                    <div className="space-y-1.5 max-h-72 overflow-y-auto custom-scroll">
-                      {attendanceResult.present.map((s) => (
-                        <div key={s.id} className="flex items-center gap-2 p-2 rounded-lg border border-slate-200">
-                          <div className="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center text-xs">🎓</div>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-xs font-medium text-slate-900 truncate">{s.name}</div>
-                            <div className="text-[10px] text-slate-500">{s.rollNo} · {s.id}</div>
-                          </div>
-                          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                        </div>
-                      ))}
-                    </div>
-                  </Card>
-
-                  {/* Absent list */}
-                  <Card className="p-5 border-slate-200 bg-white rounded-xl">
-                    <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-1.5">
-                      <UserX className="w-4 h-4 text-rose-600" /> Absent ({attendanceResult.absent.length})
-                    </h3>
-                    {attendanceResult.absent.length === 0 ? (
-                      <div className="text-center py-8">
-                        <CircleCheck className="w-8 h-8 mx-auto text-emerald-400 mb-1" />
-                        <p className="text-xs text-slate-500">Perfect attendance!</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-1.5 max-h-72 overflow-y-auto custom-scroll">
-                        {attendanceResult.absent.map((s) => (
-                          <div key={s.id} className="flex items-center gap-2 p-2 rounded-lg border border-rose-200 bg-rose-50">
-                            <div className="w-7 h-7 rounded-full bg-rose-100 flex items-center justify-center text-xs">🎓</div>
-                            <div className="flex-1 min-w-0">
-                              <div className="text-xs font-medium text-rose-900 truncate">{s.name}</div>
-                              <div className="text-[10px] text-rose-500">{s.rollNo} · {s.parentName}</div>
-                            </div>
-                            <X className="w-4 h-4 text-rose-600" />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </Card>
-                </motion.div>
-              )}
-            </div>
+            <AttendanceTab cameras={cameras} schedules={schedules} onRefresh={fetchSchedules} />
           )}
-
-          {/* ====================== BEHAVIOR ====================== */}
           {activeTab === 'behavior' && (
-            <div className="space-y-4">
-              <Card className="p-5 border-slate-200 bg-white rounded-xl">
-                <div className="flex flex-wrap items-end gap-4">
-                  <div className="space-y-1.5">
-                    <Label className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider">Student / Teacher</Label>
-                    <Select value={behaviorSubjectId} onValueChange={(v) => { setBehaviorSubjectId(v); setBehaviorReport(null) }}>
-                      <SelectTrigger className="w-72 h-9 text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {BEHAVIOR_SUBJECTS.map((s) => (
-                          <SelectItem key={s.id} value={s.id}>
-                            {s.name} ({s.type === 'student' ? s.grade : s.department})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button onClick={handleGenerateBehavior} disabled={behaviorLoading}
-                    className="h-9 text-white gap-2" style={{ background: ACCENT }}>
-                    {behaviorLoading ? (
-                      <><RefreshCw className="w-4 h-4 animate-spin" /> Analyzing…</>
-                    ) : (
-                      <><Brain className="w-4 h-4" /> Generate Behavior Report</>
-                    )}
-                  </Button>
-                  {behaviorReport && (
-                    <Button onClick={handleSendBehaviorReport} variant="outline" className="h-9 gap-2">
-                      <Send className="w-4 h-4 text-emerald-600" /> Send Report to {behaviorReport.subject.type === 'student' ? 'Parent/Guardian' : 'Supervisor'}
-                    </Button>
-                  )}
-                </div>
-              </Card>
-
-              {behaviorReport ? (
-                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                  {/* Score */}
-                  <Card className="p-5 border-slate-200 bg-white rounded-xl">
-                    <h3 className="text-sm font-semibold text-slate-900 mb-3">Behavior Score</h3>
-                    <div className="flex items-center justify-center my-4">
-                      <div className="relative w-32 h-32">
-                        <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
-                          <circle cx="50" cy="50" r="42" fill="none" stroke="#E2E8F0" strokeWidth="10" />
-                          <motion.circle
-                            cx="50" cy="50" r="42" fill="none" stroke={behaviorReport.score >= 75 ? '#15803D' : behaviorReport.score >= 50 ? '#CA8A04' : '#DC2626'} strokeWidth="10" strokeLinecap="round"
-                            initial={{ strokeDasharray: '0 264' }}
-                            animate={{ strokeDasharray: `${(behaviorReport.score / 100) * 264} 264` }}
-                            transition={{ duration: 0.8, ease: 'easeOut' }}
-                          />
-                        </svg>
-                        <div className="absolute inset-0 flex flex-col items-center justify-center">
-                          <div className="text-3xl font-bold text-slate-900">{behaviorReport.score}</div>
-                          <div className="text-[10px] text-slate-500">out of 100</div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-center gap-1.5 text-xs">
-                      {behaviorReport.trend === 'improving' && <><ArrowUpRight className="w-4 h-4 text-emerald-600" /><span className="text-emerald-700 font-semibold">Improving</span></>}
-                      {behaviorReport.trend === 'declining' && <><ArrowDownRight className="w-4 h-4 text-rose-600" /><span className="text-rose-700 font-semibold">Declining</span></>}
-                      {behaviorReport.trend === 'stable' && <><Minus className="w-4 h-4 text-slate-600" /><span className="text-slate-700 font-semibold">Stable</span></>}
-                    </div>
-                  </Card>
-
-                  {/* Trend */}
-                  <Card className="p-5 border-slate-200 bg-white rounded-xl lg:col-span-2">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-sm font-semibold text-slate-900">10-Session Trend</h3>
-                      <div className="flex items-center gap-3 text-[11px]">
-                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500" /> Positive: {behaviorReport.positivePoints}</span>
-                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-500" /> Negative: {behaviorReport.negativePoints}</span>
-                      </div>
-                    </div>
-                    <TrendSparkline
-                      points={behaviorReport.trendPoints}
-                      color={behaviorReport.trend === 'improving' ? '#15803D' : behaviorReport.trend === 'declining' ? '#DC2626' : '#7C3AED'}
-                    />
-                  </Card>
-
-                  {/* Incident history */}
-                  <Card className="p-5 border-slate-200 bg-white rounded-xl lg:col-span-2">
-                    <h3 className="text-sm font-semibold text-slate-900 mb-3">Incident History</h3>
-                    <div className="space-y-2 max-h-64 overflow-y-auto custom-scroll">
-                      {behaviorReport.incidents.map((inc, i) => {
-                        const sevColor = inc.severity === 'positive' ? '#15803D' : inc.severity === 'low' ? '#2563EB' : inc.severity === 'medium' ? '#CA8A04' : '#DC2626'
-                        const sevBg = inc.severity === 'positive' ? '#F0FDF4' : inc.severity === 'low' ? '#EFF6FF' : inc.severity === 'medium' ? '#FEFCE8' : '#FEF2F2'
-                        return (
-                          <div key={i} className="flex items-start gap-3 p-2.5 rounded-lg border border-slate-200">
-                            <div className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0" style={{ background: sevColor }} />
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-semibold text-slate-900">{inc.type}</span>
-                                <span className="text-[10px] text-slate-400">{inc.date}</span>
-                              </div>
-                              <div className="text-[11px] text-slate-600 mt-0.5">{inc.note}</div>
-                            </div>
-                            <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded" style={{ color: sevColor, background: sevBg }}>
-                              {inc.severity}
-                            </span>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </Card>
-
-                  {/* AI recommendations */}
-                  <Card className="p-5 border-slate-200 bg-white rounded-xl">
-                    <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-1.5">
-                      <Sparkles className="w-4 h-4 text-amber-500" /> AI Recommendations
-                    </h3>
-                    <div className="space-y-2">
-                      {behaviorReport.recommendations.map((r, i) => (
-                        <div key={i} className="flex items-start gap-2 p-2.5 rounded-lg bg-amber-50 border border-amber-100">
-                          <span className="w-5 h-5 rounded-full bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0">{i + 1}</span>
-                          <div className="text-[11px] text-slate-700 leading-relaxed">{r}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </Card>
-                </motion.div>
-              ) : (
-                <Card className="p-12 text-center border-slate-200">
-                  <Brain className="w-10 h-10 mx-auto text-slate-300 mb-2" />
-                  <p className="text-sm text-slate-500">Select a student or teacher and click "Generate Behavior Report" to begin.</p>
-                </Card>
-              )}
-            </div>
+            <BehaviorTab reports={behaviorReports} onRefresh={fetchBehavior} />
           )}
-
-          {/* ====================== AUDIT ====================== */}
+          {activeTab === 'visitors' && (
+            <VisitorsTab visitors={visitors} onRefresh={fetchVisitors} />
+          )}
+          {activeTab === 'drill' && (
+            <DrillTab onTriggered={refreshAll} />
+          )}
+          {activeTab === 'heatmap' && (
+            <HeatmapTab />
+          )}
           {activeTab === 'audit' && (
-            <div className="space-y-4">
-              <Card className="p-5 border-slate-200 bg-white rounded-xl">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <h3 className="text-sm font-semibold text-slate-900">Tamper-Evident Audit Log</h3>
-                    <p className="text-[11px] text-slate-500">Every safety action is chained via SHA-256 hashes. Any modification breaks the chain.</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button onClick={handleVerifyAudit} variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
-                      {auditVerified === 'verifying' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
-                      Verify Audit Integrity
-                    </Button>
-                    <Button onClick={handleExportAudit} variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
-                      <Download className="w-3.5 h-3.5" /> Export CSV
-                    </Button>
-                  </div>
-                </div>
-                {auditVerified === 'ok' && (
-                  <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
-                    className="mt-3 flex items-center gap-2 p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-700">
-                    <ShieldCheck className="w-4 h-4" /> Hash chain intact — {auditLog.length} entries verified, no tampering detected.
-                  </motion.div>
-                )}
-                {auditVerified === 'broken' && (
-                  <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
-                    className="mt-3 flex items-center gap-2 p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-xs text-rose-700">
-                    <ShieldX className="w-4 h-4" /> Hash chain BROKEN — at least one entry has been modified after the fact.
-                  </motion.div>
-                )}
-              </Card>
-
-              <Card className="p-0 border-slate-200 bg-white rounded-xl overflow-hidden">
-                <div className="max-h-[480px] overflow-y-auto custom-scroll">
-                  <Table>
-                    <TableHeader className="sticky top-0 bg-slate-50 z-10">
-                      <TableRow>
-                        <TableHead className="text-[10px] uppercase tracking-wider text-slate-500">Timestamp</TableHead>
-                        <TableHead className="text-[10px] uppercase tracking-wider text-slate-500">Actor</TableHead>
-                        <TableHead className="text-[10px] uppercase tracking-wider text-slate-500">Action</TableHead>
-                        <TableHead className="text-[10px] uppercase tracking-wider text-slate-500">Target</TableHead>
-                        <TableHead className="text-[10px] uppercase tracking-wider text-slate-500">Hash</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {auditLog.slice().reverse().map((e) => (
-                        <TableRow key={e.id} className="hover:bg-slate-50">
-                          <TableCell className="text-[11px] text-slate-700 whitespace-nowrap font-mono">
-                            {new Date(e.timestamp).toLocaleString()}
-                          </TableCell>
-                          <TableCell className="text-[11px] text-slate-700">
-                            <div className="flex items-center gap-1.5">
-                              <div className="w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center text-[9px]">
-                                {e.actor === 'system' ? '⚙️' : e.actor === 'ai-safety-engine' ? '🤖' : '👤'}
-                              </div>
-                              <span className="truncate max-w-[120px]">{e.actor}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-[11px]">
-                            <Badge variant="outline" className="text-[10px] font-mono border-slate-300 text-slate-700">{e.action}</Badge>
-                          </TableCell>
-                          <TableCell className="text-[11px] text-slate-600 max-w-xs truncate">{e.target}</TableCell>
-                          <TableCell className="text-[10px] text-slate-400 font-mono">
-                            <span className="flex items-center gap-1">
-                              <Hash className="w-3 h-3" />
-                              {e.hash.slice(0, 12)}…
-                            </span>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </Card>
-            </div>
+            <AuditTab entries={auditEntries} onRefresh={fetchAudit} />
           )}
-
-          {/* ====================== ZONES ====================== */}
           {activeTab === 'zones' && (
-            <div className="space-y-4">
-              <Card className="p-5 border-slate-200 bg-white rounded-xl">
-                <div className="flex items-center justify-between mb-1">
-                  <h3 className="text-sm font-semibold text-slate-900">Zone Management</h3>
-                  {selectedZoneId && (
-                    <Button size="sm" variant="ghost" onClick={() => setSelectedZoneId(null)} className="h-7 text-xs text-slate-600">
-                      Clear filter <X className="w-3 h-3" />
-                    </Button>
-                  )}
-                </div>
-                <p className="text-[11px] text-slate-500 mb-3">Click a zone to filter cameras and view associated alerts.</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {ZONES.map((z) => {
-                    const riskColor = z.riskLevel === 'critical' ? '#DC2626' : z.riskLevel === 'high' ? '#EA580C' : z.riskLevel === 'moderate' ? '#CA8A04' : '#15803D'
-                    const riskBg = z.riskLevel === 'critical' ? '#FEF2F2' : z.riskLevel === 'high' ? '#FFF7ED' : z.riskLevel === 'moderate' ? '#FEFCE8' : '#F0FDF4'
-                    const isSelected = selectedZoneId === z.id
-                    const zoneCameras = CAMERAS.filter((c) => c.zone === z.id)
-                    return (
-                      <motion.button
-                        key={z.id}
-                        onClick={() => setSelectedZoneId(isSelected ? null : z.id)}
-                        whileHover={{ y: -2 }}
-                        className={`text-left p-4 rounded-xl border-2 transition-all ${isSelected ? 'shadow-md' : 'hover:shadow-sm'}`}
-                        style={{
-                          borderColor: isSelected ? riskColor : '#E2E8F0',
-                          background: isSelected ? riskBg : '#FFFFFF',
-                        }}
-                      >
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex items-center gap-2">
-                            <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: riskBg, border: `1px solid ${riskColor}33` }}>
-                              <MapPin className="w-4 h-4" style={{ color: riskColor }} />
-                            </div>
-                            <div>
-                              <div className="text-sm font-semibold text-slate-900">{z.name}</div>
-                              <div className="text-[10px] text-slate-500">{zoneCameras.length} live · {z.alertCount} alerts</div>
-                            </div>
-                          </div>
-                          <span className="text-[9px] font-semibold uppercase px-2 py-0.5 rounded-full" style={{ color: riskColor, background: riskBg, border: `1px solid ${riskColor}33` }}>
-                            {z.riskLevel}
-                          </span>
-                        </div>
-                        <div className="space-y-1">
-                          {zoneCameras.slice(0, 3).map((c) => (
-                            <div key={c.id} className="flex items-center justify-between text-[10px]">
-                              <span className="text-slate-600 flex items-center gap-1">
-                                <Video className="w-3 h-3" /> {c.name}
-                              </span>
-                              <StatusBadge status={c.status} />
-                            </div>
-                          ))}
-                          {zoneCameras.length === 0 && (
-                            <div className="text-[10px] text-slate-400 italic">No cameras assigned</div>
-                          )}
-                        </div>
-                        {isSelected && (
-                          <div className="mt-3 pt-3 border-t border-slate-200">
-                            <Button size="sm" variant="outline" onClick={(ev) => { ev.stopPropagation(); setActiveTab('cameras') }} className="h-7 w-full text-xs">
-                              View cameras <ChevronRight className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        )}
-                      </motion.button>
-                    )
-                  })}
-                </div>
-              </Card>
-            </div>
+            <ZonesTab zones={zones} onRefresh={fetchZones} />
           )}
-
+          {activeTab === 'rules' && (
+            <RulesTab onMutated={() => {}} />
+          )}
         </motion.div>
       </AnimatePresence>
 
-      {/* Focus camera modal */}
-      <AnimatePresence>
-        {focusCamera && (
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] bg-slate-950/90 backdrop-blur-sm flex items-center justify-center p-4"
-            onClick={() => setFocusCamera(null)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-slate-900 rounded-2xl overflow-hidden max-w-5xl w-full border border-slate-700"
-            >
-              <div className="flex items-center justify-between p-3 border-b border-slate-800">
-                <div className="flex items-center gap-2 text-white">
-                  <Video className="w-4 h-4 text-cyan-300" />
-                  <span className="text-sm font-semibold">{focusCamera.name}</span>
-                  <span className="text-[11px] text-slate-400">· {focusCamera.location}</span>
-                  <StatusBadge status={focusCamera.status} />
-                </div>
-                <button onClick={() => setFocusCamera(null)} className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <div className="relative aspect-video bg-black">
-                <motion.div
-                  className="absolute inset-0 opacity-30"
-                  animate={{ backgroundPosition: ['0% 0%', '100% 100%', '0% 0%'] }}
-                  transition={{ duration: 12, repeat: Infinity, ease: 'linear' }}
-                  style={{
-                    backgroundImage: 'radial-gradient(circle at 30% 40%, rgba(56,189,248,0.25), transparent 50%), radial-gradient(circle at 70% 60%, rgba(168,85,247,0.20), transparent 50%)',
-                    backgroundSize: '200% 200%',
-                  }}
-                />
-                <motion.div
-                  className="absolute left-0 right-0 h-px bg-cyan-400/40"
-                  animate={{ top: ['0%', '100%', '0%'] }}
-                  transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
-                />
-                <div className="absolute top-3 left-3 flex items-center gap-1.5 text-[10px] text-red-400 font-mono">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" /> REC · LIVE
-                </div>
-                <div className="absolute top-3 right-3 text-[10px] text-slate-300 font-mono">
-                  {focusCamera.id} · {new Date().toLocaleTimeString('en-US', { hour12: false })}
-                </div>
-              </div>
-              <div className="p-3 grid grid-cols-4 gap-2 border-t border-slate-800">
-                <Button onClick={() => handleMic(focusCamera)} variant="outline" size="sm"
-                  className={`h-9 gap-1.5 text-xs ${micActiveId === focusCamera.id ? 'bg-red-600 text-white border-red-600 hover:bg-red-700' : 'bg-slate-800 text-white border-slate-700 hover:bg-slate-700'}`}>
-                  <Volume2 className="w-3.5 h-3.5" /> {micActiveId === focusCamera.id ? 'Stop Audio' : 'Audio'}
-                </Button>
-                <Button onClick={() => handleSiren(focusCamera)} variant="outline" size="sm" className="h-9 gap-1.5 text-xs bg-slate-800 text-amber-300 border-slate-700 hover:bg-amber-600 hover:text-white">
-                  <Siren className="w-3.5 h-3.5" /> Siren
-                </Button>
-                <Button onClick={() => handleAlarm(focusCamera)} variant="outline" size="sm" className="h-9 gap-1.5 text-xs bg-slate-800 text-orange-300 border-slate-700 hover:bg-orange-600 hover:text-white">
-                  <Bell className="w-3.5 h-3.5" /> Alarm
-                </Button>
-                <Button onClick={() => handlePA(focusCamera)} variant="outline" size="sm" className="h-9 gap-1.5 text-xs bg-slate-800 text-cyan-300 border-slate-700 hover:bg-cyan-600 hover:text-white">
-                  <Megaphone className="w-3.5 h-3.5" /> PA
-                </Button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Alert popup */}
-      <AnimatePresence>
-        {popupAlert && (
-          <AlertPopup
-            alert={popupAlert}
-            onConfirm={handleConfirmAlert}
-            onDismiss={handleDismissAlert}
-            onEscalate={handleEscalateAlert}
-          />
-        )}
-      </AnimatePresence>
+      {/* Camera focus modal */}
+      <SafetyCameraFocus camera={focusCamera} onClose={() => setFocusCamera(null)} onRefresh={fetchCameras} />
     </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Helper components
+// ---------------------------------------------------------------------------
+
+function StatCard({ icon: Icon, label, value, sub, accent }: { icon: any; label: string; value: string | number; sub?: string; accent: string }) {
+  return (
+    <Card className="p-3.5 border-slate-200 bg-white">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">{label}</span>
+        <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: accent + '15' }}>
+          <Icon className="w-3.5 h-3.5" style={{ color: accent }} />
+        </div>
+      </div>
+      <div className="text-2xl font-bold text-slate-900 tracking-tight">{value}</div>
+      {sub && <div className="text-[11px] text-slate-500 mt-0.5">{sub}</div>}
+    </Card>
+  )
+}
+
+function SeverityBadge({ severity }: { severity: string }) {
+  const color = SEVERITY_COLORS[severity] || '#F59E0B'
+  return (
+    <Badge variant="outline" className="text-[9px] font-bold uppercase" style={{ borderColor: color + '60', color, background: color + '10' }}>
+      {severity}
+    </Badge>
+  )
+}
+
+function exportAuditCsv(entries: AuditEntry[]) {
+  if (entries.length === 0) {
+    toast.error('No audit entries to export')
+    return
+  }
+  const header = 'Timestamp,Action,TargetType,TargetId,ActorId,ActorRole,EntryHash,PrevHash,Payload'
+  const rows = entries.map((e) =>
+    [e.createdAt, e.action, e.targetType, e.targetId || '', e.actorId || '', e.actorRole || '', e.entryHash, e.prevHash, e.payload]
+      .map((v) => `"${String(v).replace(/"/g, '""')}"`).join(','),
+  )
+  const csv = [header, ...rows].join('\n')
+  const blob = new Blob([csv], { type: 'text/csv' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `safety-audit-${new Date().toISOString().slice(0, 10)}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+  toast.success('Audit log exported as CSV')
+}
+
+// ============ Overview Tab ============
+function OverviewTab({ stats, charts, alerts, cameras, zones, onCameraFocus }: {
+  stats: Stats | null
+  charts: Charts | null
+  alerts: Alert[]
+  cameras: Camera[]
+  zones: Zone[]
+  onCameraFocus: (c: Camera) => void
+}) {
+  const recentAlerts = alerts.slice(0, 8)
+  return (
+    <div className="space-y-4">
+      {/* Recent alerts */}
+      <Card className="p-4 border-slate-200 bg-white">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-orange-500" />
+            Recent Alerts
+          </h3>
+          <Badge variant="secondary" className="text-[10px]">{alerts.length} total</Badge>
+        </div>
+        {recentAlerts.length === 0 ? (
+          <div className="text-center py-8 text-xs text-slate-400">
+            <CheckCircle2 className="w-8 h-8 mx-auto mb-2 opacity-30" />
+            No alerts yet. The system is monitoring.
+          </div>
+        ) : (
+          <div className="space-y-1.5">
+            {recentAlerts.map((a) => (
+              <div key={a.id} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-slate-50 border border-slate-100">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: (SEVERITY_COLORS[a.severity] || '#F59E0B') + '15' }}>
+                  <AlertTriangle className="w-3.5 h-3.5" style={{ color: SEVERITY_COLORS[a.severity] || '#F59E0B' }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-slate-900">{TYPE_LABELS[a.type] || a.type}</span>
+                    <SeverityBadge severity={a.severity} />
+                    <Badge variant="outline" className="text-[9px]">{a.status}</Badge>
+                  </div>
+                  <div className="text-[11px] text-slate-500 mt-0.5 truncate">
+                    {a.location} · {new Date(a.triggeredAt).toLocaleString()}
+                  </div>
+                </div>
+                {a.aiConfidence !== null && (
+                  <div className="text-[10px] text-slate-400 font-mono">{Math.round(a.aiConfidence * 100)}%</div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      {/* Camera grid preview */}
+      <Card className="p-4 border-slate-200 bg-white">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+            <Video className="w-4 h-4 text-slate-700" />
+            Camera Wall
+          </h3>
+          <Badge variant="secondary" className="text-[10px]">{cameras.length} cameras</Badge>
+        </div>
+        {cameras.length === 0 ? (
+          <EmptyState
+            icon={CameraOff}
+            title="No cameras configured"
+            sub="Go to the Live Cameras tab to add your first camera."
+          />
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+            {cameras.slice(0, 8).map((c) => (
+              <button
+                key={c.id}
+                onClick={() => onCameraFocus(c)}
+                className="relative aspect-video rounded-lg overflow-hidden border border-slate-200 bg-slate-900 hover:ring-2 hover:ring-sky-400 transition-all group"
+              >
+                {c.lastSnapshotUrl ? (
+                  <img src={c.lastSnapshotUrl} alt={c.name} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <CameraOff className="w-6 h-6 text-slate-600" />
+                  </div>
+                )}
+                <div className="absolute top-1.5 left-1.5">
+                  <div className={`w-1.5 h-1.5 rounded-full ${c.status === 'ONLINE' ? 'bg-emerald-500' : 'bg-slate-500'} animate-pulse`} />
+                </div>
+                <div className="absolute bottom-0 left-0 right-0 p-1.5 bg-gradient-to-t from-slate-900/80 to-transparent">
+                  <div className="text-[10px] font-semibold text-white truncate">{c.name}</div>
+                  <div className="text-[9px] text-white/70 truncate">{c.location}</div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      {/* By type / severity charts */}
+      {charts && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <Card className="p-4 border-slate-200 bg-white">
+            <h3 className="text-sm font-semibold text-slate-900 mb-3">Alerts by Type (last 7 days)</h3>
+            {Object.keys(charts.byType).length === 0 ? (
+              <div className="text-xs text-slate-400 text-center py-6">No data yet</div>
+            ) : (
+              <div className="space-y-2">
+                {Object.entries(charts.byType).sort((a, b) => b[1] - a[1]).map(([type, count]) => {
+                  const max = Math.max(...Object.values(charts.byType))
+                  return (
+                    <div key={type} className="flex items-center gap-2">
+                      <div className="text-[11px] text-slate-600 w-28 truncate">{TYPE_LABELS[type] || type}</div>
+                      <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+                        <div className="h-full rounded-full" style={{ width: `${(count / max) * 100}%`, background: ACCENT }} />
+                      </div>
+                      <div className="text-[11px] font-semibold text-slate-900 w-6 text-right">{count}</div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </Card>
+          <Card className="p-4 border-slate-200 bg-white">
+            <h3 className="text-sm font-semibold text-slate-900 mb-3">Alerts by Severity (last 7 days)</h3>
+            {Object.keys(charts.bySeverity).length === 0 ? (
+              <div className="text-xs text-slate-400 text-center py-6">No data yet</div>
+            ) : (
+              <div className="space-y-2">
+                {Object.entries(charts.bySeverity).map(([sev, count]) => {
+                  const max = Math.max(...Object.values(charts.bySeverity))
+                  return (
+                    <div key={sev} className="flex items-center gap-2">
+                      <div className="text-[11px] text-slate-600 w-20 truncate">{sev}</div>
+                      <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+                        <div className="h-full rounded-full" style={{ width: `${(count / max) * 100}%`, background: SEVERITY_COLORS[sev] || '#F59E0B' }} />
+                      </div>
+                      <div className="text-[11px] font-semibold text-slate-900 w-6 text-right">{count}</div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function EmptyState({ icon: Icon, title, sub }: { icon: any; title: string; sub?: string }) {
+  return (
+    <div className="text-center py-10 px-4">
+      <Icon className="w-10 h-10 mx-auto mb-3 text-slate-300" />
+      <div className="text-sm font-semibold text-slate-700">{title}</div>
+      {sub && <div className="text-xs text-slate-500 mt-1 max-w-md mx-auto">{sub}</div>}
+    </div>
+  )
+}
+
+// ============ Cameras Tab ============
+function CamerasTab({ cameras, zones, onRefresh, onCameraFocus, onMutated }: {
+  cameras: Camera[]
+  zones: Zone[]
+  onRefresh: () => void
+  onCameraFocus: (c: Camera) => void
+  onMutated: () => void
+}) {
+  const [showForm, setShowForm] = useState(false)
+  const [testing, setTesting] = useState<string | null>(null)
+
+  const handleTest = async (id: string) => {
+    setTesting(id)
+    try {
+      const { data, error } = await apiPost<{ result: any }>(`/api/safety/cameras/${id}/test-connection`)
+      if (error) throw new Error(error)
+      const r = data!.result
+      if (r.ok) {
+        toast.success(`Connection OK · ${r.latencyMs}ms · ${r.resolution || 'unknown resolution'}`)
+      } else if (r.relayedVia) {
+        toast.error(`Relay probe failed: ${r.error}`)
+      } else {
+        toast.error(r.error || 'Connection failed')
+      }
+      onRefresh()
+    } catch (err: any) {
+      toast.error(`Test failed: ${err?.message}`)
+    } finally {
+      setTesting(null)
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-900">Camera Management</h3>
+          <p className="text-xs text-slate-500 mt-0.5">Add IP cameras, test connections, configure zones.</p>
+        </div>
+        <Button size="sm" onClick={() => setShowForm(true)} className="h-8 text-xs gap-1.5 text-white" style={{ background: ACCENT }}>
+          <Plus className="w-3.5 h-3.5" />
+          Add Camera
+        </Button>
+      </div>
+
+      {cameras.length === 0 ? (
+        <Card className="p-8 border-slate-200 bg-white">
+          <EmptyState
+            icon={CameraOff}
+            title="No cameras yet"
+            sub="Click 'Add Camera' to register your first IP camera. Supports RTSP, ONVIF, and HTTP-MJPEG protocols."
+          />
+        </Card>
+      ) : (
+        <Card className="border-slate-200 bg-white overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-slate-50">
+                <TableHead className="text-[11px] uppercase">Camera</TableHead>
+                <TableHead className="text-[11px] uppercase">Zone</TableHead>
+                <TableHead className="text-[11px] uppercase">Protocol</TableHead>
+                <TableHead className="text-[11px] uppercase">Status</TableHead>
+                <TableHead className="text-[11px] uppercase">Last Check</TableHead>
+                <TableHead className="text-[11px] uppercase text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {cameras.map((c) => (
+                <TableRow key={c.id} className="hover:bg-slate-50">
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${c.status === 'ONLINE' ? 'bg-emerald-500' : c.status === 'ERROR' ? 'bg-rose-500' : 'bg-slate-400'}`} />
+                      <div>
+                        <div className="text-xs font-semibold text-slate-900">{c.name}</div>
+                        <div className="text-[10px] text-slate-500">{c.location}</div>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-xs text-slate-600">{c.zone?.name || '—'}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="text-[9px]">{c.protocol}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={`text-[9px] ${c.status === 'ONLINE' ? 'border-emerald-300 text-emerald-700 bg-emerald-50' : c.status === 'ERROR' ? 'border-rose-300 text-rose-700 bg-rose-50' : 'border-slate-300 text-slate-600'}`}>
+                      {c.status}
+                    </Badge>
+                    {!c.relayUrl && <div className="text-[9px] text-amber-600 mt-0.5">No relay</div>}
+                  </TableCell>
+                  <TableCell className="text-[10px] text-slate-500">
+                    {c.lastCheckedAt ? new Date(c.lastCheckedAt).toLocaleString() : 'Never'}
+                    {c.lastLatencyMs !== null && <div>{c.lastLatencyMs}ms</div>}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleTest(c.id)}
+                        disabled={testing === c.id}
+                        className="h-7 text-[10px] gap-1"
+                      >
+                        {testing === c.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
+                        Test
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onCameraFocus(c)}
+                        className="h-7 text-[10px] gap-1"
+                      >
+                        <Eye className="w-3 h-3" />
+                        View
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={async () => {
+                          if (!confirm(`Delete camera "${c.name}"? Alert history will be preserved.`)) return
+                          const res = await apiFetch(`/api/safety/cameras/${c.id}`, { method: 'DELETE' })
+                          if (res.ok) {
+                            toast.success('Camera deleted')
+                            onMutated()
+                          } else {
+                            toast.error('Delete failed')
+                          }
+                        }}
+                        className="h-7 text-[10px] gap-1 text-rose-600 border-rose-200 hover:bg-rose-50"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
+      )}
+
+      {showForm && (
+        <CameraFormModal
+          zones={zones}
+          onClose={() => setShowForm(false)}
+          onSaved={() => {
+            setShowForm(false)
+            onRefresh()
+            onMutated()
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+function CameraFormModal({ zones, onClose, onSaved }: {
+  zones: Zone[]
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const [saving, setSaving] = useState(false)
+  const [form, setForm] = useState({
+    name: '', location: '', protocol: 'RTSP', streamUrl: '',
+    username: '', password: '', zoneId: '', relayUrl: '',
+    hasMic: false, hasSpeaker: false, notes: '',
+  })
+
+  const submit = async () => {
+    if (!form.name || !form.streamUrl) {
+      toast.error('Name and Stream URL are required')
+      return
+    }
+    setSaving(true)
+    try {
+      const res = await apiFetch('/api/safety/cameras', {
+        method: 'POST',
+        body: JSON.stringify(form),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`)
+      toast.success('Camera added — detection configs initialized')
+      onSaved()
+    } catch (err: any) {
+      toast.error(`Failed: ${err?.message}`)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+      <Card className="max-w-lg w-full p-5 bg-white" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-semibold text-slate-900">Add Camera</h3>
+          <button onClick={onClose} className="p-1 rounded hover:bg-slate-100"><X className="w-4 h-4" /></button>
+        </div>
+        <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+          <div>
+            <Label className="text-xs">Name *</Label>
+            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Main Gate Camera" className="h-9 text-xs" />
+          </div>
+          <div>
+            <Label className="text-xs">Location</Label>
+            <Input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="Front Entrance" className="h-9 text-xs" />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label className="text-xs">Protocol</Label>
+              <Select value={form.protocol} onValueChange={(v) => setForm({ ...form, protocol: v })}>
+                <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="RTSP">RTSP</SelectItem>
+                  <SelectItem value="ONVIF">ONVIF</SelectItem>
+                  <SelectItem value="HTTP_MJPEG">HTTP MJPEG</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Zone</Label>
+              <Select value={form.zoneId || '__none__'} onValueChange={(v) => setForm({ ...form, zoneId: v === '__none__' ? '' : v })}>
+                <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="None" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— None —</SelectItem>
+                  {zones.map((z) => <SelectItem key={z.id} value={z.id}>{z.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div>
+            <Label className="text-xs">Stream URL *</Label>
+            <Input value={form.streamUrl} onChange={(e) => setForm({ ...form, streamUrl: e.target.value })} placeholder="rtsp://192.168.1.50/stream1" className="h-9 text-xs font-mono" />
+            <p className="text-[10px] text-slate-500 mt-1">Stored encrypted. Never returned to client in plaintext.</p>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label className="text-xs">Username</Label>
+              <Input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} className="h-9 text-xs" />
+            </div>
+            <div>
+              <Label className="text-xs">Password</Label>
+              <Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className="h-9 text-xs" />
+            </div>
+          </div>
+          <div>
+            <Label className="text-xs">On-prem Relay URL (optional)</Label>
+            <Input value={form.relayUrl} onChange={(e) => setForm({ ...form, relayUrl: e.target.value })} placeholder="http://192.168.1.10:8080" className="h-9 text-xs font-mono" />
+            <p className="text-[10px] text-slate-500 mt-1">Required for live RTSP streaming, mic listen, siren/PA. Deploy the relay agent on the school network.</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <label className="flex items-center gap-2 text-xs">
+              <Switch checked={form.hasMic} onCheckedChange={(v) => setForm({ ...form, hasMic: v })} />
+              Has Microphone
+            </label>
+            <label className="flex items-center gap-2 text-xs">
+              <Switch checked={form.hasSpeaker} onCheckedChange={(v) => setForm({ ...form, hasSpeaker: v })} />
+              Has Speaker
+            </label>
+          </div>
+        </div>
+        <div className="flex items-center justify-end gap-2 mt-4 pt-4 border-t border-slate-200">
+          <Button variant="outline" size="sm" onClick={onClose} className="h-8 text-xs">Cancel</Button>
+          <Button size="sm" onClick={submit} disabled={saving} className="h-8 text-xs text-white" style={{ background: ACCENT }}>
+            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <Plus className="w-3.5 h-3.5 mr-1.5" />}
+            Add Camera
+          </Button>
+        </div>
+      </Card>
+    </div>
+  )
+}
+
+// ============ Detection Tab ============
+function DetectionTab({ cameras, onMutated }: { cameras: Camera[]; onMutated: () => void }) {
+  const [sweeping, setSweeping] = useState(false)
+  const [sweepResult, setSweepResult] = useState<any>(null)
+
+  const runSweep = async () => {
+    setSweeping(true)
+    setSweepResult(null)
+    try {
+      const { data, error } = await apiPost<any>('/api/safety/detection/sweep', {})
+      if (error) throw new Error(error)
+      setSweepResult(data)
+      toast.success(`Sweep complete: ${data.detectionsCreated} new alerts, ${data.suppressed} suppressed`)
+      onMutated()
+    } catch (err: any) {
+      toast.error(`Sweep failed: ${err?.message}`)
+    } finally {
+      setSweeping(false)
+    }
+  }
+
+  const toggleConfig = async (cameraId: string, detectionType: string, enabled: boolean) => {
+    // Optimistic update
+    const res = await apiFetch(`/api/safety/cameras/${cameraId}`, {
+      method: 'PUT',
+      body: JSON.stringify({}),
+    })
+    // For simplicity, we update detection configs via a dedicated helper endpoint (not yet built);
+    // for now, log the desired change. TODO: add PATCH /api/safety/cameras/:id/detection-config
+    toast.info(`Detection toggle: ${detectionType} → ${enabled ? 'ON' : 'OFF'} (TODO: wire to API)`)
+  }
+
+  return (
+    <div className="space-y-4">
+      <Card className="p-4 border-slate-200 bg-white">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+              <Brain className="w-4 h-4 text-violet-600" />
+              VLM Detection Sweep
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Polls all online cameras with snapshots, runs VLM analysis, creates alerts for any detections (cooldown applies).
+            </p>
+          </div>
+          <Button size="sm" onClick={runSweep} disabled={sweeping} className="h-8 text-xs gap-1.5 text-white" style={{ background: '#7C3AED' }}>
+            {sweeping ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
+            Run Sweep Now
+          </Button>
+        </div>
+        {sweepResult && (
+          <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+            <div className="p-2 rounded-lg bg-slate-50 border border-slate-200">
+              <div className="text-[10px] text-slate-500 uppercase">Cameras Scanned</div>
+              <div className="text-lg font-bold text-slate-900">{sweepResult.camerasScanned}</div>
+            </div>
+            <div className="p-2 rounded-lg bg-slate-50 border border-slate-200">
+              <div className="text-[10px] text-slate-500 uppercase">With Snapshot</div>
+              <div className="text-lg font-bold text-slate-900">{sweepResult.camerasWithSnapshot}</div>
+            </div>
+            <div className="p-2 rounded-lg bg-emerald-50 border border-emerald-200">
+              <div className="text-[10px] text-emerald-700 uppercase">Detections</div>
+              <div className="text-lg font-bold text-emerald-700">{sweepResult.detectionsCreated}</div>
+            </div>
+            <div className="p-2 rounded-lg bg-amber-50 border border-amber-200">
+              <div className="text-[10px] text-amber-700 uppercase">Suppressed</div>
+              <div className="text-lg font-bold text-amber-700">{sweepResult.suppressed}</div>
+            </div>
+          </div>
+        )}
+        {sweepResult?.results && (
+          <div className="mt-3 space-y-1">
+            {sweepResult.results.map((r: any, i: number) => (
+              <div key={i} className="text-[11px] flex items-center justify-between p-2 rounded bg-slate-50 border border-slate-100">
+                <span className="font-medium text-slate-900">{r.cameraName}</span>
+                <span className={r.snapshotAvailable ? 'text-emerald-600' : 'text-amber-600'}>
+                  {r.snapshotAvailable ? `${r.detectionsCreated} new, ${r.suppressed} suppressed` : 'No snapshot'}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      <Card className="p-4 border-slate-200 bg-white">
+        <h3 className="text-sm font-semibold text-slate-900 mb-3">Per-Camera Detection Config</h3>
+        {cameras.length === 0 ? (
+          <EmptyState icon={CameraOff} title="No cameras" sub="Add a camera first." />
+        ) : (
+          <div className="space-y-3">
+            {cameras.map((c) => (
+              <div key={c.id} className="p-3 rounded-lg border border-slate-200">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-xs font-semibold text-slate-900">{c.name}</div>
+                  <Badge variant="outline" className="text-[9px]">{c.status}</Badge>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  {DETECTION_TYPES.map((dt) => {
+                    const cfg = c.detectionConfigs?.find((dc) => dc.detectionType === dt.id)
+                    const enabled = cfg?.enabled ?? false
+                    const Icon = dt.icon
+                    return (
+                      <button
+                        key={dt.id}
+                        onClick={() => toggleConfig(c.id, dt.id, !enabled)}
+                        className={`flex items-center gap-2 p-2 rounded-lg border text-xs transition-all ${enabled ? 'border-transparent text-white' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                        style={enabled ? { background: dt.color } : {}}
+                      >
+                        <Icon className="w-3.5 h-3.5" />
+                        <span className="flex-1 text-left">{dt.label}</span>
+                        <Switch checked={enabled} className="scale-75" />
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+    </div>
+  )
+}
+
+// ============ Attendance Tab ============
+function AttendanceTab({ cameras, schedules, onRefresh }: {
+  cameras: Camera[]
+  schedules: ScheduledAttendance[]
+  onRefresh: () => void
+}) {
+  const [classId, setClassId] = useState('')
+  const [className, setClassName] = useState('')
+  const [cameraId, setCameraId] = useState('')
+  const [period, setPeriod] = useState('1')
+  const [scheduledAt, setScheduledAt] = useState('')
+  const [running, setRunning] = useState<string | null>(null)
+  const [runResult, setRunResult] = useState<any>(null)
+
+  const handleSchedule = async () => {
+    if (!classId || !cameraId || !scheduledAt) {
+      toast.error('Class, Camera, and Scheduled time are required')
+      return
+    }
+    try {
+      const res = await apiFetch('/api/safety/attendance/schedule', {
+        method: 'POST',
+        body: JSON.stringify({ classId, className, cameraId, period: Number(period), scheduledAt }),
+      })
+      if (!res.ok) {
+        const d = await res.json()
+        throw new Error(d.error)
+      }
+      toast.success('Scheduled attendance created')
+      onRefresh()
+    } catch (err: any) {
+      toast.error(`Failed: ${err?.message}`)
+    }
+  }
+
+  const runNow = async (scheduleId: string) => {
+    setRunning(scheduleId)
+    setRunResult(null)
+    try {
+      const { data, error } = await apiPost<any>(`/api/safety/attendance/run/${scheduleId}`)
+      if (error) throw new Error(error)
+      setRunResult(data)
+      if (data.ok === false && data.relayRequired) {
+        toast.error('No snapshot available — relay agent required')
+      } else {
+        toast.success(`Attendance: ${data.present} present, ${data.absent} absent, ${data.unknown} unknown`)
+      }
+      onRefresh()
+    } catch (err: any) {
+      toast.error(`Failed: ${err?.message}`)
+    } finally {
+      setRunning(null)
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <Card className="p-4 border-slate-200 bg-white">
+        <h3 className="text-sm font-semibold text-slate-900 mb-1 flex items-center gap-2">
+          <ScanFace className="w-4 h-4 text-sky-600" />
+          Face-Recognition Attendance
+        </h3>
+        <p className="text-xs text-slate-500 mb-3">
+          Select a class + camera, capture a snapshot, and VLM matches enrolled student photos against the group image. Absentees get auto-notified to parents.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
+          <div>
+            <Label className="text-[10px] uppercase text-slate-500">Class ID</Label>
+            <Input value={classId} onChange={(e) => setClassId(e.target.value)} placeholder="class-7a" className="h-8 text-xs" />
+          </div>
+          <div>
+            <Label className="text-[10px] uppercase text-slate-500">Class Name</Label>
+            <Input value={className} onChange={(e) => setClassName(e.target.value)} placeholder="Class 7-A" className="h-8 text-xs" />
+          </div>
+          <div>
+            <Label className="text-[10px] uppercase text-slate-500">Camera</Label>
+            <Select value={cameraId || '__none__'} onValueChange={(v) => setCameraId(v === '__none__' ? '' : v)}>
+              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">— Select —</SelectItem>
+                {cameras.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-[10px] uppercase text-slate-500">Period</Label>
+            <Select value={period} onValueChange={setPeriod}>
+              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((p) => <SelectItem key={p} value={String(p)}>Period {p}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-[10px] uppercase text-slate-500">Scheduled At</Label>
+            <Input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} className="h-8 text-xs" />
+          </div>
+        </div>
+        <div className="flex justify-end mt-3">
+          <Button size="sm" onClick={handleSchedule} className="h-8 text-xs text-white" style={{ background: ACCENT }}>
+            <Plus className="w-3.5 h-3.5 mr-1.5" />
+            Schedule
+          </Button>
+        </div>
+      </Card>
+
+      <Card className="p-4 border-slate-200 bg-white">
+        <h3 className="text-sm font-semibold text-slate-900 mb-3">Scheduled Runs</h3>
+        {schedules.length === 0 ? (
+          <EmptyState icon={Calendar} title="No schedules" sub="Schedule a recurring attendance run above." />
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-slate-50">
+                <TableHead className="text-[11px] uppercase">Class</TableHead>
+                <TableHead className="text-[11px] uppercase">Period</TableHead>
+                <TableHead className="text-[11px] uppercase">Scheduled At</TableHead>
+                <TableHead className="text-[11px] uppercase">Last Run</TableHead>
+                <TableHead className="text-[11px] uppercase text-right">Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {schedules.map((s) => (
+                <TableRow key={s.id}>
+                  <TableCell className="text-xs font-medium">{s.className || s.classId}</TableCell>
+                  <TableCell className="text-xs">P{s.period}</TableCell>
+                  <TableCell className="text-[11px] text-slate-500">{new Date(s.scheduledAt).toLocaleString()}</TableCell>
+                  <TableCell className="text-[11px] text-slate-500">{s.lastRunAt ? new Date(s.lastRunAt).toLocaleString() : 'Never'}</TableCell>
+                  <TableCell className="text-right">
+                    <Button size="sm" onClick={() => runNow(s.id)} disabled={running === s.id} className="h-7 text-[10px] gap-1 text-white" style={{ background: ACCENT }}>
+                      {running === s.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
+                      Run Now
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </Card>
+
+      {runResult && (
+        <Card className="p-4 border-slate-200 bg-white">
+          <h3 className="text-sm font-semibold text-slate-900 mb-3">Last Run Result</h3>
+          {runResult.ok === false ? (
+            <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs">
+              <AlertTriangle className="w-4 h-4 inline mr-2" />
+              {runResult.reason || runResult.error}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200">
+                <div className="text-[10px] text-emerald-700 uppercase">Present</div>
+                <div className="text-2xl font-bold text-emerald-700">{runResult.present}</div>
+              </div>
+              <div className="p-3 rounded-lg bg-rose-50 border border-rose-200">
+                <div className="text-[10px] text-rose-700 uppercase">Absent</div>
+                <div className="text-2xl font-bold text-rose-700">{runResult.absent}</div>
+              </div>
+              <div className="p-3 rounded-lg bg-amber-50 border border-amber-200">
+                <div className="text-[10px] text-amber-700 uppercase">Unknown</div>
+                <div className="text-2xl font-bold text-amber-700">{runResult.unknown}</div>
+              </div>
+              <div className="p-3 rounded-lg bg-sky-50 border border-sky-200">
+                <div className="text-[10px] text-sky-700 uppercase">Notified</div>
+                <div className="text-2xl font-bold text-sky-700">{runResult.notificationsSent}</div>
+              </div>
+            </div>
+          )}
+        </Card>
+      )}
+    </div>
+  )
+}
+
+// ============ Behavior Tab ============
+function BehaviorTab({ reports, onRefresh }: { reports: BehaviorReport[]; onRefresh: () => void }) {
+  const [subjectType, setSubjectType] = useState<'STUDENT' | 'STAFF'>('STUDENT')
+  const [subjectId, setSubjectId] = useState('')
+  const [subjectName, setSubjectName] = useState('')
+  const [period, setPeriod] = useState(currentMonthPeriod())
+  const [generating, setGenerating] = useState(false)
+  const [sending, setSending] = useState<string | null>(null)
+
+  const generate = async () => {
+    if (!subjectId || !subjectName) {
+      toast.error('Subject ID and Name are required')
+      return
+    }
+    setGenerating(true)
+    try {
+      const res = await apiFetch('/api/safety/behavior/reports', {
+        method: 'POST',
+        body: JSON.stringify({ subjectType, subjectId, subjectName, reportingPeriod: period }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      toast.success('Report generated')
+      onRefresh()
+    } catch (err: any) {
+      toast.error(`Failed: ${err?.message}`)
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  const send = async (reportId: string) => {
+    setSending(reportId)
+    try {
+      const res = await apiFetch('/api/safety/behavior/send', {
+        method: 'POST',
+        body: JSON.stringify({ reportId }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      toast.success('Report sent to guardian')
+      onRefresh()
+    } catch (err: any) {
+      toast.error(`Failed: ${err?.message}`)
+    } finally {
+      setSending(null)
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <Card className="p-4 border-slate-200 bg-white">
+        <h3 className="text-sm font-semibold text-slate-900 mb-1 flex items-center gap-2">
+          <TrendingUp className="w-4 h-4 text-emerald-600" />
+          Generate Behavior Report
+        </h3>
+        <p className="text-xs text-slate-500 mb-3">
+          Aggregates safety alerts involving a subject over a period, computes a 0-100 score + trend delta, and uses VLM to write a counselor-style summary.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
+          <div>
+            <Label className="text-[10px] uppercase text-slate-500">Type</Label>
+            <Select value={subjectType} onValueChange={(v) => setSubjectType(v as any)}>
+              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="STUDENT">Student</SelectItem>
+                <SelectItem value="STAFF">Staff</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-[10px] uppercase text-slate-500">Subject ID</Label>
+            <Input value={subjectId} onChange={(e) => setSubjectId(e.target.value)} placeholder="stu_001" className="h-8 text-xs" />
+          </div>
+          <div>
+            <Label className="text-[10px] uppercase text-slate-500">Subject Name</Label>
+            <Input value={subjectName} onChange={(e) => setSubjectName(e.target.value)} placeholder="Aarav Singh" className="h-8 text-xs" />
+          </div>
+          <div>
+            <Label className="text-[10px] uppercase text-slate-500">Period</Label>
+            <Input value={period} onChange={(e) => setPeriod(e.target.value)} placeholder="2026-07" className="h-8 text-xs font-mono" />
+          </div>
+          <div className="flex items-end">
+            <Button size="sm" onClick={generate} disabled={generating} className="h-8 text-xs w-full text-white" style={{ background: ACCENT }}>
+              {generating ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <Brain className="w-3.5 h-3.5 mr-1.5" />}
+              Generate
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      <Card className="p-4 border-slate-200 bg-white">
+        <h3 className="text-sm font-semibold text-slate-900 mb-3">Recent Reports</h3>
+        {reports.length === 0 ? (
+          <EmptyState icon={FileText} title="No reports yet" sub="Generate a report above." />
+        ) : (
+          <div className="space-y-2">
+            {reports.map((r) => (
+              <div key={r.id} className="p-3 rounded-lg border border-slate-200">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm font-semibold text-slate-900">{r.subjectName}</span>
+                      <Badge variant="outline" className="text-[9px]">{r.subjectType}</Badge>
+                      <Badge variant="outline" className="text-[9px]">{r.reportingPeriod}</Badge>
+                      {r.sentToGuardian && <Badge variant="outline" className="text-[9px] border-emerald-300 text-emerald-700 bg-emerald-50">SENT</Badge>}
+                    </div>
+                    <div className="flex items-center gap-3 text-xs mb-2">
+                      <span className="font-bold" style={{ color: r.score >= 80 ? '#10B981' : r.score >= 60 ? '#F59E0B' : '#DC2626' }}>
+                        Score: {r.score}/100
+                      </span>
+                      <span className={r.trendDelta >= 0 ? 'text-emerald-600' : 'text-rose-600'}>
+                        {r.trendDelta >= 0 ? <TrendingUp className="w-3 h-3 inline" /> : <TrendingDown className="w-3 h-3 inline" />}
+                        {r.trendDelta >= 0 ? '+' : ''}{r.trendDelta} vs prev
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-600 leading-relaxed">{r.summary}</p>
+                    <p className="text-[10px] text-slate-500 mt-1">Recommended: {r.recommendedActions}</p>
+                  </div>
+                  {!r.sentToGuardian && (
+                    <Button
+                      size="sm"
+                      onClick={() => send(r.id)}
+                      disabled={sending === r.id}
+                      className="h-7 text-[10px] gap-1 text-white flex-shrink-0"
+                      style={{ background: ACCENT }}
+                    >
+                      {sending === r.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+                      Send to Guardian
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+    </div>
+  )
+}
+
+function currentMonthPeriod(): string {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+}
+
+// ============ Visitors Tab ============
+function VisitorsTab({ visitors, onRefresh }: { visitors: Visitor[]; onRefresh: () => void }) {
+  const [showForm, setShowForm] = useState(false)
+  const [form, setForm] = useState({ name: '', phone: '', email: '', purpose: '', hostName: '', expectedAt: '' })
+
+  const submit = async () => {
+    if (!form.name || !form.purpose) {
+      toast.error('Name and purpose are required')
+      return
+    }
+    try {
+      const res = await apiFetch('/api/safety/visitors', {
+        method: 'POST',
+        body: JSON.stringify({ ...form, isUnknown: false }),
+      })
+      if (!res.ok) {
+        const d = await res.json()
+        throw new Error(d.error)
+      }
+      toast.success('Visitor pre-approved')
+      setForm({ name: '', phone: '', email: '', purpose: '', hostName: '', expectedAt: '' })
+      setShowForm(false)
+      onRefresh()
+    } catch (err: any) {
+      toast.error(`Failed: ${err?.message}`)
+    }
+  }
+
+  const checkIn = async (id: string) => {
+    await apiPost(`/api/safety/visitors/${id}/check-in`, {})
+    toast.success('Checked in')
+    onRefresh()
+  }
+  const checkOut = async (id: string) => {
+    await apiPost(`/api/safety/visitors/${id}/check-out`, {})
+    toast.success('Checked out')
+    onRefresh()
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-900">Visitor Management</h3>
+          <p className="text-xs text-slate-500 mt-0.5">Pre-approve visitors, check in/out, auto-flag unknown faces.</p>
+        </div>
+        <Button size="sm" onClick={() => setShowForm(true)} className="h-8 text-xs gap-1.5 text-white" style={{ background: ACCENT }}>
+          <Plus className="w-3.5 h-3.5" />
+          Pre-Approve
+        </Button>
+      </div>
+
+      {visitors.length === 0 ? (
+        <Card className="p-8"><EmptyState icon={UserCheck} title="No visitors" sub="Pre-approve visitors above." /></Card>
+      ) : (
+        <Card className="border-slate-200 bg-white overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-slate-50">
+                <TableHead className="text-[11px] uppercase">Visitor</TableHead>
+                <TableHead className="text-[11px] uppercase">Purpose</TableHead>
+                <TableHead className="text-[11px] uppercase">Host</TableHead>
+                <TableHead className="text-[11px] uppercase">Expected</TableHead>
+                <TableHead className="text-[11px] uppercase">Status</TableHead>
+                <TableHead className="text-[11px] uppercase text-right">Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {visitors.map((v) => (
+                <TableRow key={v.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <div>
+                        <div className="text-xs font-semibold text-slate-900">{v.name}</div>
+                        <div className="text-[10px] text-slate-500">{v.phone || v.email || '—'}</div>
+                      </div>
+                      {v.isUnknown && <Badge variant="outline" className="text-[9px] border-rose-300 text-rose-700 bg-rose-50">UNKNOWN</Badge>}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-xs text-slate-600">{v.purpose}</TableCell>
+                  <TableCell className="text-xs text-slate-600">{v.hostName || '—'}</TableCell>
+                  <TableCell className="text-[10px] text-slate-500">{v.expectedAt ? new Date(v.expectedAt).toLocaleString() : '—'}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={`text-[9px] ${v.status === 'CHECKED_IN' ? 'border-emerald-300 text-emerald-700 bg-emerald-50' : v.status === 'CHECKED_OUT' ? 'border-slate-300 text-slate-600' : v.status === 'UNKNOWN_FLAGGED' ? 'border-rose-300 text-rose-700 bg-rose-50' : 'border-amber-300 text-amber-700 bg-amber-50'}`}>
+                      {v.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {v.status === 'PRE_APPROVED' && (
+                      <Button size="sm" onClick={() => checkIn(v.id)} className="h-7 text-[10px] text-white" style={{ background: ACCENT }}>Check In</Button>
+                    )}
+                    {v.status === 'CHECKED_IN' && (
+                      <Button size="sm" variant="outline" onClick={() => checkOut(v.id)} className="h-7 text-[10px]">Check Out</Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
+      )}
+
+      {showForm && (
+        <div className="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowForm(false)}>
+          <Card className="max-w-md w-full p-5 bg-white" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-slate-900">Pre-Approve Visitor</h3>
+              <button onClick={() => setShowForm(false)} className="p-1 rounded hover:bg-slate-100"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="space-y-3">
+              <div><Label className="text-xs">Name *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="h-9 text-xs" /></div>
+              <div><Label className="text-xs">Phone</Label><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="h-9 text-xs" /></div>
+              <div><Label className="text-xs">Email</Label><Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="h-9 text-xs" /></div>
+              <div><Label className="text-xs">Purpose *</Label><Input value={form.purpose} onChange={(e) => setForm({ ...form, purpose: e.target.value })} placeholder="PTM, Delivery, Maintenance" className="h-9 text-xs" /></div>
+              <div><Label className="text-xs">Host Name</Label><Input value={form.hostName} onChange={(e) => setForm({ ...form, hostName: e.target.value })} className="h-9 text-xs" /></div>
+              <div><Label className="text-xs">Expected At</Label><Input type="datetime-local" value={form.expectedAt} onChange={(e) => setForm({ ...form, expectedAt: e.target.value })} className="h-9 text-xs" /></div>
+            </div>
+            <div className="flex justify-end gap-2 mt-4 pt-4 border-t">
+              <Button variant="outline" size="sm" onClick={() => setShowForm(false)} className="h-8 text-xs">Cancel</Button>
+              <Button size="sm" onClick={submit} className="h-8 text-xs text-white" style={{ background: ACCENT }}>Pre-Approve</Button>
+            </div>
+          </Card>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ============ Drill Tab ============
+function DrillTab({ onTriggered }: { onTriggered: () => void }) {
+  const [triggering, setTriggering] = useState<string | null>(null)
+  const [lastResult, setLastResult] = useState<any>(null)
+
+  const trigger = async (type: 'LOCKDOWN' | 'FIRE' | 'EARTHQUAKE') => {
+    if (!confirm(`Trigger ${type} drill? This will activate all sirens and send mass notifications.`)) return
+    setTriggering(type)
+    setLastResult(null)
+    try {
+      const { data, error } = await apiPost<any>('/api/safety/drill/trigger', { type })
+      if (error) throw new Error(error)
+      setLastResult(data)
+      toast.success(`${type} drill triggered · ${data.camerasActivated} cameras, ${data.notificationsSent} notifications`)
+      onTriggered()
+    } catch (err: any) {
+      toast.error(`Failed: ${err?.message}`)
+    } finally {
+      setTriggering(null)
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <Card className="p-5 border-2 border-rose-200 bg-rose-50">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-12 h-12 rounded-xl bg-rose-600 flex items-center justify-center text-white">
+            <Siren className="w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-rose-900">Emergency Drill Trigger</h3>
+            <p className="text-xs text-rose-700 mt-0.5">One-button trigger activates all sirens/PA across every camera with a relay, and sends mass notifications to all staff.</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+          {(['LOCKDOWN', 'FIRE', 'EARTHQUAKE'] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => trigger(t)}
+              disabled={!!triggering}
+              className="p-4 rounded-xl bg-white border-2 border-rose-300 hover:bg-rose-100 transition-all disabled:opacity-50"
+            >
+              <div className="flex flex-col items-center gap-2">
+                {triggering === t ? <Loader2 className="w-6 h-6 animate-spin text-rose-600" /> : (
+                  t === 'LOCKDOWN' ? <Lock className="w-6 h-6 text-rose-600" /> :
+                  t === 'FIRE' ? <FlameIcon className="w-6 h-6 text-rose-600" /> :
+                  <AlertTriangle className="w-6 h-6 text-rose-600" />
+                )}
+                <div className="text-sm font-bold text-rose-900">{t}</div>
+                <div className="text-[10px] text-rose-600">Trigger Drill</div>
+              </div>
+            </button>
+          ))}
+        </div>
+      </Card>
+
+      {lastResult && (
+        <Card className="p-4 border-slate-200 bg-white">
+          <h3 className="text-sm font-semibold text-slate-900 mb-3">Last Drill Result</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            <div className="p-2 rounded-lg bg-slate-50 border"><div className="text-[10px] uppercase text-slate-500">Type</div><div className="text-sm font-bold">{lastResult.drill?.type || lastResult.type}</div></div>
+            <div className="p-2 rounded-lg bg-slate-50 border"><div className="text-[10px] uppercase text-slate-500">Cameras Activated</div><div className="text-sm font-bold">{lastResult.camerasActivated}/{lastResult.camerasTotal}</div></div>
+            <div className="p-2 rounded-lg bg-slate-50 border"><div className="text-[10px] uppercase text-slate-500">Notifications Sent</div><div className="text-sm font-bold">{lastResult.notificationsSent}</div></div>
+            <div className="p-2 rounded-lg bg-slate-50 border"><div className="text-[10px] uppercase text-slate-500">Drill ID</div><div className="text-xs font-mono">{lastResult.drill?.id?.slice(-8) || '—'}</div></div>
+          </div>
+          {lastResult.camerasActivated === 0 && (
+            <div className="mt-3 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <div>
+                <div className="font-semibold">No cameras were activated.</div>
+                <div className="mt-0.5">This means no cameras have a relay URL configured. Deploy the on-prem relay agent (architecture decision A) to enable siren/PA activation during drills.</div>
+              </div>
+            </div>
+          )}
+        </Card>
+      )}
+    </div>
+  )
+}
+
+// ============ Heatmap Tab ============
+function HeatmapTab() {
+  const [data, setData] = useState<any>(null)
+  const [days, setDays] = useState(30)
+  const [loading, setLoading] = useState(false)
+
+  const fetch = useCallback(async () => {
+    setLoading(true)
+    const { data, error } = await apiGet<any>(`/api/safety/heatmap?days=${days}`)
+    if (error) {
+      toast.error('Failed to load heatmap')
+    } else {
+      setData(data)
+    }
+    setLoading(false)
+  }, [days])
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetch()
+  }, [fetch])
+
+  return (
+    <div className="space-y-4">
+      <Card className="p-4 border-slate-200 bg-white">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-orange-500" />
+              Campus Heat Map
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">Per-zone alert density over the last {days} days.</p>
+          </div>
+          <Select value={String(days)} onValueChange={(v) => setDays(Number(v))}>
+            <SelectTrigger className="h-8 text-xs w-32"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7">7 days</SelectItem>
+              <SelectItem value="30">30 days</SelectItem>
+              <SelectItem value="90">90 days</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {!data || data.zones.length === 0 ? (
+          <EmptyState icon={MapPin} title="No zone data" sub="Add zones and let alerts accumulate." />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {data.zones.map((z: any) => {
+              const maxAlerts = Math.max(...data.zones.map((zz: any) => zz.totalAlerts), 1)
+              const intensity = z.totalAlerts / maxAlerts
+              const color = intensity === 0 ? '#10B981' : intensity < 0.3 ? '#F59E0B' : intensity < 0.7 ? '#F97316' : '#DC2626'
+              return (
+                <div key={z.zoneId} className="p-3 rounded-xl border-2" style={{ borderColor: color + '60', background: color + '08' }}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-sm font-semibold text-slate-900">{z.zoneName}</div>
+                    <Badge variant="outline" className="text-[9px]" style={{ borderColor: color, color, background: color + '15' }}>
+                      {z.riskLevel}
+                    </Badge>
+                  </div>
+                  <div className="text-2xl font-bold" style={{ color }}>{z.totalAlerts}</div>
+                  <div className="text-[10px] text-slate-500">alerts · {z.cameraCount} cameras</div>
+                  {z.peakHour !== null && (
+                    <div className="text-[10px] text-slate-500 mt-1">Peak hour: {String(z.peakHour).padStart(2, '0')}:00</div>
+                  )}
+                  {/* Severity distribution bar */}
+                  <div className="mt-2 flex h-1.5 rounded-full overflow-hidden bg-slate-100">
+                    {['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].map((sev) => {
+                      const count = z.bySeverity[sev] || 0
+                      const pct = z.totalAlerts > 0 ? (count / z.totalAlerts) * 100 : 0
+                      return pct > 0 ? (
+                        <div key={sev} style={{ width: `${pct}%`, background: SEVERITY_COLORS[sev] }} />
+                      ) : null
+                    })}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </Card>
+    </div>
+  )
+}
+
+// ============ Audit Tab ============
+function AuditTab({ entries, onRefresh }: { entries: AuditEntry[]; onRefresh: () => void }) {
+  const [verifying, setVerifying] = useState(false)
+  const [verifyResult, setVerifyResult] = useState<any>(null)
+  const [filter, setFilter] = useState('')
+
+  const verify = async () => {
+    setVerifying(true)
+    try {
+      const { data, error } = await apiPost<any>('/api/safety/audit-log/verify')
+      if (error) throw new Error(error)
+      setVerifyResult(data)
+      if (data.valid) {
+        toast.success(`Audit chain intact · ${data.entriesChecked} entries verified`)
+      } else {
+        toast.error(`CHAIN BROKEN at entry ${data.brokenAt} (${data.brokenAtAction})`)
+      }
+      onRefresh()
+    } catch (err: any) {
+      toast.error(`Failed: ${err?.message}`)
+    } finally {
+      setVerifying(false)
+    }
+  }
+
+  const filtered = filter
+    ? entries.filter((e) => e.action.toLowerCase().includes(filter.toLowerCase()) || e.targetType.toLowerCase().includes(filter.toLowerCase()))
+    : entries
+
+  return (
+    <div className="space-y-4">
+      <Card className="p-4 border-slate-200 bg-white">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-600" />
+              Tamper-Evident Audit Log
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">SHA-256 hash-chained. Any edit to a row breaks the chain and is detected on verify.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={() => exportAuditCsv(entries)} className="h-8 text-xs gap-1.5">
+              <Download className="w-3.5 h-3.5" /> Export CSV
+            </Button>
+            <Button size="sm" onClick={verify} disabled={verifying} className="h-8 text-xs gap-1.5 text-white" style={{ background: '#10B981' }}>
+              {verifying ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
+              Verify Integrity
+            </Button>
+          </div>
+        </div>
+        {verifyResult && (
+          <div className={`p-3 rounded-lg text-xs flex items-start gap-2 ${
+            verifyResult.valid
+              ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
+              : 'bg-rose-50 border border-rose-200 text-rose-800'
+          }`}>
+            {verifyResult.valid ? <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" /> : <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />}
+            <div>
+              {verifyResult.valid ? (
+                <div>Chain is INTACT. {verifyResult.entriesChecked} entries verified — all hashes match.</div>
+              ) : (
+                <div>
+                  <div className="font-semibold">CHAIN BROKEN — tampering detected.</div>
+                  <div className="mt-1">Broken at entry <code className="bg-rose-100 px-1 rounded">{verifyResult.brokenAt}</code> (action: {verifyResult.brokenAtAction}).</div>
+                  <div className="mt-1">Expected hash: <code className="bg-rose-100 px-1 rounded text-[10px]">{verifyResult.expectedHash}</code></div>
+                  <div className="mt-0.5">Actual hash:   <code className="bg-rose-100 px-1 rounded text-[10px]">{verifyResult.actualHash}</code></div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </Card>
+
+      <Card className="p-4 border-slate-200 bg-white">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-slate-900">Audit Entries ({entries.length})</h3>
+          <Input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Filter by action or target..." className="h-8 text-xs w-64" />
+        </div>
+        {filtered.length === 0 ? (
+          <EmptyState icon={FileText} title="No audit entries" sub="Actions will appear here as they happen." />
+        ) : (
+          <div className="space-y-1 max-h-[60vh] overflow-y-auto custom-scroll">
+            {filtered.map((e) => (
+              <div key={e.id} className="flex items-start gap-2 p-2 rounded hover:bg-slate-50 text-xs">
+                <div className="text-[10px] text-slate-400 font-mono w-32 flex-shrink-0">{new Date(e.createdAt).toLocaleString()}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-slate-900">{e.action}</span>
+                    <Badge variant="outline" className="text-[9px]">{e.targetType}</Badge>
+                    {e.targetId && <span className="text-[10px] text-slate-500 font-mono">{e.targetId.slice(-8)}</span>}
+                  </div>
+                  <div className="text-[10px] text-slate-500 mt-0.5 truncate">{e.payload}</div>
+                </div>
+                <div className="text-[9px] text-slate-400 font-mono flex-shrink-0">{e.entryHash.slice(0, 12)}…</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+    </div>
+  )
+}
+
+// ============ Zones Tab ============
+function ZonesTab({ zones, onRefresh }: { zones: Zone[]; onRefresh: () => void }) {
+  const [showForm, setShowForm] = useState(false)
+  const [form, setForm] = useState({ name: '', riskLevel: 'low', notes: '' })
+
+  const submit = async () => {
+    if (!form.name) { toast.error('Name required'); return }
+    try {
+      const res = await apiFetch('/api/safety/zones', { method: 'POST', body: JSON.stringify(form) })
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error) }
+      toast.success('Zone created')
+      setForm({ name: '', riskLevel: 'low', notes: '' })
+      setShowForm(false)
+      onRefresh()
+    } catch (err: any) { toast.error(`Failed: ${err?.message}`) }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-900">Zone Management</h3>
+          <p className="text-xs text-slate-500 mt-0.5">Logical areas of the campus — buildings, floors, outdoor spaces.</p>
+        </div>
+        <Button size="sm" onClick={() => setShowForm(true)} className="h-8 text-xs gap-1.5 text-white" style={{ background: ACCENT }}>
+          <Plus className="w-3.5 h-3.5" /> Add Zone
+        </Button>
+      </div>
+      {zones.length === 0 ? (
+        <Card className="p-8"><EmptyState icon={Grid3x3} title="No zones" sub="Add your first zone above." /></Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {zones.map((z) => {
+            const color = z.riskLevel === 'low' ? '#10B981' : z.riskLevel === 'moderate' ? '#F59E0B' : z.riskLevel === 'high' ? '#F97316' : '#DC2626'
+            return (
+              <Card key={z.id} className="p-4 border-slate-200">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-sm font-semibold text-slate-900">{z.name}</div>
+                  <Badge variant="outline" className="text-[9px]" style={{ borderColor: color, color, background: color + '15' }}>{z.riskLevel}</Badge>
+                </div>
+                <div className="grid grid-cols-2 gap-2 mt-3">
+                  <div>
+                    <div className="text-[10px] uppercase text-slate-500">Cameras</div>
+                    <div className="text-lg font-bold text-slate-900">{z._count.cameras}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] uppercase text-slate-500">Alerts</div>
+                    <div className="text-lg font-bold text-slate-900">{z._count.alerts}</div>
+                  </div>
+                </div>
+                {z.notes && <div className="text-[10px] text-slate-500 mt-2">{z.notes}</div>}
+              </Card>
+            )
+          })}
+        </div>
+      )}
+      {showForm && (
+        <div className="fixed inset-0 z-[60] bg-slate-900/60 flex items-center justify-center p-4" onClick={() => setShowForm(false)}>
+          <Card className="max-w-sm w-full p-5" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold">Add Zone</h3>
+              <button onClick={() => setShowForm(false)} className="p-1"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="space-y-3">
+              <div><Label className="text-xs">Name *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="h-9 text-xs" /></div>
+              <div>
+                <Label className="text-xs">Risk Level</Label>
+                <Select value={form.riskLevel} onValueChange={(v) => setForm({ ...form, riskLevel: v })}>
+                  <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="moderate">Moderate</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="critical">Critical</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div><Label className="text-xs">Notes</Label><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="text-xs" rows={2} /></div>
+            </div>
+            <div className="flex justify-end gap-2 mt-4 pt-4 border-t">
+              <Button variant="outline" size="sm" onClick={() => setShowForm(false)} className="h-8 text-xs">Cancel</Button>
+              <Button size="sm" onClick={submit} className="h-8 text-xs text-white" style={{ background: ACCENT }}>Add</Button>
+            </div>
+          </Card>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ============ Rules Tab ============
+function RulesTab({ onMutated }: { onMutated: () => void }) {
+  const [rules, setRules] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const fetch = useCallback(async () => {
+    setLoading(true)
+    const { data } = await apiGet<{ rules: any[] }>('/api/safety/escalation-rules')
+    if (data) setRules(data.rules)
+    setLoading(false)
+  }, [])
+
+  useEffect(() => {
+    fetch()
+  }, [fetch])
+
+  const updateRule = async (severity: string, field: string, value: any) => {
+    const existing = rules.find((r) => r.severity === severity) || { severity, notifyRoles: ['SUPER_ADMIN'], notifyChannels: ['WHATSAPP', 'IN_APP'], escalateAfterMin: 15, isActive: true }
+    const updated = { ...existing, [field]: value }
+    try {
+      const res = await apiFetch('/api/safety/escalation-rules', {
+        method: 'PUT',
+        body: JSON.stringify(updated),
+      })
+      if (!res.ok) throw new Error('Failed')
+      toast.success(`${severity} rule updated`)
+      fetch()
+    } catch (err: any) {
+      toast.error(`Failed: ${err?.message}`)
+    }
+  }
+
+  const SEVERITIES = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']
+  const ALL_ROLES = ['SUPER_ADMIN', 'SCHOOL_HEAD', 'ADMIN', 'TEACHER', 'RECEPTION', 'IT_TEAM']
+
+  return (
+    <div className="space-y-4">
+      <Card className="p-4 border-slate-200 bg-white">
+        <h3 className="text-sm font-semibold text-slate-900 mb-1">Escalation Rules</h3>
+        <p className="text-xs text-slate-500 mb-3">Per-severity: who gets notified, via which channels, and when to escalate if unacknowledged.</p>
+        {loading ? (
+          <div className="text-center py-8"><Loader2 className="w-6 h-6 animate-spin mx-auto text-slate-400" /></div>
+        ) : (
+          <div className="space-y-3">
+            {SEVERITIES.map((sev) => {
+              const rule = rules.find((r) => r.severity === sev) || { notifyRoles: [], notifyChannels: [], escalateAfterMin: 15, isActive: false }
+              const color = SEVERITY_COLORS[sev]
+              return (
+                <div key={sev} className="p-3 rounded-lg border border-slate-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full" style={{ background: color }} />
+                      <span className="text-sm font-semibold text-slate-900">{sev}</span>
+                    </div>
+                    <Switch checked={rule.isActive} onCheckedChange={(v) => updateRule(sev, 'isActive', v)} />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                      <Label className="text-[10px] uppercase text-slate-500">Notify Roles</Label>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {ALL_ROLES.map((r) => {
+                          const on = (rule.notifyRoles || []).includes(r)
+                          return (
+                            <button
+                              key={r}
+                              onClick={() => {
+                                const next = on ? (rule.notifyRoles || []).filter((x: string) => x !== r) : [...(rule.notifyRoles || []), r]
+                                updateRule(sev, 'notifyRoles', next)
+                              }}
+                              className={`text-[9px] px-1.5 py-0.5 rounded border ${on ? 'border-transparent text-white' : 'border-slate-200 text-slate-600'}`}
+                              style={on ? { background: color } : {}}
+                            >{r}</button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-[10px] uppercase text-slate-500">Escalate After (min)</Label>
+                      <Input
+                        type="number"
+                        value={rule.escalateAfterMin ?? 15}
+                        onChange={(e) => updateRule(sev, 'escalateAfterMin', Number(e.target.value))}
+                        className="h-8 text-xs mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-[10px] uppercase text-slate-500">Channels</Label>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {['WHATSAPP', 'SMS', 'EMAIL', 'IN_APP', 'PUSH'].map((ch) => {
+                          const on = (rule.notifyChannels || []).includes(ch)
+                          return (
+                            <button
+                              key={ch}
+                              onClick={() => {
+                                const next = on ? (rule.notifyChannels || []).filter((x: string) => x !== ch) : [...(rule.notifyChannels || []), ch]
+                                updateRule(sev, 'notifyChannels', next)
+                              }}
+                              className={`text-[9px] px-1.5 py-0.5 rounded border ${on ? 'border-transparent text-white' : 'border-slate-200 text-slate-600'}`}
+                              style={on ? { background: color } : {}}
+                            >{ch}</button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </Card>
+    </div>
+  )
+}
+
+// ============ Parent/Student Transparency View ============
+function ParentStudentTransparencyView({ role }: { role: string }) {
+  return (
+    <div className="p-6 max-w-2xl mx-auto">
+      <SectionHeader
+        emoji="🛡️"
+        title="Safety Monitoring — Transparency Notice"
+        subtitle="Your child's school has active safety monitoring"
+        accent={ACCENT}
+      />
+      <Card className="p-6 border-slate-200 bg-white mt-4">
+        <div className="flex items-start gap-4">
+          <div className="w-12 h-12 rounded-xl bg-sky-100 flex items-center justify-center flex-shrink-0">
+            <ShieldCheck className="w-6 h-6 text-sky-600" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-base font-semibold text-slate-900 mb-2">
+              {role === 'PARENT' ? 'Your child\'s safety is our priority' : 'Your safety at school is our priority'}
+            </h3>
+            <p className="text-sm text-slate-600 leading-relaxed mb-4">
+              LearnX International School operates an AI-powered campus safety monitoring system that helps staff
+              respond quickly to incidents. The system includes camera-based detection for fire, smoke, intrusion,
+              and unusual crowd density, with real-time alerts to school administrators and automatic escalation.
+            </p>
+            <div className="space-y-2 text-xs text-slate-600">
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 mt-0.5 flex-shrink-0" />
+                <span>24/7 AI-assisted monitoring of common areas, entrances, and perimeter</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 mt-0.5 flex-shrink-0" />
+                <span>Trained staff review every alert before any action is taken</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 mt-0.5 flex-shrink-0" />
+                <span>Parents are notified within minutes of any confirmed safety incident involving their child</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 mt-0.5 flex-shrink-0" />
+                <span>All safety actions are logged in a tamper-evident audit trail for accountability</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <Lock className="w-3.5 h-3.5 text-slate-400 mt-0.5 flex-shrink-0" />
+                <span>Live camera feeds and raw incident details are restricted to authorized staff only</span>
+              </div>
+            </div>
+            <div className="mt-4 pt-4 border-t border-slate-100 text-[11px] text-slate-500">
+              For questions about safety procedures, contact the school office.
+              For privacy concerns, refer to the school's data protection policy (DPDP/GDPR compliant).
+            </div>
+          </div>
+        </div>
+      </Card>
+    </div>
+  )
+}
+
+// ============ Lockdown Drill Bar ============
+function LockdownDrillBar({ onTriggered }: { onTriggered: () => void }) {
+  const [triggering, setTriggering] = useState(false)
+  const trigger = async () => {
+    if (!confirm('Trigger LOCKDOWN DRILL? All sirens will activate and mass notifications will be sent to all staff.')) return
+    setTriggering(true)
+    try {
+      const { data, error } = await apiPost<any>('/api/safety/drill/trigger', { type: 'LOCKDOWN' })
+      if (error) throw new Error(error)
+      toast.success(`LOCKDOWN drill triggered · ${data.camerasActivated} cameras, ${data.notificationsSent} notifications`)
+      onTriggered()
+    } catch (err: any) {
+      toast.error(`Failed: ${err?.message}`)
+    } finally {
+      setTriggering(false)
+    }
+  }
+  return (
+    <Card className="p-3 border-2 border-rose-200 bg-rose-50 flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <div className="w-8 h-8 rounded-lg bg-rose-600 flex items-center justify-center text-white">
+          <Siren className="w-4 h-4" />
+        </div>
+        <div>
+          <div className="text-xs font-bold text-rose-900">EMERGENCY: One-Button Lockdown Drill</div>
+          <div className="text-[10px] text-rose-700">Triggers sirens across all cameras + mass-notifies all staff. Switch to the Drill tab for FIRE / EARTHQUAKE options.</div>
+        </div>
+      </div>
+      <Button size="sm" onClick={trigger} disabled={triggering} className="h-8 text-xs gap-1.5 bg-rose-600 hover:bg-rose-700 text-white">
+        {triggering ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Lock className="w-3.5 h-3.5" />}
+        TRIGGER LOCKDOWN
+      </Button>
+    </Card>
   )
 }

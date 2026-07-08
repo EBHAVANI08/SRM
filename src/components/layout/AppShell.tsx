@@ -16,6 +16,7 @@ import { Phase5Module } from '@/components/dashboard/Phase5Module'
 import { AskLearnXAILanding } from '@/components/dashboard/AskLearnXAILanding'
 import { DifferentiatorsModule } from '@/components/dashboard/DifferentiatorsModule'
 import { NotificationPreviewLauncher } from '@/components/dashboard/NotificationPreviewModal'
+import { SafetyAlertPopup } from '@/components/dashboard/SafetyAlertPopup'
 import { AdmissionsModuleEnhanced } from '@/components/dashboard/AdmissionsModuleEnhanced'
 import { AttendanceModuleEnhanced } from '@/components/dashboard/AttendanceModuleEnhanced'
 import { DocumentsModuleEnhanced } from '@/components/dashboard/DocumentsModuleEnhanced'
@@ -124,6 +125,7 @@ export function AppShell() {
       </div>
       <AIAssistant />
       <NotificationPreviewLauncher />
+      <SafetyAlertPopup />
     </div>
   )
 }

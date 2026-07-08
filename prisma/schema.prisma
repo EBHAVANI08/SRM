@@ -109,6 +109,7 @@ model Class {
 
   timetable    Timetable[]
   students     Student[]   @relation("ClassStudents")
+  safetyZones  SafetyZone[] @relation("ClassSafetyZone")
   // substitutions Substitution[]
 }
 
@@ -770,23 +771,232 @@ model QuestionPaper {
   createdAt   DateTime @default(now())
 }
 
-// ============ SAFETY ALERTS ============
+// ============ SAFETY ALERTS (extended for Safety module v2) ============
 model SafetyAlert {
-  id          String   @id @default(cuid())
-  type        String   // FIRE, FIGHT, FALL, INTRUSION, SMOKE, ABSENCE, UNAUTHORIZED
-  severity    String   @default("MEDIUM") // LOW, MEDIUM, HIGH, CRITICAL
-  location    String
-  description String
-  cameraId    String?
-  studentId   String?
-  student     Student? @relation("StudentSafetyAlerts", fields: [studentId], references: [id])
-  staffId     String?
-  status      String   @default("ACTIVE") // ACTIVE, ACKNOWLEDGED, RESOLVED, FALSE_ALARM
-  aiConfidence Float?
-  triggeredAt DateTime @default(now())
-  resolvedAt  DateTime?
-  resolvedBy  String?
-  actionTaken String?
+  id              String   @id @default(cuid())
+  schoolId        String   @default("school_default")
+  type            String   // VIOLENCE, WEAPON, FALL_MEDICAL, INTRUSION, SMOKE_FIRE, CROWD_DENSITY, PROLONGED_ABSENCE, UNKNOWN_FACE, DRILL
+  severity        String   @default("MEDIUM") // LOW, MEDIUM, HIGH, CRITICAL
+  location        String
+  description     String
+  cameraId        String?
+  camera          SafetyCamera? @relation(fields: [cameraId], references: [id])
+  zoneId          String?
+  zone            SafetyZone?   @relation(fields: [zoneId], references: [id])
+  studentId       String?
+  student         Student? @relation("StudentSafetyAlerts", fields: [studentId], references: [id])
+  staffId         String?
+  status          String   @default("ACTIVE") // ACTIVE, ACKNOWLEDGED, RESOLVED, FALSE_ALARM
+  aiConfidence    Float?
+  detectionSource String   @default("MANUAL") // VLM, RULE, MANUAL, DRILL
+  snapshotUrl     String?
+  clipUrl         String?
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  escalationLevel Int      @default(0)
+  auditChainHash  String?
+  triggeredAt     DateTime @default(now())
+  resolvedAt      DateTime?
+  resolvedBy      String?
+  actionTaken     String?
+  createdAt       DateTime @default(now())
+
+  @@index([schoolId, status, triggeredAt])
+  @@index([schoolId, severity, triggeredAt])
+  @@index([cameraId, triggeredAt])
+  @@index([zoneId, triggeredAt])
+}
+
+// ============ SAFETY — ZONES ============
+model SafetyZone {
+  id              String   @id @default(cuid())
+  schoolId        String   @default("school_default")
+  name            String   // "Building A", "Playground", "Parking Lot"
+  parentZoneId    String?
+  parent          SafetyZone?   @relation("ZoneTree", fields: [parentZoneId], references: [id])
+  children        SafetyZone[]  @relation("ZoneTree")
+  linkedClassId   String?
+  linkedClass     Class?        @relation("ClassSafetyZone", fields: [linkedClassId], references: [id])
+  riskLevel       String   @default("low") // low, moderate, high, critical
+  floorPlan       String?  // optional SVG/PNG of the floor plan
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  cameras         SafetyCamera[]
+  alerts          SafetyAlert[]
+
+  @@index([schoolId])
+  @@index([parentZoneId])
+}
+
+// ============ SAFETY — CAMERAS ============
+model SafetyCamera {
+  id              String   @id @default(cuid())
+  schoolId        String   @default("school_default")
+  zoneId          String?
+  zone            SafetyZone?   @relation(fields: [zoneId], references: [id])
+  name            String
+  location        String   // free-text: "Block A — 1st Floor Corridor"
+  protocol        String   @default("RTSP") // RTSP, ONVIF, HTTP_MJPEG
+  streamUrl       String   // stored ENCRYPTED at app layer (AES-256-GCM via safety/crypto.ts)
+  credentialsEnc  String?  // encrypted JSON: {user,pass} — never plaintext, never sent to client
+  relayUrl        String?  // on-prem relay webhook URL (architecture decision A+C)
+  status          String   @default("OFFLINE") // ONLINE, OFFLINE, ERROR, DEGRADED
+  lastCheckedAt   DateTime?
+  lastSnapshotUrl String?  // path to most recent test frame (under /public/safety-snapshots/)
+  lastLatencyMs   Int?
+  lastResolution  String?
+  lastCodec       String?
+  hasMic          Boolean  @default(false)
+  hasSpeaker      Boolean  @default(false)
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  detectionConfigs SafetyDetectionConfig[]
+  alerts           SafetyAlert[]
+
+  @@index([schoolId, status])
+  @@index([zoneId])
+}
+
+// ============ SAFETY — DETECTION CONFIG (per camera × detection type) ============
+model SafetyDetectionConfig {
+  id              String   @id @default(cuid())
+  cameraId        String
+  camera          SafetyCamera @relation(fields: [cameraId], references: [id], onDelete: Cascade)
+  detectionType   String   // VIOLENCE, WEAPON, FALL_MEDICAL, INTRUSION, SMOKE_FIRE, CROWD_DENSITY, PROLONGED_ABSENCE
+  enabled         Boolean  @default(true)
+  sensitivity     String   @default("MEDIUM") // LOW, MEDIUM, HIGH
+  cooldownSec     Int      @default(60) // min seconds between same-type alerts from same camera
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([cameraId, detectionType])
+  @@index([cameraId])
+}
+
+// ============ SAFETY — TAMPER-EVIDENT AUDIT LOG (hash-chained) ============
+model SafetyAuditLog {
+  id              String   @id @default(cuid())
+  schoolId        String   @default("school_default")
+  entryHash       String   // SHA-256(own content + prevHash)
+  prevHash        String   // previous entry's entryHash — chain linkage
+  actorId         String?
+  actorRole       String?
+  action          String   // CAMERA_CREATE, CAMERA_UPDATE, CAMERA_DELETE, CONNECTION_TEST, ALERT_REVIEW, ALERT_ESCALATE, NOTIFICATION_DISPATCH, DRILL_TRIGGER, CONFIG_CHANGE, CHAIN_VERIFY, BEHAVIOR_SEND, VISITOR_CHECKIN
+  targetType      String   // CAMERA, ALERT, ZONE, RULE, DRILL, SYSTEM, BEHAVIOR, VISITOR
+  targetId        String?
+  payload         String   // JSON string of full action context
+  ipAddress       String?
+  userAgent       String?
+  createdAt       DateTime @default(now())
+
+  @@index([schoolId, createdAt])
+  @@index([actorId])
+  @@index([targetType, targetId])
+}
+
+// ============ SAFETY — ESCALATION RULES (per school × severity) ============
+model SafetyEscalationRule {
+  id                  String   @id @default(cuid())
+  schoolId            String   @default("school_default")
+  severity            String   // LOW, MEDIUM, HIGH, CRITICAL
+  notifyRoles         String   // JSON array: ["SUPER_ADMIN","SCHOOL_HEAD","IT_TEAM"]
+  notifyChannels      String   @default("[\"WHATSAPP\",\"SMS\",\"IN_APP\"]") // JSON array
+  escalateAfterMin    Int      @default(15)
+  escalateToRoles     String?  // JSON array for next tier
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@unique([schoolId, severity])
+  @@index([schoolId])
+}
+
+// ============ SAFETY — VISITOR MANAGEMENT ============
+model SafetyVisitor {
+  id              String   @id @default(cuid())
+  schoolId        String   @default("school_default")
+  name            String
+  phone           String?
+  email           String?
+  purpose         String
+  hostStaffId     String?  // FK to Staff.id (no DB FK to keep loose coupling across modules)
+  hostName        String?
+  expectedAt      DateTime?
+  checkInAt       DateTime?
+  checkOutAt      DateTime?
+  status          String   @default("PRE_APPROVED") // PRE_APPROVED, CHECKED_IN, CHECKED_OUT, DENIED, UNKNOWN_FLAGGED
+  faceEncRef      String?  // reference to enrolled face embedding
+  photoUrl        String?
+  isUnknown       Boolean  @default(false) // true if face didn't match any enrolled person
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([schoolId, status])
+  @@index([expectedAt])
+}
+
+// ============ SAFETY — BEHAVIOR REPORTS ============
+model SafetyBehaviorReport {
+  id                  String   @id @default(cuid())
+  schoolId            String   @default("school_default")
+  subjectType         String   // STUDENT, STAFF
+  subjectId           String   // FK to Student.id or Staff.id (no DB FK to keep loose coupling)
+  subjectName         String
+  reportingPeriod     String   // 2026-W27, 2026-07, 2026-Q3
+  score               Int      // 0-100
+  trendDelta          Int      // change vs previous period (+/-)
+  summary             String
+  topIncidents        String   // JSON array of {date, type, location}
+  recommendedActions  String
+  sentToGuardian      Boolean  @default(false)
+  sentAt              DateTime?
+  commId              String?  // FK to CommunicationLog.id
+  generatedBy         String?
+  createdAt           DateTime @default(now())
+
+  @@index([schoolId, subjectType, subjectId])
+  @@index([reportingPeriod])
+}
+
+// ============ SAFETY — DRILLS ============
+model SafetyDrill {
+  id              String   @id @default(cuid())
+  schoolId        String   @default("school_default")
+  type            String   // LOCKDOWN, FIRE, EARTHQUAKE
+  triggeredBy     String   // userId
+  triggeredAt     DateTime @default(now())
+  endedAt         DateTime?
+  durationSec     Int?
+  camerasActivated Int     @default(0)
+  notificationsSent Int    @default(0)
+  status          String   @default("ACTIVE") // ACTIVE, COMPLETED, CANCELLED
+  notes           String?
+
+  @@index([schoolId, triggeredAt])
+}
+
+// ============ SAFETY — SCHEDULED ATTENDANCE (auto-run per period) ============
+model SafetyScheduledAttendance {
+  id              String   @id @default(cuid())
+  schoolId        String   @default("school_default")
+  classId         String   // FK to Class (no DB FK to avoid coupling; classId is enough)
+  className       String
+  cameraId        String   // FK to SafetyCamera
+  period          Int      // 1-8
+  scheduledAt     DateTime // when to auto-run
+  lastRunAt       DateTime?
+  lastResult      String?  // JSON: {present:[], absent:[], unknown:[]}
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([classId, period])
+  @@index([schoolId, scheduledAt])
 }
 
 // ============ NOTIFICATIONS ============
