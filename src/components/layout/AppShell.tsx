@@ -31,7 +31,6 @@ import { HRMSModuleEnhanced, ConcernsModule, SISModule, DiaryModule, PhotoGaller
 
 const AI_MODULE_KEYS = [
   'ai-mock',
-  'ai-safety',
   'ai-calendar',
   'ai-academic',
   'ai-behavior',

@@ -53,7 +53,6 @@ export type ViewKey =
   | 'ai-calendar'
   | 'ai-question-paper'
   | 'ai-career'
-  | 'ai-safety'
   | 'ai-mock'
   | 'rag-knowledge'
   | 'settings'
