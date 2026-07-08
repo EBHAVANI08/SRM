@@ -487,6 +487,82 @@ export const STUDENTS: Student[] = [
       { date: '2026-06-15', staffName: 'Mr. Rajesh Kumar', mode: 'OFFLINE', status: 'COMPLETED', agenda: 'Term 1 Review & Future Planning', feedback: 'Discussed advanced math track. Parents very supportive.', parentRating: 5 },
     ],
   },
+  {
+    // Sibling of Aarav Singh (STU-2026-0142) — same guardianPhone +91 98765 43210, same address
+    id: 'STU-2026-0188',
+    admissionNo: 'ADM2026-0188',
+    firstName: 'Anaya',
+    lastName: 'Singh',
+    fullName: 'Anaya Singh',
+    dob: '2015-09-22',
+    gender: 'Female',
+    bloodGroup: 'B+',
+    nationality: 'Indian',
+    religion: 'Hindu',
+    category: 'General',
+    aadhaarNo: 'XXXX-XXXX-7820',
+    address: '42, MG Road, Indiranagar',
+    city: 'Bengaluru',
+    state: 'Karnataka',
+    pincode: '560038',
+    fatherName: 'Suresh Singh',
+    motherName: 'Sunita Singh',
+    guardianName: 'Suresh Singh',
+    guardianPhone: '+91 98765 43210',
+    guardianEmail: 'suresh.singh@email.com',
+    guardianOccupation: 'Software Engineer',
+    annualIncome: 1800000,
+    photo: '👧',
+    admissionDate: '2025-06-12',
+    previousSchool: 'Delhi Public School',
+    status: 'ACTIVE',
+    sectionId: '5-B',
+    classId: '5-B',
+    attendance: [
+      { date: '2026-07-01', status: 'PRESENT', checkIn: '08:15', checkOut: '15:30', method: 'FACE' },
+      { date: '2026-06-30', status: 'PRESENT', checkIn: '08:10', checkOut: '15:30', method: 'FACE' },
+      { date: '2026-06-29', status: 'PRESENT', checkIn: '08:18', checkOut: '15:30', method: 'FACE' },
+    ],
+    examScores: [
+      { exam: 'Unit Test 1', subject: 'English', maxMarks: 50, scored: 44, grade: 'A', date: '2026-06-20' },
+      { exam: 'Unit Test 1', subject: 'Maths', maxMarks: 50, scored: 47, grade: 'A+', date: '2026-06-22' },
+      { exam: 'Unit Test 1', subject: 'Science', maxMarks: 50, scored: 42, grade: 'A', date: '2026-06-24' },
+    ],
+    fees: [
+      { feeType: 'Tuition Q1', amount: 11500, paid: 11500, balance: 0, dueDate: '15 Apr 2026', status: 'PAID', paymentMethod: 'UPI', paidOn: '10 Apr 2026', receiptNo: 'RCP-301' },
+      { feeType: 'Tuition Q2', amount: 11500, paid: 11500, balance: 0, dueDate: '15 Jul 2026', status: 'PAID', paymentMethod: 'UPI', paidOn: '10 Jul 2026', receiptNo: 'RCP-302' },
+      { feeType: 'Transport', amount: 3000, paid: 3000, balance: 0, dueDate: '15 Jul 2026', status: 'PAID', paymentMethod: 'UPI', paidOn: '12 Jul 2026', receiptNo: 'RCP-303' },
+    ],
+    leaveRequests: [],
+    healthRecords: [
+      { date: '2026-04-12', issue: 'Seasonal Cold', treatment: 'Rest + fluids', prescribedBy: 'Dr. Mehta', notes: 'Recovered in 2 days' },
+    ],
+    behaviorRecords: [
+      { date: '2026-06-15', type: 'POSITIVE', description: 'Helped organize class library', points: 5, recordedBy: 'Mrs. Meena Iyer' },
+    ],
+    transportAssignment: {
+      routeId: 'RTE-002',
+      routeName: 'Indiranagar → LearnX',
+      vehicleNo: 'KA-01-MN-3344',
+      pickupPoint: 'MG Road Junction',
+      dropPoint: 'MG Road Junction',
+      pickupTime: '07:35 AM',
+      dropTime: '04:15 PM',
+    },
+    activities: [
+      { name: 'Classical Dance', role: 'Member', achievements: 'Won 2nd place at Inter-School Cultural Fest 2026' },
+    ],
+    documents: [
+      { title: 'Birth Certificate', type: 'BIRTH_CERT', uploadedOn: '2025-06-12', verified: true },
+      { title: 'Aadhaar Card', type: 'AADHAAR', uploadedOn: '2025-06-12', verified: true },
+    ],
+    reportCards: [
+      { term: 'TERM 1', overallPercentage: 88.0, overallGrade: 'A', overallRank: 4, attendancePercentage: 95.2, conduct: 'Excellent', teacherRemark: 'Anaya shows great creativity and teamwork.', principalRemark: 'Keep it up!', generatedAt: '2025-10-15', status: 'PUBLISHED' },
+    ],
+    ptmMeetings: [
+      { date: '2026-06-15', staffName: 'Mrs. Meena Iyer', mode: 'OFFLINE', status: 'COMPLETED', agenda: 'Term 1 Performance Review', feedback: 'Parents happy with progress. Discussed encouraging dance talent.', parentRating: 5 },
+    ],
+  },
 ]
 
 // ============ TEACHERS DATA ============

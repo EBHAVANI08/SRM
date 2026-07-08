@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/select'
 import { SectionHeader } from './SectionHeader'
 import { useNotificationPreview } from './NotificationPreviewModal'
+import { ApplicationStatusModal, type Applicant as StatusApplicant } from './ApplicationStatusModal'
 import { toast } from 'sonner'
 
 interface Applicant {
@@ -85,6 +86,7 @@ export function AdmissionsModuleEnhanced() {
   const [step, setStep] = useState(1)
   const [showSchedule, setShowSchedule] = useState(false)
   const [scheduleFor, setScheduleFor] = useState<Applicant | null>(null)
+  const [statusFor, setStatusFor] = useState<Applicant | null>(null)
   const [selectedDate, setSelectedDate] = useState('')
   const [selectedTime, setSelectedTime] = useState('')
   const [photoUploaded, setPhotoUploaded] = useState(false)
@@ -255,7 +257,10 @@ export function AdmissionsModuleEnhanced() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05 }}
           >
-            <Card className="p-5 rounded-2xl hover:shadow-lg transition-shadow">
+            <Card
+              className="p-5 rounded-2xl hover:shadow-lg transition-shadow cursor-pointer"
+              onClick={() => setStatusFor(app)}
+            >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
                   <div className="w-11 h-11 rounded-full flex items-center justify-center text-white font-semibold" style={{ background: app.avatarColor }}>
@@ -287,20 +292,28 @@ export function AdmissionsModuleEnhanced() {
                   <span className="text-[11px] text-slate-500">AI Score</span>
                   <span className="text-sm font-bold text-slate-900">{app.score}</span>
                 </div>
-                {(app.status === 'applied' || app.status === 'document') && (
-                  <Button size="sm" className="h-7 text-[11px] rounded-lg" style={{ background: '#1E3A8A' }} onClick={() => openSchedule(app)}>
-                    <Calendar className="w-3 h-3 mr-1" /> Schedule Interview
-                  </Button>
-                )}
-                {app.status === 'interview' && (
-                  <Button size="sm" variant="outline" className="h-7 text-[11px] rounded-lg" onClick={() => openSchedule(app)}>
-                    <RefreshCw className="w-3 h-3 mr-1" /> Reschedule
-                  </Button>
-                )}
-                {app.status === 'confirmed' && (
-                  <Badge variant="outline" className="bg-emerald-50 text-emerald-700 text-[10px]">Admitted</Badge>
-                )}
+                <span className="text-[10px] font-semibold text-blue-700 flex items-center gap-0.5">
+                  <Eye className="w-3 h-3" /> View Status
+                </span>
               </div>
+              {/* Action buttons row — clicking these does NOT open the status modal (stopPropagation) */}
+              {((app.status === 'applied' || app.status === 'document' || app.status === 'interview') || app.status === 'confirmed') && (
+                <div className="mt-3 pt-3 border-t border-slate-100 flex justify-end" onClick={(e) => e.stopPropagation()}>
+                  {(app.status === 'applied' || app.status === 'document') && (
+                    <Button size="sm" className="h-7 text-[11px] rounded-lg" style={{ background: '#1E3A8A' }} onClick={() => openSchedule(app)}>
+                      <Calendar className="w-3 h-3 mr-1" /> Schedule Interview
+                    </Button>
+                  )}
+                  {app.status === 'interview' && (
+                    <Button size="sm" variant="outline" className="h-7 text-[11px] rounded-lg" onClick={() => openSchedule(app)}>
+                      <RefreshCw className="w-3 h-3 mr-1" /> Reschedule
+                    </Button>
+                  )}
+                  {app.status === 'confirmed' && (
+                    <Badge variant="outline" className="bg-emerald-50 text-emerald-700 text-[10px]">Admitted</Badge>
+                  )}
+                </div>
+              )}
             </Card>
           </motion.div>
         ))}
@@ -594,6 +607,16 @@ export function AdmissionsModuleEnhanced() {
               </div>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Application Status Modal — opens on card click */}
+      <AnimatePresence>
+        {statusFor && (
+          <ApplicationStatusModal
+            applicant={statusFor as StatusApplicant}
+            onClose={() => setStatusFor(null)}
+          />
         )}
       </AnimatePresence>
     </div>

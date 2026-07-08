@@ -19,6 +19,8 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '@/components/ui/select'
 import { SectionHeader } from './SectionHeader'
+import { SchoolCampusMap, buildDirectionsText } from './SchoolCampusMap'
+import { useNotificationPreview } from './NotificationPreviewModal'
 import { useAppStore } from '@/lib/store'
 import { toast } from 'sonner'
 
@@ -56,6 +58,7 @@ export function FrontDeskModule() {
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<'all' | 'checked-in' | 'pending' | 'scheduled'>('all')
   const [selectedVisitor, setSelectedVisitor] = useState<Visitor | null>(null)
+  const { preview } = useNotificationPreview()
 
   const filteredVisitors = visitors.filter((v) => {
     const matchesSearch = v.name.toLowerCase().includes(search.toLowerCase()) || v.phone.includes(search) || v.purpose.toLowerCase().includes(search.toLowerCase())
@@ -260,7 +263,33 @@ export function FrontDeskModule() {
             visitor={selectedVisitor}
             onClose={() => { setShowGatePass(false); setSelectedVisitor(null) }}
             onSend={(method) => {
-              toast.success(`Gate pass sent via ${method.toUpperCase()}!`)
+              // Build the gate pass message body — includes AI campus directions
+              const v = selectedVisitor
+              const directions = v ? buildDirectionsText(v.purpose, v.host) : ''
+              const passBody = `🎟️ LEARNX GATE PASS\nPass ID: LX-GP-${v?.id || Date.now().toString().slice(-6)}\nVisitor: ${v?.name || ''}\nHost: ${v?.host || ''}\nPurpose: ${v?.purpose || ''}\nValid: 4 hours from issue\n\nShow the QR code at the Main Gate for paperless entry.\n\n${directions}\n\n— LearnX International School`
+
+              // Resolve destination zone name for the recipient line
+              const channel: 'WHATSAPP' | 'SMS' | 'EMAIL' =
+                method === 'whatsapp' ? 'WHATSAPP' : method === 'sms' ? 'SMS' : method === 'email' ? 'EMAIL' : 'WHATSAPP'
+
+              if (v) {
+                preview({
+                  recipients: [
+                    {
+                      id: v.id,
+                      name: v.name,
+                      contact: v.phone,
+                      channel,
+                      recipientType: 'PARENT',
+                    },
+                  ],
+                  subject: 'Your LearnX Gate Pass + Campus Directions',
+                  body: passBody,
+                  audience: 'MINIMUM',
+                  source: 'front-desk-gate-pass',
+                })
+              }
+              toast.success(`Gate pass with AI campus directions sent via ${method.toUpperCase()}!`)
               setShowGatePass(false)
               setSelectedVisitor(null)
             }}
@@ -1009,8 +1038,30 @@ function GatePassModal({ visitor, onClose, onSend }: {
           <div className="p-3 rounded-xl bg-blue-50 border border-blue-100 flex items-start gap-2">
             <Sparkles className="w-3.5 h-3.5 text-blue-700 flex-shrink-0 mt-0.5" />
             <p className="text-[11px] text-slate-700">
-              <span className="font-semibold">AI Auto-Send:</span> The gate pass will be delivered instantly with a personalized message including school address, host details, and visit instructions. Visitor can show the QR at the gate for paperless entry.
+              <span className="font-semibold">AI Auto-Send:</span> The gate pass will be delivered instantly with a personalized message including school address, host details, AI-routed campus directions, and visit instructions. Visitor can show the QR at the gate for paperless entry.
             </p>
+          </div>
+
+          {/* AI Campus Map + Directions — included in the pass message */}
+          <SchoolCampusMap
+            purpose={visitor?.purpose || 'General Visit'}
+            host={visitor?.host || ''}
+            showRoute={true}
+            height={260}
+          />
+
+          {/* Directions inclusion toggle (defaults on) */}
+          <div className="flex items-start gap-2 p-3 rounded-xl border border-orange-200 bg-orange-50/50">
+            <MapPin className="w-3.5 h-3.5 text-orange-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <div className="text-[11px] font-semibold text-slate-900">Directions included in pass message</div>
+              <p className="text-[10px] text-slate-600 mt-0.5 leading-relaxed">
+                The visitor will receive the AI-generated step-by-step route (Main Gate → Reception → destination) embedded in the WhatsApp/SMS/Email body, so they know exactly where to go before arriving.
+              </p>
+            </div>
+            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-full flex-shrink-0">
+              AUTO-ON
+            </span>
           </div>
         </div>
 

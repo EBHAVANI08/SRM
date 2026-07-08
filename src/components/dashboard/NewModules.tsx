@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/select'
 import { SectionHeader } from './SectionHeader'
 import { useNotificationPreview } from './NotificationPreviewModal'
+import { STUDENTS } from '@/lib/school-data'
 import { toast } from 'sonner'
 
 const SHARED_ACCENT = '#1E3A8A'
@@ -311,28 +312,76 @@ const SIS_STUDENTS = [
   { id: 'STU-008', name: 'Myra Singh', grade: '2-B', roll: '08', parent: 'Rohit Singh', phone: '+91 98222 33344', email: 'myra@learnx.edu', attendance: '91%', avgMarks: '83%', status: 'Active', fees: 'Paid', avatarColor: '#6366F1', initials: 'MS' },
 ]
 
+// In-memory mapping from short SIS ids to the rich STUDENTS records in school-data.ts.
+// When the user clicks a SIS row, we look up the full Student object (with all linked
+// attendance / fee / exam / health / behavior / transport / hostel / activities /
+// documents / reportCard / ptm records) so the biodata modal shows everything the
+// admin or teacher needs from a single screen.
+const SIS_TO_FULL_STUDENT_ID: Record<string, string> = {
+  'STU-001': 'STU-2026-0142', // Aarav Singh (sibling: Anaya Singh)
+  'STU-002': 'STU-2026-0089', // Diya Patel
+  'STU-003': 'STU-2026-0210', // Vivaan Gupta
+  'STU-004': 'STU-2026-0188', // mapped to Anaya Singh for sibling demo
+}
+
+// Grade → Class Teacher lookup for SIS (mirrors AdmissionsModuleEnhanced's GRADE_TEACHERS)
+const GRADE_TEACHERS_LOOKUP: Record<string, { name: string; dept: string; phone: string; email: string }> = {
+  'Grade 1': { name: 'Mrs. Anita Verma', dept: 'Primary', phone: '+91 99001 11111', email: 'anita.verma@learnx.edu' },
+  'Grade 2': { name: 'Mr. Suresh Rao', dept: 'Primary', phone: '+91 99001 33333', email: 'suresh.rao@learnx.edu' },
+  'Grade 3': { name: 'Mrs. Meena Iyer', dept: 'Primary', phone: '+91 99001 44444', email: 'meena.iyer@learnx.edu' },
+  'Grade 4': { name: 'Mr. Ramesh Kumar', dept: 'Primary', phone: '+91 99001 55555', email: 'ramesh.kumar@learnx.edu' },
+  'Grade 5': { name: 'Dr. Priya Sharma', dept: 'Middle', phone: '+91 99001 66666', email: 'priya.sharma@learnx.edu' },
+  'Grade 6': { name: 'Dr. Priya Sharma', dept: 'Middle', phone: '+91 99001 66666', email: 'priya.sharma@learnx.edu' },
+  'Grade 7': { name: 'Mr. Arun Nair', dept: 'Middle', phone: '+91 99001 77777', email: 'arun.nair@learnx.edu' },
+  'Grade 8': { name: 'Mrs. Deepa Menon', dept: 'Middle', phone: '+91 99001 88888', email: 'deepa.menon@learnx.edu' },
+  'Grade 9': { name: 'Dr. Vikram Rao', dept: 'Senior', phone: '+91 99001 99999', email: 'vikram.rao@learnx.edu' },
+  'Grade 10': { name: 'Dr. Vikram Rao', dept: 'Senior', phone: '+91 99001 99999', email: 'vikram.rao@learnx.edu' },
+}
+
 export function SISModule() {
   const { preview } = useNotificationPreview()
   const [search, setSearch] = useState('')
   const [gradeFilter, setGradeFilter] = useState('All')
+  const [sectionFilter, setSectionFilter] = useState('All')
   const [selected, setSelected] = useState<typeof SIS_STUDENTS[0] | null>(null)
+  const [messageText, setMessageText] = useState('')
 
   const filtered = SIS_STUDENTS.filter((s) => {
-    const ms = s.name.toLowerCase().includes(search.toLowerCase()) || s.id.toLowerCase().includes(search.toLowerCase()) || s.parent.toLowerCase().includes(search.toLowerCase())
-    const mf = gradeFilter === 'All' || s.grade === gradeFilter
-    return ms && mf
+    const ms = s.name.toLowerCase().includes(search.toLowerCase())
+      || s.id.toLowerCase().includes(search.toLowerCase())
+      || s.parent.toLowerCase().includes(search.toLowerCase())
+      || s.phone.includes(search)
+    const mg = gradeFilter === 'All' || s.grade === gradeFilter
+    const msect = sectionFilter === 'All' || s.grade.split('-')[1] === sectionFilter
+    return ms && mg && msect
   })
+
+  const allGrades = Array.from(new Set(SIS_STUDENTS.map((s) => s.grade))).sort()
+  const allSections = Array.from(new Set(SIS_STUDENTS.map((s) => s.grade.split('-')[1]).filter(Boolean))).sort()
 
   return (
     <div className="p-4 lg:p-8 space-y-6 animate-page-enter max-w-[1600px] mx-auto">
-      <SectionHeader emoji="📊" title="Student Information System" subtitle="Cross-module student database — single source of truth" accent="#0D9488" onNew={() => toast.success('New student form opened')} newLabel="Add Student" onRefresh={() => toast.success('✅ Refreshed')} aiActions={[{ label: 'profiles enriched by AI', count: 847 }, { label: 'at-risk flags', count: 23 }]} />
+      <SectionHeader emoji="📊" title="Student Information System" subtitle="AI-enhanced cross-module student database — single source of truth" accent="#0D9488" onNew={() => toast.success('New student form opened')} newLabel="Add Student" onRefresh={() => toast.success('✅ Refreshed')} aiActions={[{ label: 'profiles enriched by AI', count: 847 }, { label: 'at-risk flags', count: 23 }, { label: 'siblings linked', count: 142 }]} />
 
       <Card className="rounded-2xl overflow-hidden">
         <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
           <div><h3 className="text-sm font-semibold text-slate-900">Student Directory</h3><p className="text-[11px] text-slate-500">{filtered.length} of {SIS_STUDENTS.length} students</p></div>
-          <div className="flex items-center gap-2">
-            <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" /><Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search…" className="pl-9 h-9 text-xs rounded-lg w-48" /></div>
-            <Select value={gradeFilter} onValueChange={setGradeFilter}><SelectTrigger className="h-9 text-xs rounded-lg w-32"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="All">All Grades</SelectItem>{['2-B', '3-A', '5-B', '6-C', '7-A', '8-A', '9-B', '10-A'].map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent></Select>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" /><Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name, ID, parent, phone…" className="pl-9 h-9 text-xs rounded-lg w-56" /></div>
+            <Select value={gradeFilter} onValueChange={setGradeFilter}>
+              <SelectTrigger className="h-9 text-xs rounded-lg w-32"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All">All Grades</SelectItem>
+                {allGrades.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={sectionFilter} onValueChange={setSectionFilter}>
+              <SelectTrigger className="h-9 text-xs rounded-lg w-28"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All">All Sections</SelectItem>
+                {allSections.map((s) => <SelectItem key={s} value={s}>Section {s}</SelectItem>)}
+              </SelectContent>
+            </Select>
             <Button size="sm" variant="outline" className="h-9 text-xs rounded-lg" onClick={() => toast.success('Exported to CSV')}><Download className="w-3.5 h-3.5 mr-1" /> Export</Button>
           </div>
         </div>
@@ -351,7 +400,7 @@ export function SISModule() {
             </tr></thead>
             <tbody>
               {filtered.map((s) => (
-                <tr key={s.id} className="border-b border-slate-100 hover:bg-slate-50">
+                <tr key={s.id} className="border-b border-slate-100 hover:bg-slate-50 cursor-pointer" onClick={() => setSelected(s)}>
                   <td className="px-4 py-3"><div className="flex items-center gap-2"><div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[10px] font-semibold" style={{ background: s.avatarColor }}>{s.initials}</div><div><div className="font-medium text-slate-900">{s.name}</div><div className="text-[10px] text-slate-500">Roll #{s.roll}</div></div></div></td>
                   <td className="px-4 py-3 font-mono text-slate-500">{s.id}</td>
                   <td className="px-4 py-3 text-slate-700">{s.grade}</td>
@@ -360,7 +409,7 @@ export function SISModule() {
                   <td className="px-4 py-3 text-slate-700 font-medium">{s.avgMarks}</td>
                   <td className="px-4 py-3"><Badge variant="outline" className={`text-[10px] ${s.fees === 'Paid' ? 'bg-emerald-50 text-emerald-700' : s.fees === 'Partial' ? 'bg-amber-50 text-amber-700' : 'bg-rose-50 text-rose-700'}`}>{s.fees}</Badge></td>
                   <td className="px-4 py-3"><Badge variant="outline" className={`text-[10px] ${s.status === 'Active' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>{s.status}</Badge></td>
-                  <td className="px-4 py-3"><Button size="sm" variant="outline" className="h-7 text-[11px] rounded-lg" onClick={() => setSelected(s)}><Eye className="w-3 h-3 mr-1" /> View</Button></td>
+                  <td className="px-4 py-3"><Button size="sm" variant="outline" className="h-7 text-[11px] rounded-lg" onClick={(e) => { e.stopPropagation(); setSelected(s) }}><Eye className="w-3 h-3 mr-1" /> View Biodata</Button></td>
                 </tr>
               ))}
             </tbody>
@@ -370,28 +419,372 @@ export function SISModule() {
 
       <AnimatePresence>
         {selected && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm" onClick={() => setSelected(null)}>
-            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} onClick={(e) => e.stopPropagation()} className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden">
-              <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between" style={{ background: '#0D9488' }}>
-                <div className="flex items-center gap-3 text-white"><div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center font-semibold">{selected.initials}</div><div><h3 className="text-sm font-semibold">{selected.name}</h3><p className="text-[11px] opacity-90">{selected.id} · Grade {selected.grade} · Roll #{selected.roll}</p></div></div>
-                <button onClick={() => setSelected(null)} className="p-1.5 rounded-lg hover:bg-white/20 text-white"><X className="w-5 h-5" /></button>
-              </div>
-              <div className="p-6 grid grid-cols-2 gap-3">
-                <div className="p-3 rounded-lg bg-slate-50"><div className="text-[10px] text-slate-500 uppercase">Parent</div><div className="text-xs font-medium text-slate-900 mt-0.5">{selected.parent}</div></div>
-                <div className="p-3 rounded-lg bg-slate-50"><div className="text-[10px] text-slate-500 uppercase">Phone</div><div className="text-xs font-medium text-slate-900 mt-0.5">{selected.phone}</div></div>
-                <div className="p-3 rounded-lg bg-slate-50"><div className="text-[10px] text-slate-500 uppercase">Email</div><div className="text-xs font-medium text-slate-900 mt-0.5">{selected.email}</div></div>
-                <div className="p-3 rounded-lg bg-slate-50"><div className="text-[10px] text-slate-500 uppercase">Status</div><div className="text-xs font-medium text-slate-900 mt-0.5">{selected.status}</div></div>
-                <div className="p-3 rounded-lg bg-emerald-50"><div className="text-[10px] text-emerald-600 uppercase">Attendance</div><div className="text-sm font-bold text-emerald-700 mt-0.5">{selected.attendance}</div></div>
-                <div className="p-3 rounded-lg bg-blue-50"><div className="text-[10px] text-blue-600 uppercase">Avg Marks</div><div className="text-sm font-bold text-blue-700 mt-0.5">{selected.avgMarks}</div></div>
-              </div>
-              <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-2">
-                <Button size="sm" variant="outline" className="h-9 text-xs rounded-lg" onClick={() => { preview({ recipients: [{ id: selected.id, name: selected.parent, contact: selected.phone, channel: 'WHATSAPP', recipientType: 'PARENT' }], body: `Dear ${selected.parent}, please find ${selected.name}'s profile summary on the LearnX Parent Portal. — LearnX SIS`, source: 'sis_parent_notify' }); toast.success('📤 Profile shared') }}><Send className="w-3.5 h-3.5 mr-1" /> Share Profile</Button>
-                <Button size="sm" className="h-9 text-xs rounded-lg text-white" style={{ background: '#0D9488' }} onClick={() => setSelected(null)}><CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Close</Button>
-              </div>
-            </motion.div>
-          </motion.div>
+          <SISBiodataModal
+            row={selected}
+            messageText={messageText}
+            setMessageText={setMessageText}
+            onClose={() => setSelected(null)}
+            onMessageParent={(body, subject) => {
+              preview({
+                recipients: [{ id: selected.id, name: selected.parent, contact: selected.phone, channel: 'WHATSAPP', recipientType: 'PARENT' }],
+                subject,
+                body,
+                audience: 'MINIMUM',
+                source: 'sis-message-parent',
+              })
+              toast.success(`Message prepared for ${selected.parent}`)
+            }}
+            onInformTeacher={(teacherName, teacherPhone, body, subject) => {
+              preview({
+                recipients: [{ id: `teacher-${selected.grade}`, name: teacherName, contact: teacherPhone, channel: 'WHATSAPP', recipientType: 'STAFF' }],
+                subject,
+                body,
+                audience: 'MINIMUM',
+                source: 'sis-inform-teacher',
+              })
+              toast.success(`Message prepared for ${teacherName} (Class Teacher)`)
+            }}
+          />
         )}
       </AnimatePresence>
+    </div>
+  )
+}
+
+/**
+ * SIS Biodata Modal — shows the full student record from school-data.ts
+ * (attendance, fees, exams, behavior, health, transport, hostel, activities,
+ * documents, report cards, PTM meetings), auto-detects siblings via
+ * guardianPhone match, surfaces an AI at-risk summary, and exposes
+ * "Message Parent" + "Inform Class Teacher" actions.
+ */
+function SISBiodataModal({
+  row,
+  messageText,
+  setMessageText,
+  onClose,
+  onMessageParent,
+  onInformTeacher,
+}: {
+  row: typeof SIS_STUDENTS[0]
+  messageText: string
+  setMessageText: (s: string) => void
+  onClose: () => void
+  onMessageParent: (body: string, subject: string) => void
+  onInformTeacher: (teacherName: string, teacherPhone: string, body: string, subject: string) => void
+}) {
+  // Resolve the full Student record (with linked records) from school-data.ts
+  const fullId = SIS_TO_FULL_STUDENT_ID[row.id]
+  const full = fullId ? STUDENTS.find((s) => s.id === fullId) : undefined
+
+  // Sibling detection — match by guardianPhone (excluding self)
+  const siblings = full
+    ? STUDENTS.filter((s) => s.id !== full.id && s.guardianPhone === full.guardianPhone)
+    : []
+
+  // Resolve class teacher for the student's grade
+  const gradeNum = row.grade.split('-')[0]
+  const teacherKey = `Grade ${gradeNum}`
+  const teacher = GRADE_TEACHERS_LOOKUP[teacherKey] || GRADE_TEACHERS_LOOKUP['Grade 1']
+
+  // AI at-risk summary (rule-based, deterministic, explainable)
+  const attendancePct = full && full.attendance.length > 0
+    ? Math.round(full.attendance.filter((a) => a.status === 'PRESENT').length / full.attendance.length * 100)
+    : parseInt(row.attendance)
+  const feesOverdue = full ? full.fees.some((f) => f.status === 'OVERDUE' || f.status === 'PENDING') : row.fees !== 'Paid'
+  const negativeBehavior = full ? full.behaviorRecords.filter((b) => b.type === 'NEGATIVE').length : 0
+  const positiveBehavior = full ? full.behaviorRecords.filter((b) => b.type === 'POSITIVE').length : 0
+  const atRisk = attendancePct < 85 || feesOverdue || negativeBehavior > positiveBehavior + 2
+
+  const aiSummary = atRisk
+    ? `⚠️ At-Risk: Attendance ${attendancePct}%, fees ${feesOverdue ? 'overdue' : 'ok'}, ${negativeBehavior} negative behavior incidents vs ${positiveBehavior} positive. Recommend counselor intervention within 7 days.`
+    : `✅ Healthy: Attendance ${attendancePct}%, fees ${feesOverdue ? 'overdue' : 'current'}, ${positiveBehavior} positive behavior incidents. Continue current engagement.`
+
+  const handleSendParent = () => {
+    const subject = `Message from LearnX SIS regarding ${row.name}`
+    const body = messageText.trim()
+      ? `Dear ${row.parent},\n\n${messageText}\n\n— LearnX SIS (regarding ${row.name}, Grade ${row.grade})`
+      : `Dear ${row.parent},\n\nThis is a message from the LearnX Student Information System regarding ${row.name} (Grade ${row.grade}). Please find the latest profile snapshot below:\n\nAttendance: ${attendancePct}%\nFees: ${feesOverdue ? 'OVERDUE — please clear at the earliest' : 'Up to date'}\nBehavior: ${positiveBehavior} positive / ${negativeBehavior} negative incidents this term\n\n— LearnX SIS`
+    onMessageParent(body, subject)
+  }
+
+  const handleInformTeacher = () => {
+    const subject = `SIS Note regarding ${row.name} (Grade ${row.grade})`
+    const body = messageText.trim()
+      ? `Dear ${teacher.name},\n\nNote from the LearnX SIS regarding ${row.name} (Grade ${row.grade}, Roll ${row.roll}):\n\n${messageText}\n\nStudent summary:\n- Attendance: ${attendancePct}%\n- Fees: ${feesOverdue ? 'Overdue' : 'Current'}\n- Behavior: ${positiveBehavior}+ / ${negativeBehavior}- this term\n- AI Risk: ${atRisk ? 'AT-RISK' : 'Healthy'}\n\nParent / Guardian: ${row.parent} (${row.phone})\n\n— LearnX SIS`
+      : `Dear ${teacher.name},\n\nSharing an update regarding ${row.name} (Grade ${row.grade}, Roll ${row.roll}).\n\nStudent summary:\n- Attendance: ${attendancePct}%\n- Fees: ${feesOverdue ? 'Overdue' : 'Current'}\n- Behavior: ${positiveBehavior}+ / ${negativeBehavior}- this term\n- AI Risk: ${atRisk ? 'AT-RISK — please monitor' : 'Healthy'}\n\nParent / Guardian: ${row.parent} (${row.phone})\n\n— LearnX SIS`
+    onInformTeacher(teacher.name, teacher.phone, body, subject)
+  }
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm" onClick={onClose}>
+      <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} onClick={(e) => e.stopPropagation()} className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[92vh] overflow-hidden flex flex-col" style={{ borderTop: '4px solid #0D9488' }}>
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between" style={{ background: '#0D9488' }}>
+          <div className="flex items-center gap-3 text-white">
+            <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center font-semibold text-lg">{row.initials}</div>
+            <div>
+              <h3 className="text-sm font-semibold">{row.name}</h3>
+              <p className="text-[11px] opacity-90">{row.id} · Grade {row.grade} · Roll #{row.roll}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/20 text-white"><X className="w-5 h-5" /></button>
+        </div>
+
+        {/* Body — scrollable */}
+        <div className="flex-1 overflow-y-auto custom-scroll p-6 space-y-5">
+          {/* AI Summary banner */}
+          <div className={`p-3 rounded-xl border flex items-start gap-2 ${atRisk ? 'border-rose-200 bg-rose-50' : 'border-emerald-200 bg-emerald-50'}`}>
+            <Sparkles className={`w-4 h-4 flex-shrink-0 mt-0.5 ${atRisk ? 'text-rose-600' : 'text-emerald-600'}`} />
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wide text-slate-700">AI Risk Assessment</div>
+              <p className={`text-[11px] leading-relaxed mt-0.5 ${atRisk ? 'text-rose-800' : 'text-emerald-800'}`}>{aiSummary}</p>
+            </div>
+          </div>
+
+          {/* Personal Info grid */}
+          <div>
+            <div className="text-xs font-semibold text-slate-700 mb-2 flex items-center gap-1.5">
+              <Users className="w-3.5 h-3.5 text-slate-500" /> Personal Information
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <InfoCell label="Admission No" value={full?.admissionNo || row.id} />
+              <InfoCell label="Date of Birth" value={full?.dob || '—'} />
+              <InfoCell label="Gender" value={full?.gender || '—'} />
+              <InfoCell label="Blood Group" value={full?.bloodGroup || '—'} />
+              <InfoCell label="Category" value={full?.category || '—'} />
+              <InfoCell label="Nationality" value={full?.nationality || 'Indian'} />
+              <InfoCell label="Admission Date" value={full?.admissionDate || '—'} />
+              <InfoCell label="Previous School" value={full?.previousSchool || '—'} />
+              <InfoCell label="Status" value={full?.status || row.status} />
+            </div>
+          </div>
+
+          {/* Parent / Guardian */}
+          <div>
+            <div className="text-xs font-semibold text-slate-700 mb-2 flex items-center gap-1.5">
+              <Phone className="w-3.5 h-3.5 text-slate-500" /> Parent / Guardian
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <InfoCell label="Father" value={full?.fatherName || '—'} />
+              <InfoCell label="Mother" value={full?.motherName || '—'} />
+              <InfoCell label="Guardian" value={full?.guardianName || row.parent} />
+              <InfoCell label="Phone" value={full?.guardianPhone || row.phone} />
+              <InfoCell label="Email" value={full?.guardianEmail || row.email} />
+              <InfoCell label="Occupation" value={full?.guardianOccupation || '—'} />
+              <InfoCell label="Annual Income" value={full ? `₹${full.annualIncome.toLocaleString('en-IN')}` : '—'} />
+              <InfoCell label="Address" value={full ? `${full.address}, ${full.city}, ${full.state} ${full.pincode}` : '—'} colSpan={3} />
+            </div>
+          </div>
+
+          {/* Siblings — auto-detected via guardianPhone match */}
+          <div>
+            <div className="text-xs font-semibold text-slate-700 mb-2 flex items-center gap-1.5">
+              <Heart className="w-3.5 h-3.5 text-rose-500" /> Siblings
+              <span className="ml-auto text-[10px] text-slate-400 font-normal">auto-detected via guardian phone</span>
+            </div>
+            {siblings.length === 0 ? (
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 text-[11px] text-slate-500">
+                No siblings found enrolled at this school (matched by guardian phone {full?.guardianPhone || row.phone}).
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {siblings.map((sib) => {
+                  const sibAttendance = sib.attendance.filter((a) => a.status === 'PRESENT').length / Math.max(sib.attendance.length, 1) * 100
+                  const sibFeesOverdue = sib.fees.some((f) => f.status === 'OVERDUE' || f.status === 'PENDING')
+                  return (
+                    <div key={sib.id} className="p-3 rounded-xl border border-slate-200 bg-white flex items-start gap-2">
+                      <div className="w-9 h-9 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center text-base">
+                        {sib.photo}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-semibold text-slate-900">{sib.fullName}</div>
+                        <div className="text-[10px] text-slate-500 font-mono">{sib.id} · {sib.sectionId}</div>
+                        <div className="text-[10px] text-slate-600 mt-1">
+                          DOB: {sib.dob} · Blood: {sib.bloodGroup}
+                        </div>
+                        <div className="flex flex-wrap gap-1 mt-1.5">
+                          <Badge variant="outline" className={`text-[9px] ${sibAttendance >= 90 ? 'bg-emerald-50 text-emerald-700' : sibAttendance >= 80 ? 'bg-amber-50 text-amber-700' : 'bg-rose-50 text-rose-700'}`}>
+                            Att {Math.round(sibAttendance)}%
+                          </Badge>
+                          <Badge variant="outline" className={`text-[9px] ${sibFeesOverdue ? 'bg-rose-50 text-rose-700' : 'bg-emerald-50 text-emerald-700'}`}>
+                            Fees {sibFeesOverdue ? 'Overdue' : 'Paid'}
+                          </Badge>
+                          {sib.activities && sib.activities[0] && (
+                            <Badge variant="outline" className="text-[9px] bg-violet-50 text-violet-700">
+                              {sib.activities[0].name}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Academic snapshot — Attendance, Exams, Report Card */}
+          {full && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100">
+                <div className="text-[10px] text-emerald-700 uppercase font-semibold mb-1">Attendance (last {full.attendance.length} days)</div>
+                <div className="text-2xl font-bold text-emerald-700">{attendancePct}%</div>
+                <div className="text-[10px] text-emerald-600 mt-0.5">
+                  {full.attendance.filter((a) => a.status === 'PRESENT').length} present · {full.attendance.filter((a) => a.status === 'ABSENT').length} absent
+                </div>
+              </div>
+              <div className="p-3 rounded-xl bg-blue-50 border border-blue-100">
+                <div className="text-[10px] text-blue-700 uppercase font-semibold mb-1">Latest Exam Avg</div>
+                <div className="text-2xl font-bold text-blue-700">
+                  {full.examScores.length > 0
+                    ? Math.round(full.examScores.reduce((a, e) => a + (e.scored / e.maxMarks * 100), 0) / full.examScores.length) + '%'
+                    : '—'}
+                </div>
+                <div className="text-[10px] text-blue-600 mt-0.5">{full.examScores.length} exams recorded</div>
+              </div>
+              <div className="p-3 rounded-xl bg-violet-50 border border-violet-100">
+                <div className="text-[10px] text-violet-700 uppercase font-semibold mb-1">Report Card (Term 1)</div>
+                <div className="text-2xl font-bold text-violet-700">
+                  {full.reportCards[0] ? `${full.reportCards[0].overallPercentage}%` : '—'}
+                </div>
+                <div className="text-[10px] text-violet-600 mt-0.5">
+                  {full.reportCards[0] ? `${full.reportCards[0].overallGrade} · Rank ${full.reportCards[0].overallRank}` : 'No report card'}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Cross-module linked records */}
+          {full && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <LinkedRecordCard
+                title="Fee Records"
+                count={full.fees.length}
+                items={full.fees.map((f) => ({ label: f.feeType, value: `₹${f.amount}`, badge: f.status }))}
+                accent="#22C55E"
+              />
+              <LinkedRecordCard
+                title="Health Records"
+                count={full.healthRecords.length}
+                items={full.healthRecords.map((h) => ({ label: h.issue, value: h.date, badge: h.treatment }))}
+                accent="#E11D48"
+              />
+              <LinkedRecordCard
+                title="Behavior Records"
+                count={full.behaviorRecords.length}
+                items={full.behaviorRecords.map((b) => ({ label: b.description, value: b.date, badge: b.type }))}
+                accent="#F59E0B"
+              />
+              <LinkedRecordCard
+                title="Documents"
+                count={full.documents.length}
+                items={full.documents.map((d) => ({ label: d.title, value: d.uploadedOn, badge: d.verified ? 'VERIFIED' : 'PENDING' }))}
+                accent="#1E3A8A"
+              />
+              {full.transportAssignment && (
+                <LinkedRecordCard
+                  title="Transport"
+                  count={1}
+                  items={[{ label: full.transportAssignment.routeName, value: `Pickup ${full.transportAssignment.pickupTime}`, badge: full.transportAssignment.vehicleNo }]}
+                  accent="#0D9488"
+                />
+              )}
+              {full.activities.length > 0 && (
+                <LinkedRecordCard
+                  title="Activities"
+                  count={full.activities.length}
+                  items={full.activities.map((a) => ({ label: a.name, value: a.category, badge: (a.performance || '').slice(0, 30) }))}
+                  accent="#7C3AED"
+                />
+              )}
+            </div>
+          )}
+
+          {/* Message composer — used for both parent + teacher */}
+          <div>
+            <div className="text-xs font-semibold text-slate-700 mb-2 flex items-center gap-1.5">
+              <MessageCircle className="w-3.5 h-3.5 text-slate-500" /> Quick Message
+              <span className="ml-auto text-[10px] text-slate-400 font-normal">optional — leave blank to send profile summary</span>
+            </div>
+            <Textarea
+              value={messageText}
+              onChange={(e) => setMessageText(e.target.value)}
+              placeholder="Type a custom message to send to the parent or class teacher…"
+              className="text-xs rounded-lg min-h-[60px]"
+            />
+          </div>
+        </div>
+
+        {/* Footer — Parent + Teacher actions */}
+        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between gap-2 flex-wrap">
+          <div className="text-[11px] text-slate-500">
+            <div className="font-semibold text-slate-700">Class Teacher: {teacher.name}</div>
+            <div className="flex items-center gap-2 mt-0.5">
+              <Phone className="w-2.5 h-2.5" /> {teacher.phone}
+              <Mail className="w-2.5 h-2.5 ml-2" /> {teacher.email}
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" className="h-9 text-xs rounded-lg gap-1.5" onClick={handleInformTeacher}>
+              <Send className="w-3.5 h-3.5" />
+              Inform Class Teacher
+            </Button>
+            <Button size="sm" className="h-9 text-xs rounded-lg text-white gap-1.5" style={{ background: '#0D9488' }} onClick={handleSendParent}>
+              <Send className="w-3.5 h-3.5" />
+              Message Parent
+            </Button>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  )
+}
+
+function InfoCell({ label, value, colSpan = 1 }: { label: string; value: string; colSpan?: number }) {
+  return (
+    <div className={`p-2.5 rounded-lg bg-slate-50 border border-slate-100 ${colSpan === 3 ? 'col-span-2 sm:col-span-3' : ''}`}>
+      <div className="text-[9px] text-slate-500 uppercase tracking-wide">{label}</div>
+      <div className="text-[11px] font-semibold text-slate-900 mt-0.5 break-words">{value}</div>
+    </div>
+  )
+}
+
+function LinkedRecordCard({
+  title,
+  count,
+  items,
+  accent,
+}: {
+  title: string
+  count: number
+  items: { label: string; value: string; badge?: string }[]
+  accent: string
+}) {
+  return (
+    <div className="p-3 rounded-xl border border-slate-200 bg-white">
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-[11px] font-semibold" style={{ color: accent }}>{title}</div>
+        <Badge variant="outline" className="text-[9px]" style={{ color: accent, borderColor: accent + '40' }}>{count}</Badge>
+      </div>
+      {items.length === 0 ? (
+        <div className="text-[10px] text-slate-400">No records</div>
+      ) : (
+        <div className="space-y-1">
+          {items.slice(0, 4).map((it, i) => (
+            <div key={i} className="flex items-center justify-between gap-2 text-[10px]">
+              <span className="text-slate-700 truncate flex-1">{it.label}</span>
+              <span className="text-slate-500 font-mono">{it.value}</span>
+              {it.badge && (
+                <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 flex-shrink-0">
+                  {it.badge.length > 14 ? it.badge.slice(0, 14) + '…' : it.badge}
+                </span>
+              )}
+            </div>
+          ))}
+          {items.length > 4 && <div className="text-[10px] text-slate-400 pt-1">+ {items.length - 4} more</div>}
+        </div>
+      )}
     </div>
   )
 }
