@@ -1,0 +1,902 @@
+     1→    50→    50→    50→}
+     2→    51→    51→    51→
+     3→    52→    52→    52→model AcademicYear {
+     4→    53→    53→    53→  id        String   @id @default(cuid())
+     5→    54→    54→    54→  name      String   // e.g. "2025-2026"
+     6→    55→    55→    55→  startDate DateTime
+     7→    56→    56→    56→  endDate   DateTime
+     8→    57→    57→    57→  isActive  Boolean  @default(false)
+     9→    58→    58→    58→  createdAt DateTime @default(now())
+    10→    59→    59→    59→
+    11→    60→    60→    60→  classes   Class[]
+    12→    61→    61→    61→  exams     Exam[]
+    13→    62→    62→    62→  events    Event[]
+    14→    63→    63→    63→  fees      Fee[]
+    15→    64→    64→    64→}
+    16→    65→    65→    65→
+    17→    66→    66→    66→model Grade {
+    18→    67→    67→    67→  id        String   @id @default(cuid())
+    19→    68→    68→    68→  name      String   // e.g. "Grade 1", "Kindergarten"
+    20→    69→    69→    69→  level     String   // KG, PRIMARY, SECONDARY, SR_SECONDARY
+    21→    70→    70→    70→  order     Int
+    22→    71→    71→    71→
+    23→    72→    72→    72→  sections  Section[]
+    24→    73→    73→    73→  subjects  Subject[]
+    25→    74→    74→    74→}
+    26→    75→    75→    75→
+    27→    76→    76→    76→model Section {
+    28→    77→    77→    77→  id        String   @id @default(cuid())
+    29→    78→    78→    78→  name      String   // A, B, C
+    30→    79→    79→    79→  gradeId   String
+    31→    80→    80→    80→  grade     Grade    @relation(fields: [gradeId], references: [id])
+    32→    81→    81→    81→  capacity  Int      @default(40)
+    33→    82→    82→    82→
+    34→    83→    83→    83→  classes   Class[]
+    35→    84→    84→    84→  students  Student[]
+    36→    85→    85→    85→}
+    37→    86→    86→    86→
+    38→    87→    87→    87→model Subject {
+    39→    88→    88→    88→  id        String   @id @default(cuid())
+    40→    89→    89→    89→  name      String
+    41→    90→    90→    90→  code      String
+    42→    91→    91→    91→  gradeId   String?
+    43→    92→    92→    92→  grade     Grade?   @relation(fields: [gradeId], references: [id])
+    44→    93→    93→    93→  isCore    Boolean  @default(true)
+    45→    94→    94→    94→
+    46→    95→    95→    95→  exams     Exam[]
+    47→    96→    96→    96→  lessons   LessonPlan[]
+    48→    97→    97→    97→  portions  Portion[]
+    49→    98→    98→    98→  scores    ExamScore[]
+    50→    99→    99→    99→}
+    51→   100→   100→   100→
+    52→   101→   101→   101→model Class {
+    53→   102→   102→   102→  id           String   @id @default(cuid())
+    54→   103→   103→   103→  academicYearId String
+    55→   104→   104→   104→  academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
+    56→   105→   105→   105→  sectionId    String
+    57→   106→   106→   106→  section      Section  @relation(fields: [sectionId], references: [id])
+    58→   107→   107→   107→  classTeacherId String?
+    59→   108→   108→   108→  room          String?
+    60→   109→   109→   109→
+    61→   110→   110→   110→  timetable    Timetable[]
+    62→   111→   111→   111→  students     Student[]   @relation("ClassStudents")
+    63→   112→   112→   112→  // substitutions Substitution[]
+    64→   113→   113→   113→}
+    65→   114→   114→   114→
+    66→   115→   115→   115→// ============ STUDENTS ============
+    67→   116→   116→   116→model Student {
+    68→   117→   117→   117→  id              String   @id @default(cuid())
+    69→   118→   118→   118→  admissionNo     String   @unique
+    70→   119→   119→   119→  firstName       String
+    71→   120→   120→   120→  lastName        String
+    72→   121→   121→   121→  fullName        String
+    73→   122→   122→   122→  dob             DateTime
+    74→   123→   123→   123→  gender          String   // MALE, FEMALE, OTHER
+    75→   124→   124→   124→  bloodGroup      String?
+    76→   125→   125→   125→  nationality     String   @default("Indian")
+    77→   126→   126→   126→  religion        String?
+    78→   127→   127→   127→  category        String?  // General, OBC, SC, ST
+    79→   128→   128→   128→  aadhaarNo       String?
+    80→   129→   129→   129→  address         String?
+    81→   130→   130→   130→  city            String?
+    82→   131→   131→   131→  state           String?
+    83→   132→   132→   132→  pincode         String?
+    84→   133→   133→   133→  fatherName      String?
+    85→   134→   134→   134→  motherName      String?
+    86→   135→   135→   135→  guardianName    String?
+    87→   136→   136→   136→  guardianPhone   String
+    88→   137→   137→   137→  guardianEmail   String?
+    89→   138→   138→   138→  guardianOccupation String?
+    90→   139→   139→   139→  annualIncome    Float?
+    91→   140→   140→   140→  photo           String?
+    92→   141→   141→   141→  medicalConditions String?
+    93→   142→   142→   142→  allergies       String?
+    94→   143→   143→   143→  admissionDate   DateTime @default(now())
+    95→   144→   144→   144→  previousSchool  String?
+    96→   145→   145→   145→  transferCertificate String?
+    97→   146→   146→   146→  birthCertificate String?
+    98→   147→   147→   147→  status          String   @default("ACTIVE") // ACTIVE, GRADUATED, TRANSFERRED, INACTIVE
+    99→   148→   148→   148→  academicYearId  String?
+   100→   149→   149→   149→
+   101→   150→   150→   150→  userId          String?
+   102→   151→   151→   151→  user            User?    @relation(fields: [userId], references: [id])
+   103→   152→   152→   152→  sectionId       String?
+   104→   153→   153→   153→  section         Section? @relation(fields: [sectionId], references: [id])
+   105→   154→   154→   154→  classId         String?
+   106→   155→   155→   155→  class           Class?   @relation("ClassStudents", fields: [classId], references: [id])
+   107→   156→   156→   156→
+   108→   157→   157→   157→  attendance      Attendance[]
+   109→   158→   158→   158→  examScores      ExamScore[]
+   110→   159→   159→   159→  fees            Fee[]
+   111→   160→   160→   160→  leaveRequests   LeaveRequest[] @relation("StudentLeaves")
+   112→   161→   161→   161→  reportCards     ReportCard[]
+   113→   162→   162→   162→  behaviors       BehaviorRecord[]
+   114→   163→   163→   163→  healthRecords   HealthRecord[]
+   115→   164→   164→   164→  transportAssignments TransportAssignment[]
+   116→   165→   165→   165→  hostelAllocations HostelAllocation[]
+   117→   166→   166→   166→  canteenOrders   CanteenOrder[]
+   118→   167→   167→   167→  activities      ActivityRegistration[]
+   119→   168→   168→   168→  documents       Document[]
+   120→   169→   169→   169→  alumni          Alumni?
+   121→   170→   170→   170→  parent          Parent?
+   122→   171→   171→   171→  ptmMeetings     PTMMeeting[]   @relation("StudentPTM")
+   123→   172→   172→   172→  careerSessions  CareerCounselling[]
+   124→   173→   173→   173→  safetyAlerts    SafetyAlert[]  @relation("StudentSafetyAlerts")
+   125→   174→   174→   174→
+   126→   175→   175→   175→  // Phase 1: Household link
+   127→   176→   176→   176→  household       Household? @relation(fields: [householdId], references: [id])
+   128→   177→   177→   177→  householdId     String?
+   129→   178→   178→   178→}
+   130→   179→   179→   179→
+   131→   180→   180→   180→model Parent {
+   132→   181→   181→   181→  id          String   @id @default(cuid())
+   133→   182→   182→   182→  userId      String   @unique
+   134→   183→   183→   183→  user        User     @relation(fields: [userId], references: [id])
+   135→   184→   184→   184→  studentId   String   @unique
+   136→   185→   185→   185→  student     Student  @relation(fields: [studentId], references: [id])
+   137→   186→   186→   186→  relation    String   // FATHER, MOTHER, GUARDIAN
+   138→   187→   187→   187→  occupation  String?
+   139→   188→   188→   188→  income      Float?
+   140→   189→   189→   189→  createdAt   DateTime @default(now())
+   141→   190→   190→   190→}
+   142→   191→   191→   191→
+   143→   192→   192→   192→// ============ STAFF / HRMS ============
+   144→   193→   193→   193→model Staff {
+   145→   194→   194→   194→  id              String   @id @default(cuid())
+   146→   195→   195→   195→  employeeId      String   @unique
+   147→   196→   196→   196→  firstName       String
+   148→   197→   197→   197→  lastName        String
+   149→   198→   198→   198→  fullName        String
+   150→   199→   199→   199→  dob             DateTime
+   151→   200→   200→   200→  gender          String
+   152→   201→   201→   201→  bloodGroup      String?
+   153→   202→   202→   202→  qualification   String?
+   154→   203→   203→   203→  experience      Float?
+   155→   204→   204→   204→  designation     String
+   156→   205→   205→   205→  department      String   // Teaching, Non-Teaching, Admin
+   157→   206→   206→   206→  subjectSpecialization String?
+   158→   207→   207→   207→  joiningDate     DateTime @default(now())
+   159→   208→   208→   208→  retirementDate  DateTime?
+   160→   209→   209→   209→  phone           String
+   161→   210→   210→   210→  email           String
+   162→   211→   211→   211→  address         String?
+   163→   212→   212→   212→  city            String?
+   164→   213→   213→   213→  state           String?
+   165→   214→   214→   214→  pincode         String?
+   166→   215→   215→   215→  aadhaarNo       String?
+   167→   216→   216→   216→  panNo           String?
+   168→   217→   217→   217→  bankAccountNo   String?
+   169→   218→   218→   218→  bankIfsc        String?
+   170→   219→   219→   219→  bankName        String?
+   171→   220→   220→   220→  photo           String?
+   172→   221→   221→   221→  status          String   @default("ACTIVE") // ACTIVE, ON_LEAVE, RESIGNED, TERMINATED
+   173→   222→   222→   222→  employmentType  String   @default("FULL_TIME") // FULL_TIME, PART_TIME, CONTRACT
+   174→   223→   223→   223→  userId          String?  @unique
+   175→   224→   224→   224→  user            User?    @relation(fields: [userId], references: [id])
+   176→   225→   225→   225→
+   177→   226→   226→   226→  salaryRecords   SalaryRecord[]
+   178→   227→   227→   227→  leaveRequests   LeaveRequest[] @relation("StaffLeaves")
+   179→   228→   228→   228→  attendance      StaffAttendance[]
+   180→   229→   229→   229→  substitutions   Substitution[]  @relation("SubstituteTeacher")
+   181→   230→   230→   230→  timetable       Timetable[]     @relation("TeacherTimetable")
+   182→   231→   231→   231→  lessonPlans     LessonPlan[]
+   183→   232→   232→   232→  examDuties      Exam[]          @relation("ExamInvigilator")
+   184→   233→   233→   233→  ptmMeetings     PTMMeeting[]    @relation("StaffPTM")
+   185→   234→   234→   234→  documents       Document[]      @relation("StaffDocuments")
+   186→   235→   235→   235→}
+   187→   236→   236→   236→
+   188→   237→   237→   237→model SalaryRecord {
+   189→   238→   238→   238→  id          String   @id @default(cuid())
+   190→   239→   239→   239→  staffId     String
+   191→   240→   240→   240→  staff       Staff    @relation(fields: [staffId], references: [id])
+   192→   241→   241→   241→  month       String   // e.g. "2026-06"
+   193→   242→   242→   242→  basicSalary Float
+   194→   243→   243→   243→  hra         Float
+   195→   244→   244→   244→  da          Float
+   196→   245→   245→   245→  conveyance  Float
+   197→   246→   246→   246→  specialAllowance Float
+   198→   247→   247→   247→  grossSalary Float
+   199→   248→   248→   248→  pfDeduction Float
+   200→   249→   249→   249→  taxDeduction Float
+   201→   250→   250→   250→  otherDeduction Float
+   202→   251→   251→   251→  netSalary   Float
+   203→   252→   252→   252→  status      String   @default("PENDING") // PENDING, PAID, PROCESSING
+   204→   253→   253→   253→  paidOn      DateTime?
+   205→   254→   254→   254→  createdAt   DateTime @default(now())
+   206→   255→   255→   255→}
+   207→   256→   256→   256→
+   208→   257→   257→   257→// ============ ATTENDANCE ============
+   209→   258→   258→   258→model Attendance {
+   210→   259→   259→   259→  id          String   @id @default(cuid())
+   211→   260→   260→   260→  studentId   String
+   212→   261→   261→   261→  student     Student  @relation(fields: [studentId], references: [id])
+   213→   262→   262→   262→  date        DateTime
+   214→   263→   263→   263→  status      String   // PRESENT, ABSENT, LATE, HALF_DAY, EXCUSED
+   215→   264→   264→   264→  checkIn     DateTime?
+   216→   265→   265→   265→  checkOut    DateTime?
+   217→   266→   266→   266→  method      String   @default("BIOMETRIC") // BIOMETRIC, RFID, FACE, MANUAL
+   218→   267→   267→   267→  deviceId    String?
+   219→   268→   268→   268→  remark      String?
+   220→   269→   269→   269→  createdAt   DateTime @default(now())
+   221→   270→   270→   270→}
+   222→   271→   271→   271→
+   223→   272→   272→   272→model StaffAttendance {
+   224→   273→   273→   273→  id          String   @id @default(cuid())
+   225→   274→   274→   274→  staffId     String
+   226→   275→   275→   275→  staff       Staff    @relation(fields: [staffId], references: [id])
+   227→   276→   276→   276→  date        DateTime
+   228→   277→   277→   277→  status      String   // PRESENT, ABSENT, LATE, WFH, ON_LEAVE
+   229→   278→   278→   278→  checkIn     DateTime?
+   230→   279→   279→   279→  checkOut    DateTime?
+   231→   280→   280→   280→  method      String   @default("BIOMETRIC")
+   232→   281→   281→   281→  workHours   Float?
+   233→   282→   282→   282→  remark      String?
+   234→   283→   283→   283→  createdAt   DateTime @default(now())
+   235→   284→   284→   284→}
+   236→   285→   285→   285→
+   237→   286→   286→   286→model LeaveRequest {
+   238→   287→   287→   287→  id          String   @id @default(cuid())
+   239→   288→   288→   288→  studentId   String?
+   240→   289→   289→   289→  student     Student? @relation("StudentLeaves", fields: [studentId], references: [id])
+   241→   290→   290→   290→  staffId     String?
+   242→   291→   291→   291→  staff       Staff?   @relation("StaffLeaves", fields: [staffId], references: [id])
+   243→   292→   292→   292→  leaveType   String   // CASUAL, SICK, EARNED, MATERNITY, PATERNITY, STUDY, UNPAID
+   244→   293→   293→   293→  startDate   DateTime
+   245→   294→   294→   294→  endDate     DateTime
+   246→   295→   295→   295→  reason      String
+   247→   296→   296→   296→  status      String   @default("PENDING") // PENDING, APPROVED, REJECTED, CANCELLED
+   248→   297→   297→   297→  appliedBy   String
+   249→   298→   298→   298→  approvedBy  String?
+   250→   299→   299→   299→  approvedOn  DateTime?
+   251→   300→   300→   300→  attachment   String?
+   252→   301→   301→   301→  daysCount   Float
+   253→   302→   302→   302→  createdAt   DateTime @default(now())
+   254→   303→   303→   303→}
+   255→   304→   304→   304→
+   256→   305→   305→   305→// ============ FEES & FINANCE ============
+   257→   306→   306→   306→model Fee {
+   258→   307→   307→   307→  id          String   @id @default(cuid())
+   259→   308→   308→   308→  studentId   String
+   260→   309→   309→   309→  student     Student  @relation(fields: [studentId], references: [id])
+   261→   310→   310→   310→  academicYearId String?
+   262→   311→   311→   311→  academicYear AcademicYear? @relation(fields: [academicYearId], references: [id])
+   263→   312→   312→   312→  feeType     String   // TUITION, TRANSPORT, HOSTEL, LAB, LIBRARY, EXAM, SPORTS, UNIFORM, BOOKS, LATE
+   264→   313→   313→   313→  amount      Float
+   265→   314→   314→   314→  discount    Float    @default(0)
+   266→   315→   315→   315→  paidAmount  Float    @default(0)
+   267→   316→   316→   316→  balance     Float
+   268→   317→   317→   317→  dueDate     DateTime
+   269→   318→   318→   318→  status      String   @default("PENDING") // PENDING, PARTIAL, PAID, OVERDUE
+   270→   319→   319→   319→  paymentMode String?  // CASH, CARD, UPI, NETBANKING, CHEQUE
+   271→   320→   320→   320→  transactionId String?
+   272→   321→   321→   321→  paidOn      DateTime?
+   273→   322→   322→   322→  receiptNo   String?
+   274→   323→   323→   323→  remark      String?
+   275→   324→   324→   324→  createdAt   DateTime @default(now())
+   276→   325→   325→   325→
+   277→   326→   326→   326→  installments FeeInstallment[]
+   278→   327→   327→   327→}
+   279→   328→   328→   328→
+   280→   329→   329→   329→model FeeInstallment {
+   281→   330→   330→   330→  id          String   @id @default(cuid())
+   282→   331→   331→   331→  feeId       String
+   283→   332→   332→   332→  fee         Fee      @relation(fields: [feeId], references: [id])
+   284→   333→   333→   333→  installmentNo Int
+   285→   334→   334→   334→  amount      Float
+   286→   335→   335→   335→  dueDate     DateTime
+   287→   336→   336→   336→  paidDate    DateTime?
+   288→   337→   337→   337→  status      String   @default("PENDING")
+   289→   338→   338→   338→  createdAt   DateTime @default(now())
+   290→   339→   339→   339→}
+   291→   340→   340→   340→
+   292→   341→   341→   341→model Transaction {
+   293→   342→   342→   342→  id          String   @id @default(cuid())
+   294→   343→   343→   343→  type        String   // INCOME, EXPENSE
+   295→   344→   344→   344→  category    String
+   296→   345→   345→   345→  description String
+   297→   346→   346→   346→  amount      Float
+   298→   347→   347→   347→  date        DateTime
+   299→   348→   348→   348→  paymentMode String?
+   300→   349→   349→   349→  referenceNo String?
+   301→   350→   350→   350→  recordedBy  String?
+   302→   351→   351→   351→  createdAt   DateTime @default(now())
+   303→   352→   352→   352→}
+   304→   353→   353→   353→
+   305→   354→   354→   354→// ============ EXAMS & ACADEMICS ============
+   306→   355→   355→   355→model Exam {
+   307→   356→   356→   356→  id          String   @id @default(cuid())
+   308→   357→   357→   357→  name        String   // e.g. "First Unit Test", "Half Yearly", "Final"
+   309→   358→   358→   358→  examType    String   // UNIT_TEST, MONTHLY, HALF_YEARLY, FINAL, QUIZ, MOCK
+   310→   359→   359→   359→  academicYearId String?
+   311→   360→   360→   360→  academicYear AcademicYear? @relation(fields: [academicYearId], references: [id])
+   312→   361→   361→   361→  startDate   DateTime
+   313→   362→   362→   362→  endDate     DateTime
+   314→   363→   363→   363→  status      String   @default("SCHEDULED") // SCHEDULED, ONGOING, COMPLETED, CANCELLED
+   315→   364→   364→   364→  invigilatorId String?
+   316→   365→   365→   365→  invigilator Staff?   @relation("ExamInvigilator", fields: [invigilatorId], references: [id])
+   317→   366→   366→   366→  totalMarks  Int      @default(100)
+   318→   367→   367→   367→  passingMarks Int     @default(35)
+   319→   368→   368→   368→  createdAt   DateTime @default(now())
+   320→   369→   369→   369→
+   321→   370→   370→   370→  scores      ExamScore[]
+   322→   371→   371→   371→  subjects    Subject[]
+   323→   372→   372→   372→  questionPapers QuestionPaper[]
+   324→   373→   373→   373→  reportCards ReportCard[]
+   325→   374→   374→   374→}
+   326→   375→   375→   375→
+   327→   376→   376→   376→model ExamScore {
+   328→   377→   377→   377→  id          String   @id @default(cuid())
+   329→   378→   378→   378→  examId      String
+   330→   379→   379→   379→  exam        Exam     @relation(fields: [examId], references: [id])
+   331→   380→   380→   380→  studentId   String
+   332→   381→   381→   381→  student     Student  @relation(fields: [studentId], references: [id])
+   333→   382→   382→   382→  subjectId   String?
+   334→   383→   383→   383→  subject     Subject? @relation(fields: [subjectId], references: [id])
+   335→   384→   384→   384→  marksObtained Float
+   336→   385→   385→   385→  totalMarks  Int
+   337→   386→   386→   386→  grade       String?
+   338→   387→   387→   387→  percentage  Float
+   339→   388→   388→   388→  rank        Int?
+   340→   389→   389→   389→  remark      String?
+   341→   390→   390→   390→  createdAt   DateTime @default(now())
+   342→   391→   391→   391→}
+   343→   392→   392→   392→
+   344→   393→   393→   393→model ReportCard {
+   345→   394→   394→   394→  id          String   @id @default(cuid())
+   346→   395→   395→   395→  studentId   String
+   347→   396→   396→   396→  student     Student  @relation(fields: [studentId], references: [id])
+   348→   397→   397→   397→  academicYearId String?
+   349→   398→   398→   398→  examId      String?
+   350→   399→   399→   399→  exam        Exam?    @relation(fields: [examId], references: [id])
+   351→   400→   400→   400→  term        String   // TERM1, TERM2, FINAL
+   352→   401→   401→   401→  overallPercentage Float
+   353→   402→   402→   402→  overallGrade String
+   354→   403→   403→   403→  overallRank Int?
+   355→   404→   404→   404→  attendancePercentage Float
+   356→   405→   405→   405→  conduct     String?
+   357→   406→   406→   406→  teacherRemark String?
+   358→   407→   407→   407→  principalRemark String?
+   359→   408→   408→   408→  generatedAt DateTime @default(now())
+   360→   409→   409→   409→  status      String   @default("DRAFT") // DRAFT, PUBLISHED, PRINTED
+   361→   410→   410→   410→}
+   362→   411→   411→   411→
+   363→   412→   412→   412→model LessonPlan {
+   364→   413→   413→   413→  id          String   @id @default(cuid())
+   365→   414→   414→   414→  subjectId   String
+   366→   415→   415→   415→  subject     Subject  @relation(fields: [subjectId], references: [id])
+   367→   416→   416→   416→  staffId     String
+   368→   417→   417→   417→  staff       Staff    @relation(fields: [staffId], references: [id])
+   369→   418→   418→   418→  title       String
+   370→   419→   419→   419→  topic       String
+   371→   420→   420→   420→  objectives  String
+   372→   421→   421→   421→  methodology String
+   373→   422→   422→   422→  resources   String?
+   374→   423→   423→   423→  duration    Int      // minutes
+   375→   424→   424→   424→  date        DateTime
+   376→   425→   425→   425→  status      String   @default("PLANNED") // PLANNED, COMPLETED, IN_PROGRESS
+   377→   426→   426→   426→  createdAt   DateTime @default(now())
+   378→   427→   427→   427→}
+   379→   428→   428→   428→
+   380→   429→   429→   429→model Portion {
+   381→   430→   430→   430→  id          String   @id @default(cuid())
+   382→   431→   431→   431→  subjectId   String
+   383→   432→   432→   432→  subject     Subject  @relation(fields: [subjectId], references: [id])
+   384→   433→   433→   433→  title       String
+   385→   434→   434→   434→  description String?
+   386→   435→   435→   435→  totalTopics Int
+   387→   436→   436→   436→  completedTopics Int  @default(0)
+   388→   437→   437→   437→  syllabus    String?
+   389→   438→   438→   438→  createdAt   DateTime @default(now())
+   390→   439→   439→   439→}
+   391→   440→   440→   440→
+   392→   441→   441→   441→model Timetable {
+   393→   442→   442→   442→  id          String   @id @default(cuid())
+   394→   443→   443→   443→  classId     String
+   395→   444→   444→   444→  class       Class    @relation(fields: [classId], references: [id])
+   396→   445→   445→   445→  staffId     String?
+   397→   446→   446→   446→  staff       Staff?   @relation("TeacherTimetable", fields: [staffId], references: [id])
+   398→   447→   447→   447→  day         String   // MONDAY, TUESDAY, ...
+   399→   448→   448→   448→  period      Int
+   400→   449→   449→   449→  startTime   String
+   401→   450→   450→   450→  endTime     String
+   402→   451→   451→   451→  subjectName String?
+   403→   452→   452→   452→  room        String?
+   404→   453→   453→   453→  isBreak     Boolean  @default(false)
+   405→   454→   454→   454→  createdAt   DateTime @default(now())
+   406→   455→   455→   455→}
+   407→   456→   456→   456→
+   408→   457→   457→   457→model Substitution {
+   409→   458→   458→   458→  id              String   @id @default(cuid())
+   410→   459→   459→   459→  originalTeacherId String
+   411→   460→   460→   460→  originalTeacher Staff    @relation("SubstituteTeacher", fields: [originalTeacherId], references: [id])
+   412→   461→   461→   461→  substituteTeacherId String?
+   413→   462→   462→   462→  classId         String
+   414→   463→   463→   463→  date            DateTime
+   415→   464→   464→   464→  period          Int
+   416→   465→   465→   465→  subject         String
+   417→   466→   466→   466→  reason          String
+   418→   467→   467→   467→  status          String   @default("PENDING") // PENDING, ASSIGNED, COMPLETED, CANCELLED
+   419→   468→   468→   468→  assignedBy      String?
+   420→   469→   469→   469→  assignedAt      DateTime?
+   421→   470→   470→   470→  createdAt       DateTime @default(now())
+   422→   471→   471→   471→}
+   423→   472→   472→   472→
+   424→   473→   473→   473→// ============ TRANSPORT ============
+   425→   474→   474→   474→model Vehicle {
+   426→   475→   475→   475→  id          String   @id @default(cuid())
+   427→   476→   476→   476→  vehicleNo   String   @unique
+   428→   477→   477→   477→  type        String   // BUS, VAN, CAR
+   429→   478→   478→   478→  capacity    Int
+   430→   479→   479→   479→  driverName  String
+   431→   480→   480→   480→  driverPhone String
+   432→   481→   481→   481→  driverLicense String?
+   433→   482→   482→   482→  routeId     String?
+   434→   483→   483→   483→  gpsDeviceId String?
+   435→   484→   484→   484→  insuranceExpiry DateTime?
+   436→   485→   485→   485→  pollutionExpiry DateTime?
+   437→   486→   486→   486→  fitnessExpiry DateTime?
+   438→   487→   487→   487→  status      String   @default("ACTIVE") // ACTIVE, MAINTENANCE, INACTIVE
+   439→   488→   488→   488→  createdAt   DateTime @default(now())
+   440→   489→   489→   489→
+   441→   490→   490→   490→  route       Route?   @relation(fields: [routeId], references: [id])
+   442→   491→   491→   491→  assignments TransportAssignment[]
+   443→   492→   492→   492→}
+   444→   493→   493→   493→
+   445→   494→   494→   494→model Route {
+   446→   495→   495→   495→  id          String   @id @default(cuid())
+   447→   496→   496→   496→  name        String
+   448→   497→   497→   497→  startPoint  String
+   449→   498→   498→   498→  endPoint    String
+   450→   499→   499→   499→  stops       String   // JSON of stops array
+   451→   500→   500→   500→  distance    Float    // km
+   452→   501→   501→   501→  estimatedTime Int    // minutes
+   453→   502→   502→   502→  fee         Float
+   454→   503→   503→   503→  createdAt   DateTime @default(now())
+   455→   504→   504→   504→
+   456→   505→   505→   505→  vehicles    Vehicle[]
+   457→   506→   506→   506→  assignments TransportAssignment[]
+   458→   507→   507→   507→}
+   459→   508→   508→   508→
+   460→   509→   509→   509→model TransportAssignment {
+   461→   510→   510→   510→  id          String   @id @default(cuid())
+   462→   511→   511→   511→  studentId   String
+   463→   512→   512→   512→  student     Student  @relation(fields: [studentId], references: [id])
+   464→   513→   513→   513→  vehicleId   String
+   465→   514→   514→   514→  vehicle     Vehicle  @relation(fields: [vehicleId], references: [id])
+   466→   515→   515→   515→  routeId     String?
+   467→   516→   516→   516→  route       Route?   @relation(fields: [routeId], references: [id])
+   468→   517→   517→   517→  pickupPoint String?
+   469→   518→   518→   518→  dropPoint   String?
+   470→   519→   519→   519→  status      String   @default("ACTIVE")
+   471→   520→   520→   520→  createdAt   DateTime @default(now())
+   472→   521→   521→   521→}
+   473→   522→   522→   522→
+   474→   523→   523→   523→// ============ HOSTEL ============
+   475→   524→   524→   524→model Hostel {
+   476→   525→   525→   525→  id          String   @id @default(cuid())
+   477→   526→   526→   526→  name        String
+   478→   527→   527→   527→  type        String   // BOYS, GIRLS, CO_ED
+   479→   528→   528→   528→  capacity    Int
+   480→   529→   529→   529→  wardenId    String?
+   481→   530→   530→   530→  wardenName  String?
+   482→   531→   531→   531→  wardenPhone String?
+   483→   532→   532→   532→  address     String?
+   484→   533→   533→   533→  createdAt   DateTime @default(now())
+   485→   534→   534→   534→
+   486→   535→   535→   535→  rooms       HostelRoom[]
+   487→   536→   536→   536→}
+   488→   537→   537→   537→
+   489→   538→   538→   538→model HostelRoom {
+   490→   539→   539→   539→  id          String   @id @default(cuid())
+   491→   540→   540→   540→  hostelId    String
+   492→   541→   541→   541→  hostel      Hostel   @relation(fields: [hostelId], references: [id])
+   493→   542→   542→   542→  roomNo      String
+   494→   543→   543→   543→  floor       Int
+   495→   544→   544→   544→  capacity    Int
+   496→   545→   545→   545→  occupied    Int      @default(0)
+   497→   546→   546→   546→  type        String   // SINGLE, DOUBLE, DORMITORY
+   498→   547→   547→   547→  fee         Float
+   499→   548→   548→   548→  status      String   @default("AVAILABLE") // AVAILABLE, FULL, MAINTENANCE
+   500→   549→   549→   549→
+   501→   550→   550→   550→  allocations HostelAllocation[]
+   502→   551→   551→   551→}
+   503→   552→   552→   552→
+   504→   553→   553→   553→model HostelAllocation {
+   505→   554→   554→   554→  id          String   @id @default(cuid())
+   506→   555→   555→   555→  studentId   String
+   507→   556→   556→   556→  student     Student  @relation(fields: [studentId], references: [id])
+   508→   557→   557→   557→  roomId      String
+   509→   558→   558→   558→  room        HostelRoom @relation(fields: [roomId], references: [id])
+   510→   559→   559→   559→  allocationDate DateTime @default(now())
+   511→   560→   560→   560→  vacateDate  DateTime?
+   512→   561→   561→   561→  status      String   @default("ACTIVE")
+   513→   562→   562→   562→}
+   514→   563→   563→   563→
+   515→   564→   564→   564→// ============ CANTEEN ============
+   516→   565→   565→   565→model CanteenItem {
+   517→   566→   566→   566→  id          String   @id @default(cuid())
+   518→   567→   567→   567→  name        String
+   519→   568→   568→   568→  category    String   // BREAKFAST, LUNCH, SNACKS, BEVERAGES
+   520→   569→   569→   569→  price       Float
+   521→   570→   570→   570→  isVeg       Boolean  @default(true)
+   522→   571→   571→   571→  isAvailable Boolean  @default(true)
+   523→   572→   572→   572→  description String?
+   524→   573→   573→   573→  image       String?
+   525→   574→   574→   574→  createdAt   DateTime @default(now())
+   526→   575→   575→   575→
+   527→   576→   576→   576→  orders      CanteenOrder[]
+   528→   577→   577→   577→}
+   529→   578→   578→   578→
+   530→   579→   579→   579→model CanteenOrder {
+   531→   580→   580→   580→  id          String   @id @default(cuid())
+   532→   581→   581→   581→  orderId     String   @unique
+   533→   582→   582→   582→  studentId   String?
+   534→   583→   583→   583→  student     Student? @relation(fields: [studentId], references: [id])
+   535→   584→   584→   584→  staffId     String?
+   536→   585→   585→   585→  itemId      String
+   537→   586→   586→   586→  item        CanteenItem @relation(fields: [itemId], references: [id])
+   538→   587→   587→   587→  quantity    Int
+   539→   588→   588→   588→  totalAmount Float
+   540→   589→   589→   589→  status      String   @default("PENDING") // PENDING, PREPARING, READY, SERVED, CANCELLED
+   541→   590→   590→   590→  orderDate   DateTime @default(now())
+   542→   591→   591→   591→  paymentStatus String @default("PENDING")
+   543→   592→   592→   592→}
+   544→   593→   593→   593→
+   545→   594→   594→   594→// ============ LIBRARY / DOCUMENTS ============
+   546→   595→   595→   595→model Document {
+   547→   596→   596→   596→  id          String   @id @default(cuid())
+   548→   597→   597→   597→  title       String
+   549→   598→   598→   598→  type        String   // TC, BIRTH_CERT, MARKSHEET, BONAFIDE, ID_CARD, OTHER
+   550→   599→   599→   599→  studentId   String?
+   551→   600→   600→   600→  student     Student? @relation(fields: [studentId], references: [id])
+   552→   601→   601→   601→  staffId     String?
+   553→   602→   602→   602→  staff       Staff?   @relation("StaffDocuments", fields: [staffId], references: [id])
+   554→   603→   603→   603→  fileUrl     String
+   555→   604→   604→   604→  fileFormat  String
+   556→   605→   605→   605→  fileSize    Int?
+   557→   606→   606→   606→  uploadedBy  String?
+   558→   607→   607→   607→  isVerified  Boolean  @default(false)
+   559→   608→   608→   608→  createdAt   DateTime @default(now())
+   560→   609→   609→   609→}
+   561→   610→   610→   610→
+   562→   611→   611→   611→// ============ EVENTS & ACTIVITIES ============
+   563→   612→   612→   612→model Event {
+   564→   613→   613→   613→  id          String   @id @default(cuid())
+   565→   614→   614→   614→  title       String
+   566→   615→   615→   615→  description String?
+   567→   616→   616→   616→  type        String   // ACADEMIC, SPORTS, CULTURAL, HOLIDAY, EXAM, PTM, WORKSHOP
+   568→   617→   617→   617→  startDate   DateTime
+   569→   618→   618→   618→  endDate     DateTime?
+   570→   619→   619→   619→  venue       String?
+   571→   620→   620→   620→  academicYearId String?
+   572→   621→   621→   621→  academicYear AcademicYear? @relation(fields: [academicYearId], references: [id])
+   573→   622→   622→   622→  organizer   String?
+   574→   623→   623→   623→  status      String   @default("UPCOMING") // UPCOMING, ONGOING, COMPLETED, CANCELLED
+   575→   624→   624→   624→  createdAt   DateTime @default(now())
+   576→   625→   625→   625→}
+   577→   626→   626→   626→
+   578→   627→   627→   627→model ExtracurricularActivity {
+   579→   628→   628→   628→  id          String   @id @default(cuid())
+   580→   629→   629→   629→  name        String
+   581→   630→   630→   630→  category    String   // SPORTS, MUSIC, DANCE, ART, ROBOTICS, DEBATE, SCIENCE_CLUB
+   582→   631→   631→   631→  description String?
+   583→   632→   632→   632→  coachId     String?
+   584→   633→   633→   633→  schedule    String?
+   585→   634→   634→   634→  venue       String?
+   586→   635→   635→   635→  fee         Float    @default(0)
+   587→   636→   636→   636→  createdAt   DateTime @default(now())
+   588→   637→   637→   637→
+   589→   638→   638→   638→  registrations ActivityRegistration[]
+   590→   639→   639→   639→}
+   591→   640→   640→   640→
+   592→   641→   641→   641→model ActivityRegistration {
+   593→   642→   642→   642→  id          String   @id @default(cuid())
+   594→   643→   643→   643→  activityId  String
+   595→   644→   644→   644→  activity    ExtracurricularActivity @relation(fields: [activityId], references: [id])
+   596→   645→   645→   645→  studentId   String
+   597→   646→   646→   646→  student     Student  @relation(fields: [studentId], references: [id])
+   598→   647→   647→   647→  status      String   @default("ENROLLED") // ENROLLED, COMPLETED, DROPPED
+   599→   648→   648→   648→  performance String?
+   600→   649→   649→   649→  rating      Int?
+   601→   650→   650→   650→  registeredOn DateTime @default(now())
+   602→   651→   651→   651→}
+   603→   652→   652→   652→
+   604→   653→   653→   653→// also fix references
+   605→   654→   654→   654→
+   606→   655→   655→   655→
+   607→   656→   656→   656→// ============ HEALTH & WELLNESS ============
+   608→   657→   657→   657→model HealthRecord {
+   609→   658→   658→   658→  id          String   @id @default(cuid())
+   610→   659→   659→   659→  studentId   String
+   611→   660→   660→   660→  student     Student  @relation(fields: [studentId], references: [id])
+   612→   661→   661→   661→  height      Float?   // cm
+   613→   662→   662→   662→  weight      Float?   // kg
+   614→   663→   663→   663→  bmi         Float?
+   615→   664→   664→   664→  bloodPressure String?
+   616→   665→   665→   665→  vision      String?
+   617→   666→   666→   666→  hearing     String?
+   618→   667→   667→   667→  allergies   String?
+   619→   668→   668→   668→  chronicConditions String?
+   620→   669→   669→   669→  medications String?
+   621→   670→   670→   670→  lastCheckup DateTime?
+   622→   671→   671→   671→  nextCheckup DateTime?
+   623→   672→   672→   672→  doctorName  String?
+   624→   673→   673→   673→  notes       String?
+   625→   674→   674→   674→  createdAt   DateTime @default(now())
+   626→   675→   675→   675→}
+   627→   676→   676→   676→
+   628→   677→   677→   677→// ============ BEHAVIOR & AI TRACKING ============
+   629→   678→   678→   678→model BehaviorRecord {
+   630→   679→   679→   679→  id          String   @id @default(cuid())
+   631→   680→   680→   680→  studentId   String
+   632→   681→   681→   681→  student     Student  @relation(fields: [studentId], references: [id])
+   633→   682→   682→   682→  date        DateTime
+   634→   683→   683→   683→  type        String   // POSITIVE, NEGATIVE, NEUTRAL
+   635→   684→   684→   684→  category    String   // DISCIPLINE, ACADEMIC, SOCIAL, ATTENDANCE
+   636→   685→   685→   685→  description String
+   637→   686→   686→   686→  points      Int      @default(0) // positive or negative
+   638→   687→   687→   687→  recordedBy  String?
+   639→   688→   688→   688→  actionTaken String?
+   640→   689→   689→   689→  createdAt   DateTime @default(now())
+   641→   690→   690→   690→}
+   642→   691→   691→   691→
+   643→   692→   692→   692→model UserActivity {
+   644→   693→   693→   693→  id          String   @id @default(cuid())
+   645→   694→   694→   694→  type        String   // LOGIN, CREATE, UPDATE, DELETE, VIEW, AI_QUERY
+   646→   695→   695→   695→  module      String
+   647→   696→   696→   696→  description String
+   648→   697→   697→   697→  userId      String?
+   649→   698→   698→   698→  user        User?    @relation(fields: [userId], references: [id])
+   650→   699→   699→   699→  metadata    String?  // JSON
+   651→   700→   700→   700→  ipAddress   String?
+   652→   701→   701→   701→  createdAt   DateTime @default(now())
+   653→   702→   702→   702→}
+   654→   703→   703→   703→
+   655→   704→   704→   704→// ============ PTM ============
+   656→   705→   705→   705→model PTMMeeting {
+   657→   706→   706→   706→  id          String   @id @default(cuid())
+   658→   707→   707→   707→  studentId   String
+   659→   708→   708→   708→  student     Student  @relation("StudentPTM", fields: [studentId], references: [id])
+   660→   709→   709→   709→  staffId     String?
+   661→   710→   710→   710→  staff       Staff?   @relation("StaffPTM", fields: [staffId], references: [id])
+   662→   711→   711→   711→  date        DateTime
+   663→   712→   712→   712→  duration    Int      @default(15)
+   664→   713→   713→   713→  mode        String   @default("OFFLINE") // OFFLINE, ONLINE
+   665→   714→   714→   714→  status      String   @default("SCHEDULED") // SCHEDULED, COMPLETED, CANCELLED, NO_SHOW
+   666→   715→   715→   715→  agenda      String?
+   667→   716→   716→   716→  feedback    String?
+   668→   717→   717→   717→  parentRating Int?
+   669→   718→   718→   718→  createdAt   DateTime @default(now())
+   670→   719→   719→   719→}
+   671→   720→   720→   720→
+   672→   721→   721→   721→// ============ ALUMNI ============
+   673→   722→   722→   722→model Alumni {
+   674→   723→   723→   723→  id          String   @id @default(cuid())
+   675→   724→   724→   724→  studentId   String   @unique
+   676→   725→   725→   725→  student     Student  @relation(fields: [studentId], references: [id])
+   677→   726→   726→   726→  passingYear Int
+   678→   727→   727→   727→  currentStatus String? // STUDYING, WORKING, ENTREPRENEUR
+   679→   728→   728→   728→  organization String?
+   680→   729→   729→   729→  designation String?
+   681→   730→   730→   730→  email       String?
+   682→   731→   731→   731→  phone       String?
+   683→   732→   732→   732→  linkedin    String?
+   684→   733→   733→   733→  isMentor    Boolean  @default(false)
+   685→   734→   734→   734→  joinedAt    DateTime @default(now())
+   686→   735→   735→   735→}
+   687→   736→   736→   736→
+   688→   737→   737→   737→// ============ CAREER COUNSELLING ============
+   689→   738→   738→   738→model CareerCounselling {
+   690→   739→   739→   739→  id          String   @id @default(cuid())
+   691→   740→   740→   740→  studentId   String
+   692→   741→   741→   741→  student     Student  @relation(fields: [studentId], references: [id])
+   693→   742→   742→   742→  sessionDate DateTime
+   694→   743→   743→   743→  counsellor  String?
+   695→   744→   744→   744→  aptitudeScore Float?
+   696→   745→   745→   745→  interestArea String?
+   697→   746→   746→   746→  recommendedCareers String? // JSON array
+   698→   747→   747→   747→  personalityType String?
+   699→   748→   748→   748→  strength    String?
+   700→   749→   749→   749→  weakness    String?
+   701→   750→   750→   750→  aiRecommendation String?
+   702→   751→   751→   751→  status      String   @default("SCHEDULED")
+   703→   752→   752→   752→  createdAt   DateTime @default(now())
+   704→   753→   753→   753→}
+   705→   754→   754→   754→
+   706→   755→   755→   755→// ============ QUESTION PAPER (AI) ============
+   707→   756→   756→   756→model QuestionPaper {
+   708→   757→   757→   757→  id          String   @id @default(cuid())
+   709→   758→   758→   758→  examId      String?
+   710→   759→   759→   759→  exam        Exam?    @relation(fields: [examId], references: [id])
+   711→   760→   760→   760→  subject     String
+   712→   761→   761→   761→  grade       String
+   713→   762→   762→   762→  totalMarks  Int
+   714→   763→   763→   763→  duration    Int      // minutes
+   715→   764→   764→   764→  difficulty  String   @default("MEDIUM") // EASY, MEDIUM, HARD, MIXED
+   716→   765→   765→   765→  blueprint   String?  // JSON
+   717→   766→   766→   766→  questions   String?  // JSON of generated questions
+   718→   767→   767→   767→  aiGenerated Boolean  @default(true)
+   719→   768→   768→   768→  reviewed    Boolean  @default(false)
+   720→   769→   769→   769→  reviewedBy  String?
+   721→   770→   770→   770→  createdAt   DateTime @default(now())
+   722→   771→   771→   771→}
+   723→   772→   772→   772→
+   724→   773→   773→   773→// ============ SAFETY ALERTS ============
+   725→   774→   774→   774→model SafetyAlert {
+   726→   775→   775→   775→  id          String   @id @default(cuid())
+   727→   776→   776→   776→  type        String   // FIRE, FIGHT, FALL, INTRUSION, SMOKE, ABSENCE, UNAUTHORIZED
+   728→   777→   777→   777→  severity    String   @default("MEDIUM") // LOW, MEDIUM, HIGH, CRITICAL
+   729→   778→   778→   778→  location    String
+   730→   779→   779→   779→  description String
+   731→   780→   780→   780→  cameraId    String?
+   732→   781→   781→   781→  studentId   String?
+   733→   782→   782→   782→  student     Student? @relation("StudentSafetyAlerts", fields: [studentId], references: [id])
+   734→   783→   783→   783→  staffId     String?
+   735→   784→   784→   784→  status      String   @default("ACTIVE") // ACTIVE, ACKNOWLEDGED, RESOLVED, FALSE_ALARM
+   736→   785→   785→   785→  aiConfidence Float?
+   737→   786→   786→   786→  triggeredAt DateTime @default(now())
+   738→   787→   787→   787→  resolvedAt  DateTime?
+   739→   788→   788→   788→  resolvedBy  String?
+   740→   789→   789→   789→  actionTaken String?
+   741→   790→   790→   790→}
+   742→   791→   791→   791→
+   743→   792→   792→   792→// ============ NOTIFICATIONS ============
+   744→   793→   793→   793→model Notification {
+   745→   794→   794→   794→  id          String   @id @default(cuid())
+   746→   795→   795→   795→  userId      String?
+   747→   796→   796→   796→  user        User?    @relation(fields: [userId], references: [id])
+   748→   797→   797→   797→  title       String
+   749→   798→   798→   798→  message     String
+   750→   799→   799→   799→  type        String   @default("INFO") // INFO, WARNING, ERROR, SUCCESS, ANNOUNCEMENT
+   751→   800→   800→   800→  module      String?
+   752→   801→   801→   801→  priority    String   @default("NORMAL") // LOW, NORMAL, HIGH, URGENT
+   753→   802→   802→   802→  isRead      Boolean  @default(false)
+   754→   803→   803→   803→  actionUrl   String?
+   755→   804→   804→   804→  metadata    String?
+   756→   805→   805→   805→  createdAt   DateTime @default(now())
+   757→   806→   806→   806→}
+   758→   807→   807→   807→
+   759→   808→   808→   808→// ============ AUDIT LOG ============
+   760→   809→   809→   809→model AuditLog {
+   761→   810→   810→   810→  id          String   @id @default(cuid())
+   762→   811→   811→   811→  userId      String?
+   763→   812→   812→   812→  user        User?    @relation(fields: [userId], references: [id])
+   764→   813→   813→   813→  action      String
+   765→   814→   814→   814→  module      String
+   766→   815→   815→   815→  description String
+   767→   816→   816→   816→  ipAddress   String?
+   768→   817→   817→   817→  userAgent   String?
+   769→   818→   818→   818→  metadata    String?
+   770→   819→   819→   819→  createdAt   DateTime @default(now())
+   771→   820→   820→   820→}
+   772→   821→   821→   821→
+   773→   822→   822→   822→// ============ AI CHAT / RAG ============
+   774→   823→   823→   823→model ChatSession {
+   775→   824→   824→   824→  id          String   @id @default(cuid())
+   776→   825→   825→   825→  userId      String?
+   777→   826→   826→   826→  user        User?    @relation(fields: [userId], references: [id])
+   778→   827→   827→   827→  title       String?
+   779→   828→   828→   828→  context     String?  // module context
+   780→   829→   829→   829→  messages    String?  // JSON of messages
+   781→   830→   830→   830→  createdAt   DateTime @default(now())
+   782→   831→   831→   831→  updatedAt   DateTime @updatedAt
+   783→   832→   832→   832→}
+   784→   833→   833→   833→
+   785→   834→   834→   834→model KnowledgeDocument {
+   786→   835→   835→   835→  id          String   @id @default(cuid())
+   787→   836→   836→   836→  title       String
+   788→   837→   837→   837→  content     String
+   789→   838→   838→   838→  category    String
+   790→   839→   839→   839→  tags        String?
+   791→   840→   840→   840→  embedding   String?
+   792→   841→   841→   841→  metadata    String?
+   793→   842→   842→   842→  createdAt   DateTime @default(now())
+   794→   843→   843→   843→}
+   795→   844→   844→   844→
+   796→   845→   845→   845→model MockTest {
+   797→   846→   846→   846→  id          String   @id @default(cuid())
+   798→   847→   847→   847→  studentId   String?
+   799→   848→   848→   848→  subject     String
+   800→   849→   849→   849→  topic       String?
+   801→   850→   850→   850→  difficulty  String
+   802→   851→   851→   851→  questions   String   // JSON
+   803→   852→   852→   852→  duration    Int
+   804→   853→   853→   853→  totalMarks  Int
+   805→   854→   854→   854→  status      String   @default("AVAILABLE") // AVAILABLE, IN_PROGRESS, COMPLETED
+   806→   855→   855→   855→  attemptId   String?
+   807→   856→   856→   856→  score       Float?
+   808→   857→   857→   857→  aiAnalysis  String?
+   809→   858→   858→   858→  createdAt   DateTime @default(now())
+   810→   859→   859→   859→}
+   811→   860→   860→   860→
+   812→   861→   861→   861→// ============================================================
+   813→   862→   862→   862→// PHASE 1 — CANONICAL ENTITY GRAPH & EVENT BACKBONE
+   814→   863→   863→   863→// ============================================================
+   815→   864→   864→   864→
+   816→   865→   865→   865→// ============ HOUSEHOLD (family unit for sibling logic, shared fee ledger) ============
+   817→   866→   866→   866→model Household {
+   818→   867→   867→   867→  id              String   @id @default(cuid())
+   819→   868→   868→   868→  schoolId        String   @default("school_default")
+   820→   869→   869→   869→  familyName      String
+   821→   870→   870→   870→  primaryAddress  String?
+   822→   871→   871→   871→  primaryPhone    String?
+   823→   872→   872→   872→  primaryEmail    String?
+   824→   873→   873→   873→  annualIncome    Float?
+   825→   874→   874→   874→  feeLedgerId     String?  // shared fee ledger reference
+   826→   875→   875→   875→  createdAt       DateTime @default(now())
+   827→   876→   876→   876→  updatedAt       DateTime @updatedAt
+   828→   877→   877→   877→
+   829→   878→   878→   878→  members         PersonRelationship[]
+   830→   879→   879→   879→  students        Student[]
+   831→   880→   880→   880→}
+   832→   881→   881→   881→
+   833→   882→   882→   882→// ============ PERSON RELATIONSHIPS (guardian_of, sibling_of, emergency_contact_of, authorized_pickup_of) ============
+   834→   883→   883→   883→model PersonRelationship {
+   835→   884→   884→   884→  id              String   @id @default(cuid())
+   836→   885→   885→   885→  schoolId        String   @default("school_default")
+   837→   886→   886→   886→  fromPersonType  String   // STUDENT, STAFF, GUARDIAN
+   838→   887→   887→   887→  fromPersonId    String
+   839→   888→   888→   888→  toPersonType    String   // STUDENT, STAFF, GUARDIAN
+   840→   889→   889→   889→  toPersonId      String
+   841→   890→   890→   890→  relationType    String   // guardian_of, sibling_of, emergency_contact_of, authorized_pickup_of, parent_of
+   842→   891→   891→   891→  isPrimary       Boolean  @default(false)
+   843→   892→   892→   892→  metadata        String?  // JSON: custody %, pickup auth, etc.
+   844→   893→   893→   893→  createdAt       DateTime @default(now())
+   845→   894→   894→   894→
+   846→   895→   895→   895→  household       Household? @relation(fields: [householdId], references: [id])
+   847→   896→   896→   896→  householdId     String?
+   848→   897→   897→   897→}
+   849→   898→   898→   898→
+   850→   899→   899→   899→// ============ POLICY (school rules as versioned data) ============
+   851→   900→   900→   900→model Policy {
+   852→   901→   901→   901→  id              String   @id @default(cuid())
+   853→   902→   902→   902→  schoolId        String   @default("school_default")
+   854→   903→   903→   903→  name            String   // e.g., "grading_bands", "fine_rules", "numbering_scheme"
+   855→   904→   904→   904→  category        String   // ACADEMIC, FINANCIAL, OPERATIONAL, SAFETY
+   856→   905→   905→   905→  version         Int      @default(1)
+   857→   906→   906→   906→  data            String   // JSON: the actual policy rules
+   858→   907→   907→   907→  isActive        Boolean  @default(true)
+   859→   908→   908→   908→  effectiveFrom   DateTime @default(now())
+   860→   909→   909→   909→  effectiveTo     DateTime?
+   861→   910→   910→   910→  createdAt       DateTime @default(now())
+   862→   911→   911→   911→  updatedAt       DateTime @updatedAt
+   863→   912→   912→   912→}
+   864→   913→   913→   913→
+   865→   914→   914→   914→// ============ EVENT LOG (the bloodstream — §1.2) ============
+   866→   915→   915→   915→model EventLog {
+   867→   916→   916→   916→  id              String   @id @default(cuid())
+   868→   917→   917→   917→  ulid            String   @unique // ULID for ordering
+   869→   918→   918→   918→  schoolId        String   @default("school_default")
+   870→   919→   919→   919→  type            String   // e.g., student.admitted, attendance.marked, fee.paid
+   871→   920→   920→   920→  entityType      String   // STUDENT, STAFF, FEE, etc.
+   872→   921→   921→   921→  entityId        String
+   873→   922→   922→   922→  payload         String   // JSON: event-specific data
+   874→   923→   923→   923→  actorType       String   // human, ai, system
+   875→   924→   924→   924→  actorId         String?
+   876→   925→   925→   925→  causationId     String?  // links to parent event (why did this happen)
+   877→   926→   926→   926→  correlationId   String?  // links related events in same workflow
+   878→   927→   927→   927→  occurredAt      DateTime @default(now())
+   879→   928→   928→   928→  createdAt       DateTime @default(now())
+   880→   929→   929→   929→
+   881→   930→   930→   930→  @@index([schoolId, type])
+   882→   931→   931→   931→  @@index([entityType, entityId])
+   883→   932→   932→   932→  @@index([causationId])
+   884→   933→   933→   933→  @@index([correlationId])
+   885→   934→   934→   934→}
+   886→   935→   935→   935→
+   887→   936→   936→   936→// ============ EVENT CONSUMER LEDGER (idempotency) ============
+   888→   937→   937→   937→model EventConsumerLedger {
+   889→   938→   938→   938→  id              String   @id @default(cuid())
+   890→   939→   939→   939→  eventLogId      String
+   891→   940→   940→   940→  consumerName    String   // e.g., "notification-service", "rag-indexer"
+   892→   941→   941→   941→  processedAt     DateTime @default(now())
+   893→   942→   942→   942→  result          String   // SUCCESS, FAILED, DLQ
+   894→   943→   943→   943→  error           String?
+   895→   944→   944→   944→
+   896→   945→   945→   945→  @@unique([eventLogId, consumerName])
+   897→   946→   946→   946→  @@index([consumerName, result])
+   898→   947→   947→   947→}
+   899→   948→   948→   948→
+   900→   949→   949→   949→// ============ EVENT OUTBOX (transactional outbox pattern) ============
+   901→
+   902→[showing lines 50-949 of 1310; use offset=950 with limit to continue reading]

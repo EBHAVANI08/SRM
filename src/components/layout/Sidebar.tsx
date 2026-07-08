@@ -140,35 +140,25 @@ export function Sidebar() {
                 {catModules.map((m) => {
                   const Icon = ICON_MAP[m.icon] || LayoutDashboard
                   const isActive = currentView === m.key
-                  const isAIPanel = m.key === 'ask-learnx-ai'
                   return (
                     <button
                       key={m.key}
                       onClick={() => handleModuleClick(m.key)}
                       className={`sidebar-item w-full ${isActive ? 'active' : ''} ${
                         collapsed ? 'justify-center' : ''
-                      } ${isAIPanel ? 'ask-learnx-ai-item' : ''}`}
-                      style={isAIPanel ? {
-                        background: 'linear-gradient(135deg, #1E3A8A, #2563EB)',
-                        color: '#FFFFFF',
-                        borderColor: '#1E3A8A',
-                        fontWeight: 600,
-                      } : undefined}
+                      }`}
                       title={collapsed ? m.title : undefined}
                     >
                       <span className="text-base flex-shrink-0 leading-none">{m.emoji}</span>
                       {!collapsed && (
                         <>
                           <span className="flex-1 text-left truncate">{m.shortTitle}</span>
-                          {m.aiPowered && !isAIPanel && (
+                          {m.aiPowered && (
                             <span className="w-1 h-1 rounded-full bg-orange-500 opacity-50" />
-                          )}
-                          {isAIPanel && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                           )}
                         </>
                       )}
-                      {collapsed && m.aiPowered && !isAIPanel && (
+                      {collapsed && m.aiPowered && (
                         <span className="absolute top-1.5 right-1.5 w-1 h-1 rounded-full bg-orange-500 opacity-50" />
                       )}
                     </button>

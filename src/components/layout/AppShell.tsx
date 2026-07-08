@@ -8,7 +8,7 @@ import { DashboardHome } from '@/components/dashboard/DashboardHome'
 import { ModuleView } from '@/components/dashboard/ModuleView'
 import { AIPoweredModule } from '@/components/dashboard/AIPoweredModule'
 import { FrontDeskModule } from '@/components/dashboard/FrontDeskModule'
-import { SecurityModule } from '@/components/dashboard/SecurityModule'
+import { SafetyModule } from '@/components/dashboard/SafetyModule'
 import { AttendanceModule } from '@/components/dashboard/AttendanceModule'
 import { FeesModule } from '@/components/dashboard/FeesModule'
 import { AdmissionsModule } from '@/components/dashboard/AdmissionsModule'
@@ -74,7 +74,7 @@ export function AppShell() {
           ) : currentView === 'front-desk' ? (
             <FrontDeskModule />
           ) : currentView === 'security' ? (
-            <SecurityModule />
+            <SafetyModule />
           ) : currentView === 'attendance' ? (
             <AttendanceModuleEnhanced />
           ) : currentView === 'fees' ? (

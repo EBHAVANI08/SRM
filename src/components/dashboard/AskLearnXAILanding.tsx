@@ -5,14 +5,20 @@
  * clicks the "Ask LearnX AI" module in the sidebar. The actual chat panel
  * opens as an overlay on the right; this page explains what the user is
  * looking at, lists the 13 named agents, and provides quick-start buttons.
+ *
+ * House-style note: uses <SectionHeader> (which renders an <h2>) so the
+ * TopBar's <h1> remains the single source of truth for the page title.
  */
 
 import { motion } from 'framer-motion'
 import {
-  Sparkles, ArrowRight, Bot, Shield, Lock, Zap, Cpu, Lightbulb, GitBranch,
+  Sparkles, ArrowRight, Shield, Lock, Zap, Cpu, Lightbulb,
 } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
 import { NAMED_AGENTS } from '@/lib/agents/agentRegistry'
+import { SectionHeader } from './SectionHeader'
+import { Button } from '@/components/ui/button'
+import { toast } from 'sonner'
 
 export function AskLearnXAILanding() {
   const user = useAppStore((s) => s.user)
@@ -21,77 +27,68 @@ export function AskLearnXAILanding() {
   const openPanel = () => setAIAssistantOpen(true)
 
   return (
-    <div className="min-h-screen px-8 py-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4 mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-700 to-blue-900 text-white flex items-center justify-center text-xl shadow-sm">
+    <div className="p-4 sm:p-6 space-y-4 max-w-[1600px] mx-auto">
+      <SectionHeader
+        emoji="✨"
+        title="Ask LearnX AI"
+        subtitle="Your role-personalized AI concierge · 13 named agents · orchestrator-routed"
+        accent="#1E3A8A"
+        onNew={() => {
+          openPanel()
+          toast.success('Opening chat panel…')
+        }}
+        newLabel="Open Chat"
+        aiActions={[
+          { label: 'named agents', count: 13 },
+          { label: 'scope-enforced', count: 1 },
+        ]}
+      />
+
+      {/* Quick-launch card — neutral, no heavy gradient */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="rounded-2xl border border-slate-200 bg-white p-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4"
+      >
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-xl flex-shrink-0">
             ✨
           </div>
-          <div>
-            <h1 className="text-xl font-bold text-slate-900">Ask LearnX AI</h1>
-            <p className="text-xs text-slate-500">
-              Powered by LearnX Intelligence · 13 named agents · role-scoped
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold text-slate-900 tracking-tight">
+              Hello {user?.name?.split(' ')[0] || 'there'} — what can I help you with today?
+            </h2>
+            <p className="text-xs text-slate-500 mt-1 leading-relaxed max-w-2xl">
+              The Orchestrator routes your question to the right specialist agent (Finance,
+              Attendance, Insight, Discovery, etc.), enforces your role scope on every data
+              access, and gates suggested actions by what you are authorized to do. Every reply
+              cites its sources, surfaces a routing badge, and explains any scope restrictions
+              transparently.
             </p>
           </div>
         </div>
-        <button
-          onClick={openPanel}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-700 to-blue-900 text-white text-sm font-semibold shadow-sm hover:shadow-md transition-all"
-        >
-          <Sparkles className="w-4 h-4" />
-          Open Chat Panel
-          <ArrowRight className="w-4 h-4" />
-        </button>
-      </div>
-
-      {/* Hero card */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mt-6 rounded-2xl bg-gradient-to-br from-blue-700 via-blue-800 to-blue-900 text-white p-8 shadow-sm overflow-hidden relative"
-      >
-        <div className="absolute top-0 right-0 w-72 h-72 bg-white/5 rounded-full -mr-32 -mt-32 blur-2xl" />
-        <div className="relative z-10 max-w-2xl">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="px-2 py-0.5 rounded-full bg-white/10 text-[10px] font-semibold tracking-wide">
-              MULTI-AGENT ORCHESTRATOR
-            </span>
-            <span className="px-2 py-0.5 rounded-full bg-emerald-400/20 text-emerald-200 text-[10px] font-semibold tracking-wide">
-              ONLINE
-            </span>
-          </div>
-          <h2 className="text-3xl font-bold mb-2">
-            Hello {user?.name?.split(' ')[0] || 'there'} — what can I help you with today?
-          </h2>
-          <p className="text-white/70 text-sm leading-relaxed mb-5">
-            I am the LearnX Concierge. When you ask a question, the Orchestrator routes your
-            query to the right specialist agent (Finance, Attendance, Insight, Discovery, etc.),
-            enforces your role scope on every data access, and gates suggested actions by what
-            you are authorized to do. Every reply cites its sources, surfaces a routing badge,
-            and explains any scope restrictions transparently.
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={openPanel}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-blue-800 text-sm font-semibold hover:bg-blue-50 transition-all"
-            >
-              <Sparkles className="w-4 h-4" />
-              Start chatting
-            </button>
-            <button
-              onClick={openPanel}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 text-white text-sm font-semibold hover:bg-white/20 transition-all"
-            >
-              <Lightbulb className="w-4 h-4" />
-              Show example prompts
-            </button>
-          </div>
+        <div className="flex flex-wrap gap-2 flex-shrink-0">
+          <Button
+            onClick={openPanel}
+            className="h-9 rounded-lg gap-1.5 text-xs font-medium"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            Start chatting
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Button>
+          <Button
+            variant="outline"
+            onClick={openPanel}
+            className="h-9 rounded-lg gap-1.5 text-xs font-medium border-slate-200 text-slate-700 hover:bg-slate-50"
+          >
+            <Lightbulb className="w-3.5 h-3.5" />
+            Example prompts
+          </Button>
         </div>
       </motion.div>
 
       {/* Trust row */}
-      <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <TrustCard icon={<Cpu className="w-4 h-4" />} title="13 Named Agents" subtitle="orchestrator-routed" />
         <TrustCard icon={<Shield className="w-4 h-4" />} title="Scope Enforced" subtitle="server-side per request" />
         <TrustCard icon={<Lock className="w-4 h-4" />} title="Field Redaction" subtitle="per role sensitivity tier" />
@@ -99,16 +96,16 @@ export function AskLearnXAILanding() {
       </div>
 
       {/* Agent catalog */}
-      <div className="mt-8">
-        <div className="flex items-center justify-between mb-4">
+      <div>
+        <div className="flex items-center justify-between mb-3 px-1">
           <div>
-            <h3 className="text-lg font-semibold text-slate-900">The 13 Named Agents</h3>
+            <h3 className="text-base font-semibold text-slate-900">The 13 Named Agents</h3>
             <p className="text-xs text-slate-500 mt-0.5">
               Each agent has a scoped system prompt, scoped data access, and its own audit trail.
               Conflicts on the same record resolve to the Orchestrator.
             </p>
           </div>
-          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
+          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide hidden md:block">
             Tier A=autonomous · B=confirm · C=never-auto
           </span>
         </div>
@@ -120,7 +117,7 @@ export function AskLearnXAILanding() {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.2 }}
-              className="p-4 rounded-xl border border-slate-200 bg-white hover:border-blue-300 hover:shadow-sm transition-all"
+              className="p-4 rounded-xl border border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm transition-all"
             >
               <div className="flex items-start justify-between gap-2 mb-2">
                 <div className="flex items-center gap-2">
@@ -157,8 +154,8 @@ export function AskLearnXAILanding() {
       </div>
 
       {/* How it works */}
-      <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6">
-        <h3 className="text-lg font-semibold text-slate-900 mb-4">How the Orchestrator works</h3>
+      <div className="rounded-2xl border border-slate-200 bg-white p-5">
+        <h3 className="text-base font-semibold text-slate-900 mb-4">How the Orchestrator works</h3>
         <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
           {[
             { n: 1, t: 'You ask', d: 'Type any question in the chat panel.' },
@@ -168,7 +165,7 @@ export function AskLearnXAILanding() {
             { n: 5, t: 'Gate', d: 'Suggested actions are filtered by your role.' },
           ].map((step) => (
             <div key={step.n} className="rounded-xl bg-slate-50 border border-slate-200 p-3">
-              <div className="w-6 h-6 rounded-full bg-blue-800 text-white text-xs font-bold flex items-center justify-center mb-2">
+              <div className="w-6 h-6 rounded-full bg-slate-900 text-white text-xs font-bold flex items-center justify-center mb-2">
                 {step.n}
               </div>
               <div className="text-sm font-semibold text-slate-900">{step.t}</div>
@@ -176,24 +173,6 @@ export function AskLearnXAILanding() {
             </div>
           ))}
         </div>
-      </div>
-
-      {/* CTA at the bottom */}
-      <div className="mt-6 flex items-center justify-between p-4 rounded-xl bg-blue-50 border border-blue-200">
-        <div className="flex items-center gap-3">
-          <Bot className="w-5 h-5 text-blue-800" />
-          <div>
-            <div className="text-sm font-semibold text-slate-900">Ready to ask?</div>
-            <div className="text-xs text-slate-600">The chat panel slides in from the right.</div>
-          </div>
-        </div>
-        <button
-          onClick={openPanel}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-800 text-white text-sm font-semibold hover:bg-blue-900 transition-all"
-        >
-          <Sparkles className="w-4 h-4" />
-          Open chat
-        </button>
       </div>
     </div>
   )
@@ -203,7 +182,7 @@ function TrustCard({ icon, title, subtitle }: { icon: React.ReactNode; title: st
   return (
     <div className="p-3 rounded-xl border border-slate-200 bg-white">
       <div className="flex items-center gap-2 mb-1">
-        <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-800 flex items-center justify-center">
+        <div className="w-7 h-7 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center">
           {icon}
         </div>
         <span className="text-sm font-semibold text-slate-900">{title}</span>

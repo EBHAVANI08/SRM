@@ -1,0 +1,845 @@
+     1→'use client'
+     2→
+     3→import { useState, useEffect, useRef } from 'react'
+     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→import {
+     6→  Camera, CameraOff, X, CheckCircle2, AlertTriangle, Bell, Shield,
+     7→  ScanFace, Fingerprint, IdCard, Search, Filter, Plus, Zap, Sparkles,
+     8→  Brain, Siren, Phone, MessageSquare, Mail, Send, Download, Eye,
+     9→  Users, UserCheck, UserX, Activity, Bot, Cpu, Database, Wifi,
+    10→  ChevronRight, TrendingUp, Target, Clock, MapPin, Video, Play,
+    11→  Pause, Volume2, Maximize2, Settings, RefreshCw, Flame, Wind,
+    12→  AlertCircle, ShieldAlert, PersonStanding, Dumbbell, Snowflake
+    13→} from 'lucide-react'
+    14→import { Card } from '@/components/ui/card'
+    15→import { Button } from '@/components/ui/button'
+    16→import { Input } from '@/components/ui/input'
+    17→import { Label } from '@/components/ui/label'
+    18→import { Badge } from '@/components/ui/badge'
+    19→import { SectionHeader } from './SectionHeader'
+    20→import { useAppStore } from '@/lib/store'
+    21→import { toast } from 'sonner'
+    22→
+    23→interface CameraFeed {
+    24→  id: string
+    25→  name: string
+    26→  location: string
+    27→  status: 'online' | 'offline' | 'alert'
+    28→  detections: string[]
+    29→  peopleCount: number
+    30→}
+    31→
+    32→interface Alert {
+    33→  id: string
+    34→  type: 'fight' | 'fall' | 'fire' | 'smoke' | 'intrusion' | 'weapon' | 'crowd' | 'behavior'
+    35→  severity: 'low' | 'medium' | 'high' | 'critical'
+    36→  camera: string
+    37→  location: string
+    38→  description: string
+    39→  timestamp: string
+    40→  status: 'active' | 'acknowledged' | 'resolved'
+    41→  aiConfidence: number
+    42→  identifiedPerson?: { name: string; id: string; method: string; photo: string }
+    43→}
+    44→
+    45→interface IdentifiedPerson {
+    46→  id: string
+    47→  name: string
+    48→  role: 'student' | 'teacher' | 'staff' | 'visitor' | 'unknown'
+    49→  identifier: string // RFID, face match, or ID card
+    50→  method: 'rfid' | 'face' | 'id-card' | 'passport'
+    51→  location: string
+    52→  time: string
+    53→  status: 'authorized' | 'flagged' | 'unknown'
+    54→  photo: string
+    55→}
+    56→
+    57→const CAMERAS: CameraFeed[] = [
+    58→  { id: 'CAM-001', name: 'Main Gate', location: 'Entrance', status: 'online', detections: ['Face Recognition', 'Weapon Detection'], peopleCount: 12 },
+    59→  { id: 'CAM-002', name: 'Corridor A', location: 'Block A - 1st Floor', status: 'online', detections: ['Behavior Analysis', 'Crowd Density'], peopleCount: 8 },
+    60→  { id: 'CAM-003', name: 'Playground', location: 'Outdoor', status: 'alert', detections: ['Fight Detection', 'Fall Detection'], peopleCount: 24 },
+    61→  { id: 'CAM-004', name: 'Class 7-B', location: 'Block B - 2nd Floor', status: 'online', detections: ['Behavior Analysis', 'Attention Tracking'], peopleCount: 28 },
+    62→  { id: 'CAM-005', name: 'Cafeteria', location: 'Block C - Ground', status: 'online', detections: ['Crowd Density', 'Smoke Detection'], peopleCount: 47 },
+    63→  { id: 'CAM-006', name: 'Library', location: 'Block A - 2nd Floor', status: 'online', detections: ['Behavior Analysis'], peopleCount: 15 },
+    64→  { id: 'CAM-007', name: 'Parking', location: 'Outdoor', status: 'online', detections: ['Vehicle Detection', 'Intrusion'], peopleCount: 3 },
+    65→  { id: 'CAM-008', name: 'Back Gate', location: 'Rear Entrance', status: 'online', detections: ['Intrusion Detection'], peopleCount: 1 },
+    66→]
+    67→
+    68→const INITIAL_ALERTS: Alert[] = [
+    69→  {
+    70→    id: 'ALT-001', type: 'fight', severity: 'critical', camera: 'CAM-003', location: 'Playground',
+    71→    description: 'AI detected physical altercation between 2 students near basketball court',
+    72→    timestamp: '2 min ago', status: 'active', aiConfidence: 94,
+    73→    identifiedPerson: { name: 'Aarav Singh', id: 'STU-2026-0142', method: 'Face Recognition', photo: '👨‍🎓' }
+    74→  },
+    75→  {
+    76→    id: 'ALT-002', type: 'smoke', severity: 'high', camera: 'CAM-005', location: 'Cafeteria',
+    77→    description: 'Smoke detected near cooking area — possible kitchen fire risk',
+    78→    timestamp: '8 min ago', status: 'acknowledged', aiConfidence: 87,
+    79→  },
+    80→  {
+    81→    id: 'ALT-003', type: 'behavior', severity: 'medium', camera: 'CAM-004', location: 'Class 7-B',
+    82→    description: '3 students showing signs of distress — emotional wellness check recommended',
+    83→    timestamp: '15 min ago', status: 'active', aiConfidence: 76,
+    84→  },
+    85→  {
+    86→    id: 'ALT-004', type: 'intrusion', severity: 'high', camera: 'CAM-008', location: 'Back Gate',
+    87→    description: 'Unauthorized person detected trying to enter through back gate',
+    88→    timestamp: '22 min ago', status: 'resolved', aiConfidence: 92,
+    89→    identifiedPerson: { name: 'Unknown Person', id: 'UNK-0034', method: 'No RFID/Face match', photo: '❓' }
+    90→  },
+    91→  {
+    92→    id: 'ALT-005', type: 'crowd', severity: 'low', camera: 'CAM-002', location: 'Corridor A',
+    93→    description: 'Crowd density above normal — 38 students in corridor (threshold: 25)',
+    94→    timestamp: '35 min ago', status: 'resolved', aiConfidence: 88,
+    95→  },
+    96→]
+    97→
+    98→const IDENTIFIED_PEOPLE: IdentifiedPerson[] = [
+    99→  { id: 'STU-2026-0142', name: 'Aarav Singh', role: 'student', identifier: 'RFID: RF-7842', method: 'rfid', location: 'Playground', time: '10:28 AM', status: 'authorized', photo: '👨‍🎓' },
+   100→  { id: 'STU-2026-0089', name: 'Diya Patel', role: 'student', identifier: 'Face Match: 98.4%', method: 'face', location: 'Class 7-B', time: '10:25 AM', status: 'authorized', photo: '👩‍🎓' },
+   101→  { id: 'STF-0042', name: 'Mrs. Anita Verma', role: 'teacher', identifier: 'Face Match: 99.1%', method: 'face', location: 'Corridor A', time: '10:22 AM', status: 'authorized', photo: '👩‍🏫' },
+   102→  { id: 'UNK-0034', name: 'Unknown Person', role: 'unknown', identifier: 'No match found', method: 'face', location: 'Back Gate', time: '10:18 AM', status: 'flagged', photo: '❓' },
+   103→  { id: 'STU-2026-0210', name: 'Vivaan Gupta', role: 'student', identifier: 'ID Card: LX-ID-210', method: 'id-card', location: 'Cafeteria', time: '10:15 AM', status: 'authorized', photo: '👨‍🎓' },
+   104→  { id: 'VST-0089', name: 'Rajesh Kumar', role: 'visitor', identifier: 'Passport Photo Match: 96%', method: 'passport', location: 'Main Gate', time: '10:10 AM', status: 'authorized', photo: '👨' },
+   105→  { id: 'STF-0018', name: 'Mr. Rajesh Kumar', role: 'staff', identifier: 'RFID: RF-0018', method: 'rfid', location: 'Parking', time: '09:45 AM', status: 'authorized', photo: '👨‍💼' },
+   106→  { id: 'STU-2026-0156', name: 'Ananya Reddy', role: 'student', identifier: 'Face Match: 97.8%', method: 'face', location: 'Library', time: '09:30 AM', status: 'authorized', photo: '👩‍🎓' },
+   107→]
+   108→
+   109→export function SecurityModule() {
+   110→  const [alerts, setAlerts] = useState<Alert[]>(INITIAL_ALERTS)
+   111→  const [selectedCamera, setSelectedCamera] = useState<CameraFeed | null>(null)
+   112→  const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null)
+   113→  const [activeTab, setActiveTab] = useState<'cameras' | 'alerts' | 'people' | 'detections'>('cameras')
+   114→  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null)
+   115→  const [streamingCamera, setStreamingCamera] = useState(false)
+   116→  const videoRef = useRef<HTMLVideoElement>(null)
+   117→
+   118→  const stats = {
+   119→    cameras: CAMERAS.length,
+   120→    online: CAMERAS.filter((c) => c.status === 'online').length,
+   121→    alerts: alerts.filter((a) => a.status === 'active').length,
+   122→    peopleTracked: IDENTIFIED_PEOPLE.length,
+   123→  }
+   124→
+   125→  const handleAcknowledge = (alertId: string) => {
+   126→    setAlerts((as) => as.map((a) => a.id === alertId ? { ...a, status: 'acknowledged' } : a))
+   127→    toast.success('Alert acknowledged. Security team notified.')
+   128→  }
+   129→
+   130→  const handleResolve = (alertId: string) => {
+   131→    setAlerts((as) => as.map((a) => a.id === alertId ? { ...a, status: 'resolved' } : a))
+   132→    toast.success('Alert resolved & logged in incident report.')
+   133→  }
+   134→
+   135→  const handleAlertClassroom = (alert: Alert) => {
+   136→    toast.success(`Alert sent to Class 7-B classroom display & teacher's phone via WhatsApp.`)
+   137→    setAlerts((as) => as.map((a) => a.id === alert.id ? { ...a, status: 'acknowledged' } : a))
+   138→  }
+   139→
+   140→  const handleAlertSecurity = (alert: Alert) => {
+   141→    toast.error(`🚨 SOS sent to security team (4 guards) + Principal. Response team dispatched to ${alert.location}.`)
+   142→    setAlerts((as) => as.map((a) => a.id === alert.id ? { ...a, status: 'acknowledged' } : a))
+   143→  }
+   144→
+   145→  const handleLiveCamera = async (camera: CameraFeed) => {
+   146→    setSelectedCamera(camera)
+   147→    try {
+   148→      if (!navigator.mediaDevices?.getUserMedia) {
+   149→        toast.warning('Live camera not available in this environment. Showing simulated feed.')
+   150→        return
+   151→      }
+   152→      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+   153→      setCameraStream(stream)
+   154→      setStreamingCamera(true)
+   155→      if (videoRef.current) {
+   156→        videoRef.current.srcObject = stream
+   157→        videoRef.current.setAttribute('playsinline', 'true')
+   158→        videoRef.current.muted = true
+   159→        await videoRef.current.play().catch(() => {})
+   160→      }
+   161→    } catch (err) {
+   162→      toast.warning('Camera access denied. Showing simulated feed with AI overlay.')
+   163→    }
+   164→  }
+   165→
+   166→  const closeCamera = () => {
+   167→    if (cameraStream) {
+   168→      cameraStream.getTracks().forEach((t) => t.stop())
+   169→      setCameraStream(null)
+   170→    }
+   171→    setStreamingCamera(false)
+   172→    setSelectedCamera(null)
+   173→  }
+   174→
+   175→  useEffect(() => {
+   176→    return () => {
+   177→      if (cameraStream) cameraStream.getTracks().forEach((t) => t.stop())
+   178→    }
+   179→  }, [cameraStream])
+   180→
+   181→  return (
+   182→    <div className="p-4 lg:p-8 space-y-6 animate-page-enter max-w-[1600px] mx-auto">
+   183→      <SectionHeader
+   184→        emoji="🛡️"
+   185→        title="AI Safety & Security Command Center"
+   186→        subtitle="Powered by LearnX Intelligence · Real-time CCTV analytics + behavior intelligence"
+   187→        accent="#1E3A8A"
+   188→        onNew={() => toast.info('Opening incident report...')}
+   189→        newLabel="New Incident"
+   190→        aiActions={[
+   191→          { label: 'cameras AI-monitored', count: 184 },
+   192→          { label: 'people identified', count: 247 },
+   193→          { label: 'threats blocked', count: 3 },
+   194→        ]}
+   195→      />
+   196→
+   197→      {/* AI Automation Engine */}
+   198→      <Card className="p-5 elevated-card rounded-2xl bg-gradient-to-br from-blue-50/50 to-orange-50/30 border-blue-100">
+   199→        <div className="flex items-start gap-4">
+   200→          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-700 to-blue-900 flex items-center justify-center text-white flex-shrink-0">
+   201→            <Bot className="w-5 h-5" />
+   202→          </div>
+   203→          <div className="flex-1">
+   204→            <div className="flex items-center gap-2 mb-3">
+   205→              <h3 className="text-sm font-semibold text-slate-900">AI Vision Engine — 24/7 Monitoring</h3>
+   206→              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-semibold border border-emerald-200">
+   207→                <span className="dot-pulse" />
+   208→                Live
+   209→              </span>
+   210→            </div>
+   211→            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+   212→              <div className="p-2.5 rounded-lg bg-white border border-slate-200">
+   213→                <div className="flex items-center gap-1.5 mb-1">
+   214→                  <Video className="w-3 h-3 text-blue-700" />
+   215→                  <span className="text-[10px] font-semibold text-slate-600 uppercase">Cameras</span>
+   216→                </div>
+   217→                <div className="text-sm font-bold text-slate-900">{stats.online}/{stats.cameras} online</div>
+   218→              </div>
+   219→              <div className="p-2.5 rounded-lg bg-white border border-slate-200">
+   220→                <div className="flex items-center gap-1.5 mb-1">
+   221→                  <Siren className="w-3 h-3 text-rose-500" />
+   222→                  <span className="text-[10px] font-semibold text-slate-600 uppercase">Active Alerts</span>
+   223→                </div>
+   224→                <div className="text-sm font-bold text-slate-900">{stats.alerts}</div>
+   225→              </div>
+   226→              <div className="p-2.5 rounded-lg bg-white border border-slate-200">
+   227→                <div className="flex items-center gap-1.5 mb-1">
+   228→                  <ScanFace className="w-3 h-3 text-teal-600" />
+   229→                  <span className="text-[10px] font-semibold text-slate-600 uppercase">People ID'd</span>
+   230→                </div>
+   231→                <div className="text-sm font-bold text-slate-900">{stats.peopleTracked}</div>
+   232→              </div>
+   233→              <div className="p-2.5 rounded-lg bg-white border border-slate-200">
+   234→                <div className="flex items-center gap-1.5 mb-1">
+   235→                  <Brain className="w-3 h-3 text-orange-500" />
+   236→                  <span className="text-[10px] font-semibold text-slate-600 uppercase">AI Accuracy</span>
+   237→                </div>
+   238→                <div className="text-sm font-bold text-slate-900">99.2%</div>
+   239→              </div>
+   240→            </div>
+   241→            <p className="text-[11px] text-slate-500 mt-3 leading-relaxed">
+   242→              AI continuously analyzes 184 CCTV feeds for fights, falls, fire, smoke, intrusion, weapons, sexual activity, and behavior anomalies. Identifies every person via RFID, face recognition, ID card, or passport photo from admission records. Auto-escalates critical alerts to security & principal.
+   243→            </p>
+   244→          </div>
+   245→        </div>
+   246→      </Card>
+   247→
+   248→      {/* Detection types strip */}
+   249→      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
+   250→        {[
+   251→          { emoji: '🥊', label: 'Fight Detection', color: '#E11D48', active: true },
+   252→          { emoji: '🩹', label: 'Fall Detection', color: '#F59E0B', active: true },
+   253→          { emoji: '🔥', label: 'Fire Detection', color: '#EF4444', active: true },
+   254→          { emoji: '💨', label: 'Smoke Detection', color: '#6B7280', active: true },
+   255→          { emoji: '🚷', label: 'Intrusion', color: '#8B5CF6', active: true },
+   256→          { emoji: '🔪', label: 'Weapon', color: '#DC2626', active: true },
+   257→          { emoji: '🔞', label: 'Inappropriate', color: '#E11D48', active: true },
+   258→          { emoji: '📊', label: 'Behavior', color: '#1E3A8A', active: true },
+   259→        ].map((det, i) => (
+   260→          <div key={i} className="p-3 rounded-xl bg-white border border-slate-200 text-center">
+   261→            <div className="text-2xl mb-1">{det.emoji}</div>
+   262→            <div className="text-[10px] font-semibold text-slate-700">{det.label}</div>
+   263→            <div className="flex items-center justify-center gap-1 mt-1">
+   264→              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+   265→              <span className="text-[9px] text-emerald-600 font-medium">Active</span>
+   266→            </div>
+   267→          </div>
+   268→        ))}
+   269→      </div>
+   270→
+   271→      {/* Tabs */}
+   272→      <div className="flex gap-1 p-1 rounded-xl bg-slate-100 w-fit">
+   273→        {[
+   274→          { id: 'cameras', label: 'Live Cameras', emoji: '📹' },
+   275→          { id: 'alerts', label: 'Active Alerts', emoji: '🚨', badge: stats.alerts },
+   276→          { id: 'people', label: 'People Identified', emoji: '👥' },
+   277→          { id: 'detections', label: 'AI Detections', emoji: '🧠' },
+   278→        ].map((tab) => (
+   279→          <button
+   280→            key={tab.id}
+   281→            onClick={() => setActiveTab(tab.id as any)}
+   282→            className={`px-4 py-2 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+   283→              activeTab === tab.id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+   284→            }`}
+   285→          >
+   286→            <span>{tab.emoji}</span>
+   287→            {tab.label}
+   288→            {tab.badge ? <span className="ml-1 px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[9px] font-bold">{tab.badge}</span> : null}
+   289→          </button>
+   290→        ))}
+   291→      </div>
+   292→
+   293→      {/* Tab content */}
+   294→      <AnimatePresence mode="wait">
+   295→        {activeTab === 'cameras' && (
+   296→          <motion.div key="cameras" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+   297→            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+   298→              {CAMERAS.map((cam) => (
+   299→                <CameraCard key={cam.id} camera={cam} onClick={() => handleLiveCamera(cam)} />
+   300→              ))}
+   301→            </div>
+   302→          </motion.div>
+   303→        )}
+   304→
+   305→        {activeTab === 'alerts' && (
+   306→          <motion.div key="alerts" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-3">
+   307→            {alerts.map((alert) => (
+   308→              <AlertCard
+   309→                key={alert.id}
+   310→                alert={alert}
+   311→                onAcknowledge={() => handleAcknowledge(alert.id)}
+   312→                onResolve={() => handleResolve(alert.id)}
+   313→                onAlertClassroom={() => handleAlertClassroom(alert)}
+   314→                onAlertSecurity={() => handleAlertSecurity(alert)}
+   315→                onView={() => setSelectedAlert(alert)}
+   316→              />
+   317→            ))}
+   318→          </motion.div>
+   319→        )}
+   320→
+   321→        {activeTab === 'people' && (
+   322→          <motion.div key="people" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+   323→            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+   324→              {IDENTIFIED_PEOPLE.map((person) => (
+   325→                <PersonCard key={person.id} person={person} />
+   326→              ))}
+   327→            </div>
+   328→          </motion.div>
+   329→        )}
+   330→
+   331→        {activeTab === 'detections' && (
+   332→          <motion.div key="detections" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+   333→            {[
+   334→              { type: 'Fight Detection', count: 1, accuracy: 94, icon: '🥊', desc: 'Physical altercation between students' },
+   335→              { type: 'Smoke Detection', count: 1, accuracy: 87, icon: '💨', desc: 'Smoke near cooking areas' },
+   336→              { type: 'Behavior Analysis', count: 12, accuracy: 88, icon: '📊', desc: 'Engagement & wellness tracking' },
+   337→              { type: 'Intrusion Detection', count: 1, accuracy: 92, icon: '🚷', desc: 'Unauthorized entry attempts' },
+   338→              { type: 'Face Recognition', count: 247, accuracy: 98, icon: ' ScanFace', desc: 'Person identification via face match' },
+   339→              { type: 'RFID Tracking', count: 1842, accuracy: 100, icon: '🔐', desc: 'Card-based entry/exit tracking' },
+   340→              { type: 'Weapon Detection', count: 0, accuracy: 96, icon: '🔪', desc: 'Weapon & dangerous object detection' },
+   341→              { type: 'Crowd Density', count: 3, accuracy: 91, icon: '👥', desc: 'Overcrowding in corridors/areas' },
+   342→            ].map((det, i) => (
+   343→              <Card key={i} className="p-5 elevated-card rounded-2xl">
+   344→                <div className="flex items-start justify-between mb-3">
+   345→                  <div className="flex items-center gap-3">
+   346→                    <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-xl">
+   347→                      {det.icon}
+   348→                    </div>
+   349→                    <div>
+   350→                      <h4 className="text-sm font-semibold text-slate-900">{det.type}</h4>
+   351→                      <p className="text-[11px] text-slate-500">{det.desc}</p>
+   352→                    </div>
+   353→                  </div>
+   354→                  <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+   355→                    {det.accuracy}% accurate
+   356→                  </span>
+   357→                </div>
+   358→                <div className="flex items-center justify-between">
+   359→                  <div>
+   360→                    <div className="text-2xl font-bold text-slate-900">{det.count}</div>
+   361→                    <div className="text-[10px] text-slate-500 uppercase tracking-wider">Detections Today</div>
+   362→                  </div>
+   363→                  <div className="flex items-center gap-1.5">
+   364→                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+   365→                    <span className="text-[10px] text-emerald-600 font-medium">Monitoring</span>
+   366→                  </div>
+   367→                </div>
+   368→              </Card>
+   369→            ))}
+   370→          </motion.div>
+   371→        )}
+   372→      </AnimatePresence>
+   373→
+   374→      {/* Live Camera Modal */}
+   375→      <AnimatePresence>
+   376→        {selectedCamera && (
+   377→          <LiveCameraModal
+   378→            camera={selectedCamera}
+   379→            videoRef={videoRef}
+   380→            streaming={streamingCamera}
+   381→            onClose={closeCamera}
+   382→          />
+   383→        )}
+   384→        {selectedAlert && (
+   385→          <AlertDetailModal alert={selectedAlert} onClose={() => setSelectedAlert(null)}
+   386→            onAlertClassroom={() => handleAlertClassroom(selectedAlert)}
+   387→            onAlertSecurity={() => handleAlertSecurity(selectedAlert)}
+   388→          />
+   389→        )}
+   390→      </AnimatePresence>
+   391→    </div>
+   392→  )
+   393→}
+   394→
+   395→// ============ Camera Card with simulated live feed ============
+   396→function CameraCard({ camera, onClick }: { camera: CameraFeed; onClick: () => void }) {
+   397→  return (
+   398→    <motion.div
+   399→      initial={{ opacity: 0, y: 10 }}
+   400→      animate={{ opacity: 1, y: 0 }}
+   401→      className="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-md transition-all cursor-pointer"
+   402→      onClick={onClick}
+   403→    >
+   404→      {/* Simulated camera feed */}
+   405→      <div className="relative aspect-video bg-gradient-to-br from-slate-800 to-slate-900 overflow-hidden">
+   406→        {/* Animated "people" dots to simulate live feed */}
+   407→        <div className="absolute inset-0">
+   408→          {Array.from({ length: camera.peopleCount > 10 ? 8 : camera.peopleCount }).map((_, i) => (
+   409→            <motion.div
+   410→              key={i}
+   411→              className="absolute w-2 h-2 rounded-full bg-emerald-400/60"
+   412→              style={{ top: `${20 + (i * 11) % 60}%`, left: `${15 + (i * 17) % 70}%` }}
+   413→              animate={{ x: [0, 20, -10, 0], y: [0, -10, 15, 0] }}
+   414→              transition={{ duration: 8 + i, repeat: Infinity, ease: 'linear' }}
+   415→            />
+   416→          ))}
+   417→        </div>
+   418→
+   419→        {/* Bounding boxes (AI detection overlay) */}
+   420→        {camera.status === 'alert' && (
+   421→          <div className="absolute top-1/4 left-1/3 w-20 h-24 border-2 border-rose-500 rounded">
+   422→            <span className="absolute -top-5 left-0 px-1 py-0.5 bg-rose-500 text-white text-[8px] font-bold rounded">FIGHT 94%</span>
+   423→          </div>
+   424→        )}
+   425→        <div className="absolute top-1/2 left-1/4 w-16 h-20 border border-emerald-400/50 rounded" />
+   426→
+   427→        {/* Top overlay */}
+   428→        <div className="absolute top-2 left-2 right-2 flex items-center justify-between">
+   429→          <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-black/60 backdrop-blur-sm">
+   430→            <span className={`w-1.5 h-1.5 rounded-full ${camera.status === 'alert' ? 'bg-rose-500' : 'bg-emerald-500'} animate-pulse`} />
+   431→            <span className="text-[9px] text-white font-mono">{camera.id}</span>
+   432→          </div>
+   433→          <div className="px-2 py-1 rounded-md bg-black/60 backdrop-blur-sm">
+   434→            <span className="text-[9px] text-white font-mono">{new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+   435→          </div>
+   436→        </div>
+   437→
+   438→        {/* Bottom overlay */}
+   439→        <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between">
+   440→          <div>
+   441→            <div className="text-[10px] text-white font-semibold">{camera.name}</div>
+   442→            <div className="text-[9px] text-white/60">{camera.location}</div>
+   443→          </div>
+   444→          <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/60 backdrop-blur-sm">
+   445→            <Users className="w-2.5 h-2.5 text-white/80" />
+   446→            <span className="text-[9px] text-white font-mono">{camera.peopleCount}</span>
+   447→          </div>
+   448→        </div>
+   449→
+   450→        {/* Play icon overlay */}
+   451→        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+   452→          <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+   453→            <Play className="w-4 h-4 text-white ml-0.5" />
+   454→          </div>
+   455→        </div>
+   456→      </div>
+   457→
+   458→      {/* Info */}
+   459→      <div className="p-3">
+   460→        <div className="flex items-center justify-between mb-2">
+   461→          <span className={`status-chip ${camera.status === 'alert' ? 'status-danger' : camera.status === 'online' ? 'status-success' : 'status-neutral'}`}>
+   462→            {camera.status === 'alert' ? '⚠ Alert' : camera.status === 'online' ? '● Live' : 'Offline'}
+   463→          </span>
+   464→          <span className="text-[10px] text-slate-400 font-mono">HD 1080p</span>
+   465→        </div>
+   466→        <div className="flex flex-wrap gap-1">
+   467→          {camera.detections.slice(0, 2).map((d) => (
+   468→            <span key={d} className="px-1.5 py-0.5 rounded-md bg-slate-100 text-[9px] text-slate-600 font-medium">{d}</span>
+   469→          ))}
+   470→        </div>
+   471→      </div>
+   472→    </motion.div>
+   473→  )
+   474→}
+   475→
+   476→// ============ Live Camera Modal ============
+   477→function LiveCameraModal({ camera, videoRef, streaming, onClose }: {
+   478→  camera: CameraFeed
+   479→  videoRef: React.RefObject<HTMLVideoElement>
+   480→  streaming: boolean
+   481→  onClose: () => void
+   482→}) {
+   483→  return (
+   484→    <motion.div
+   485→      initial={{ opacity: 0 }}
+   486→      animate={{ opacity: 1 }}
+   487→      exit={{ opacity: 0 }}
+   488→      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
+   489→      onClick={onClose}
+   490→    >
+   491→      <motion.div
+   492→        initial={{ scale: 0.95, opacity: 0 }}
+   493→        animate={{ scale: 1, opacity: 1 }}
+   494→        exit={{ scale: 0.95, opacity: 0 }}
+   495→        onClick={(e) => e.stopPropagation()}
+   496→        className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full overflow-hidden"
+   497→      >
+   498→        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+   499→          <div className="flex items-center gap-3">
+   500→            <div className="w-9 h-9 rounded-xl bg-blue-800 flex items-center justify-center text-white">
+   501→              <Video className="w-4 h-4" />
+   502→            </div>
+   503→            <div>
+   504→              <h3 className="text-base font-semibold text-slate-900">{camera.name} — Live Feed</h3>
+   505→              <p className="text-[11px] text-slate-500">{camera.id} · {camera.location}</p>
+   506→            </div>
+   507→          </div>
+   508→          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100">
+   509→            <X className="w-5 h-5 text-slate-500" />
+   510→          </button>
+   511→        </div>
+   512→
+   513→        <div className="p-6">
+   514→          {/* Live feed area */}
+   515→          <div className="relative aspect-video bg-slate-900 rounded-xl overflow-hidden border-2 border-slate-200">
+   516→            <video ref={videoRef} className={`w-full h-full object-cover ${streaming ? '' : 'hidden'}`} playsInline muted />
+   517→            {!streaming && (
+   518→              <div className="absolute inset-0">
+   519→                {/* Simulated feed */}
+   520→                {Array.from({ length: 12 }).map((_, i) => (
+   521→                  <motion.div
+   522→                    key={i}
+   523→                    className="absolute w-3 h-3 rounded-full bg-emerald-400/50"
+   524→                    style={{ top: `${15 + (i * 13) % 70}%`, left: `${10 + (i * 19) % 80}%` }}
+   525→                    animate={{ x: [0, 30, -15, 0], y: [0, -15, 20, 0] }}
+   526→                    transition={{ duration: 10 + i, repeat: Infinity, ease: 'linear' }}
+   527→                  />
+   528→                ))}
+   529→                <div className="absolute inset-0 flex items-center justify-center">
+   530→                  <div className="text-center text-white/40">
+   531→                    <Video className="w-12 h-12 mx-auto mb-2" />
+   532→                    <p className="text-xs">Simulated Feed (Camera access requires HTTPS)</p>
+   533→                  </div>
+   534→                </div>
+   535→              </div>
+   536→            )}
+   537→
+   538→            {/* AI detection overlay */}
+   539→            <div className="absolute top-1/3 left-1/4 w-24 h-28 border-2 border-emerald-400 rounded">
+   540→              <span className="absolute -top-5 left-0 px-1.5 py-0.5 bg-emerald-500 text-white text-[9px] font-bold rounded">PERSON 98%</span>
+   541→            </div>
+   542→            <div className="absolute top-1/2 right-1/3 w-20 h-24 border border-emerald-400/50 rounded" />
+   543→
+   544→            {/* Overlays */}
+   545→            <div className="absolute top-3 left-3 flex items-center gap-2 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-sm">
+   546→              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+   547→              <span className="text-[10px] text-white font-mono">LIVE · REC</span>
+   548→            </div>
+   549→            <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-emerald-500/90 text-[10px] text-white font-semibold">
+   550→              AI: {camera.detections.join(', ')}
+   551→            </div>
+   552→            <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
+   553→              <div className="px-2.5 py-1 rounded-md bg-black/60 backdrop-blur-sm">
+   554→                <span className="text-[10px] text-white font-mono">{new Date().toLocaleTimeString('en-IN')}</span>
+   555→              </div>
+   556→              <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-black/60 backdrop-blur-sm">
+   557→                <Users className="w-3 h-3 text-white" />
+   558→                <span className="text-[10px] text-white font-mono">{camera.peopleCount} people</span>
+   559→              </div>
+   560→            </div>
+   561→          </div>
+   562→
+   563→          {/* Controls */}
+   564→          <div className="flex items-center justify-between mt-4">
+   565→            <div className="flex items-center gap-2">
+   566→              <Button variant="outline" size="sm" className="h-8 text-xs rounded-lg gap-1">
+   567→                <Volume2 className="w-3 h-3" /> Audio
+   568→              </Button>
+   569→              <Button variant="outline" size="sm" className="h-8 text-xs rounded-lg gap-1">
+   570→                <Maximize2 className="w-3 h-3" /> Fullscreen
+   571→              </Button>
+   572→              <Button variant="outline" size="sm" className="h-8 text-xs rounded-lg gap-1">
+   573→                <Download className="w-3 h-3" /> Record
+   574→              </Button>
+   575→            </div>
+   576→            <div className="flex items-center gap-2">
+   577→              <Button
+   578→                size="sm"
+   579→                onClick={() => toast.success('Alert sent to security team!')}
+   580→                className="h-8 text-xs rounded-lg bg-rose-600 hover:bg-rose-700 text-white gap-1"
+   581→              >
+   582→                <Siren className="w-3 h-3" /> Alert Security
+   583→              </Button>
+   584→              <Button
+   585→                size="sm"
+   586→                onClick={() => toast.success('Notification sent to classroom display!')}
+   587→                className="h-8 text-xs rounded-lg bg-blue-800 hover:bg-blue-900 text-white gap-1"
+   588→              >
+   589→                <Bell className="w-3 h-3" /> Alert Classroom
+   590→              </Button>
+   591→            </div>
+   592→          </div>
+   593→
+   594→          {/* AI Insights */}
+   595→          <div className="mt-4 p-3 rounded-xl bg-blue-50 border border-blue-100">
+   596→            <div className="flex items-center gap-2 mb-2">
+   597→              <Brain className="w-3.5 h-3.5 text-blue-700" />
+   598→              <span className="text-xs font-semibold text-slate-900">AI Live Analysis</span>
+   599→            </div>
+   600→            <div className="grid grid-cols-3 gap-2 text-center">
+   601→              <div>
+   602→                <div className="text-lg font-bold text-slate-900">{camera.peopleCount}</div>
+   603→                <div className="text-[9px] text-slate-500 uppercase">People</div>
+   604→              </div>
+   605→              <div>
+   606→                <div className="text-lg font-bold text-emerald-600">Normal</div>
+   607→                <div className="text-[9px] text-slate-500 uppercase">Behavior</div>
+   608→              </div>
+   609→              <div>
+   610→                <div className="text-lg font-bold text-slate-900">98%</div>
+   611→                <div className="text-[9px] text-slate-500 uppercase">Confidence</div>
+   612→              </div>
+   613→            </div>
+   614→          </div>
+   615→        </div>
+   616→      </motion.div>
+   617→    </motion.div>
+   618→  )
+   619→}
+   620→
+   621→// ============ Alert Card ============
+   622→function AlertCard({ alert, onAcknowledge, onResolve, onAlertClassroom, onAlertSecurity, onView }: {
+   623→  alert: Alert
+   624→  onAcknowledge: () => void
+   625→  onResolve: () => void
+   626→  onAlertClassroom: () => void
+   627→  onAlertSecurity: () => void
+   628→  onView: () => void
+   629→}) {
+   630→  const severityConfig = {
+   631→    critical: { color: '#DC2626', bg: '#FEF2F2', border: '#FECACA', label: 'CRITICAL' },
+   632→    high: { color: '#EA580C', bg: '#FFF7ED', border: '#FED7AA', label: 'HIGH' },
+   633→    medium: { color: '#D97706', bg: '#FFFBEB', border: '#FDE68A', label: 'MEDIUM' },
+   634→    low: { color: '#2563EB', bg: '#EFF6FF', border: '#BFDBFE', label: 'LOW' },
+   635→  }
+   636→  const sev = severityConfig[alert.severity]
+   637→  const typeEmojis: Record<string, string> = {
+   638→    fight: '🥊', fall: '🩹', fire: '🔥', smoke: '💨', intrusion: '🚷',
+   639→    weapon: '🔪', crowd: '👥', behavior: '📊',
+   640→  }
+   641→
+   642→  return (
+   643→    <motion.div
+   644→      initial={{ opacity: 0, x: -10 }}
+   645→      animate={{ opacity: 1, x: 0 }}
+   646→      className="bg-white rounded-2xl border border-slate-200 p-4 hover:shadow-md transition-all"
+   647→      style={{ borderLeftWidth: '4px', borderLeftColor: sev.color }}
+   648→    >
+   649→      <div className="flex items-start gap-3">
+   650→        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0" style={{ background: sev.bg }}>
+   651→          {typeEmojis[alert.type]}
+   652→        </div>
+   653→        <div className="flex-1 min-w-0">
+   654→          <div className="flex items-center gap-2 mb-1 flex-wrap">
+   655→            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold text-white" style={{ background: sev.color }}>
+   656→              {sev.label}
+   657→            </span>
+   658→            <span className="text-xs font-semibold text-slate-900 capitalize">{alert.type} Detection</span>
+   659→            <span className="text-[10px] text-slate-400">·</span>
+   660→            <span className="text-[10px] text-slate-500 font-mono">{alert.camera}</span>
+   661→            <span className="text-[10px] text-slate-400">·</span>
+   662→            <span className="text-[10px] text-slate-500">{alert.timestamp}</span>
+   663→            <span className={`status-chip ml-auto ${
+   664→              alert.status === 'active' ? 'status-danger' : alert.status === 'acknowledged' ? 'status-warning' : 'status-success'
+   665→            }`}>{alert.status}</span>
+   666→          </div>
+   667→          <p className="text-xs text-slate-600 mb-2">{alert.description}</p>
+   668→
+   669→          {alert.identifiedPerson && (
+   670→            <div className="flex items-center gap-2 p-2 rounded-lg bg-slate-50 border border-slate-100 mb-2">
+   671→              <div className="w-7 h-7 rounded-full bg-slate-200 flex items-center justify-center text-sm">
+   672→                {alert.identifiedPerson.photo}
+   673→              </div>
+   674→              <div className="flex-1 min-w-0">
+   675→                <div className="text-[11px] font-semibold text-slate-900">{alert.identifiedPerson.name}</div>
+   676→                <div className="text-[9px] text-slate-500">{alert.identifiedPerson.id} · {alert.identifiedPerson.method}</div>
+   677→              </div>
+   678→              <span className={`status-chip ${alert.identifiedPerson.name.includes('Unknown') ? 'status-danger' : 'status-info'}`}>
+   679→                {alert.identifiedPerson.name.includes('Unknown') ? 'Flagged' : 'Identified'}
+   680→              </span>
+   681→            </div>
+   682→          )}
+   683→
+   684→          <div className="flex items-center gap-2 text-[10px] text-slate-500 mb-3">
+   685→            <MapPin className="w-3 h-3" />
+   686→            <span>{alert.location}</span>
+   687→            <span>·</span>
+   688→            <Brain className="w-3 h-3" />
+   689→            <span>AI Confidence: <span className="font-semibold text-slate-700">{alert.aiConfidence}%</span></span>
+   690→          </div>
+   691→
+   692→          {/* Action buttons */}
+   693→          <div className="flex gap-2 flex-wrap">
+   694→            <Button size="sm" variant="outline" onClick={onView} className="h-7 text-[11px] rounded-md gap-1">
+   695→              <Eye className="w-3 h-3" /> View
+   696→            </Button>
+   697→            {alert.status === 'active' && (
+   698→              <>
+   699→                <Button size="sm" onClick={onAcknowledge} className="h-7 text-[11px] rounded-md bg-amber-500 hover:bg-amber-600 text-white gap-1">
+   700→                  <CheckCircle2 className="w-3 h-3" /> Acknowledge
+   701→                </Button>
+   702→                <Button size="sm" onClick={onAlertClassroom} className="h-7 text-[11px] rounded-md bg-blue-800 hover:bg-blue-900 text-white gap-1">
+   703→                  <Bell className="w-3 h-3" /> Alert Classroom
+   704→                </Button>
+   705→                <Button size="sm" onClick={onAlertSecurity} className="h-7 text-[11px] rounded-md bg-rose-600 hover:bg-rose-700 text-white gap-1">
+   706→                  <Siren className="w-3 h-3" /> Alert Security
+   707→                </Button>
+   708→              </>
+   709→            )}
+   710→            {alert.status !== 'resolved' && (
+   711→              <Button size="sm" variant="outline" onClick={onResolve} className="h-7 text-[11px] rounded-md gap-1 text-emerald-700 border-emerald-200 hover:bg-emerald-50">
+   712→                <CheckCircle2 className="w-3 h-3" /> Resolve
+   713→              </Button>
+   714→            )}
+   715→          </div>
+   716→        </div>
+   717→      </div>
+   718→    </motion.div>
+   719→  )
+   720→}
+   721→
+   722→// ============ Alert Detail Modal ============
+   723→function AlertDetailModal({ alert, onClose, onAlertClassroom, onAlertSecurity }: {
+   724→  alert: Alert
+   725→  onClose: () => void
+   726→  onAlertClassroom: () => void
+   727→  onAlertSecurity: () => void
+   728→}) {
+   729→  return (
+   730→    <motion.div
+   731→      initial={{ opacity: 0 }}
+   732→      animate={{ opacity: 1 }}
+   733→      exit={{ opacity: 0 }}
+   734→      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm"
+   735→      onClick={onClose}
+   736→    >
+   737→      <motion.div
+   738→        initial={{ scale: 0.95, opacity: 0 }}
+   739→        animate={{ scale: 1, opacity: 1 }}
+   740→        exit={{ scale: 0.95, opacity: 0 }}
+   741→        onClick={(e) => e.stopPropagation()}
+   742→        className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden"
+   743→      >
+   744→        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+   745→          <h3 className="text-base font-semibold text-slate-900 capitalize">{alert.type} Alert Details</h3>
+   746→          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100">
+   747→            <X className="w-5 h-5 text-slate-500" />
+   748→          </button>
+   749→        </div>
+   750→        <div className="p-6 space-y-4">
+   751→          <div className="relative aspect-video bg-slate-900 rounded-xl overflow-hidden">
+   752→            <div className="absolute inset-0 flex items-center justify-center">
+   753→              <div className="text-center text-white/60">
+   754→                <Video className="w-10 h-10 mx-auto mb-2" />
+   755→                <p className="text-[10px]">Alert Snapshot · {alert.camera}</p>
+   756→              </div>
+   757→            </div>
+   758→            <div className="absolute top-1/3 left-1/3 w-24 h-28 border-2 border-rose-500 rounded">
+   759→              <span className="absolute -top-5 left-0 px-1.5 py-0.5 bg-rose-500 text-white text-[9px] font-bold rounded">
+   760→                {alert.type.toUpperCase()} {alert.aiConfidence}%
+   761→              </span>
+   762→            </div>
+   763→          </div>
+   764→          <div className="space-y-2 text-xs">
+   765→            <div className="flex justify-between"><span className="text-slate-500">Camera:</span><span className="font-semibold text-slate-900">{alert.camera} · {alert.location}</span></div>
+   766→            <div className="flex justify-between"><span className="text-slate-500">Time:</span><span className="font-semibold text-slate-900">{alert.timestamp}</span></div>
+   767→            <div className="flex justify-between"><span className="text-slate-500">AI Confidence:</span><span className="font-semibold text-slate-900">{alert.aiConfidence}%</span></div>
+   768→            <div className="flex justify-between"><span className="text-slate-500">Severity:</span><span className="font-semibold capitalize text-slate-900">{alert.severity}</span></div>
+   769→          </div>
+   770→          <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+   771→            <div className="text-[10px] font-semibold text-slate-500 uppercase mb-1">Description</div>
+   772→            <p className="text-xs text-slate-700">{alert.description}</p>
+   773→          </div>
+   774→          {alert.identifiedPerson && (
+   775→            <div className="p-3 rounded-xl bg-blue-50 border border-blue-100">
+   776→              <div className="text-[10px] font-semibold text-blue-700 uppercase mb-2">Person Identified</div>
+   777→              <div className="flex items-center gap-3">
+   778→                <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-lg">{alert.identifiedPerson.photo}</div>
+   779→                <div>
+   780→                  <div className="text-sm font-semibold text-slate-900">{alert.identifiedPerson.name}</div>
+   781→                  <div className="text-[10px] text-slate-500">{alert.identifiedPerson.id} · {alert.identifiedPerson.method}</div>
+   782→                </div>
+   783→              </div>
+   784→            </div>
+   785→          )}
+   786→          <div className="flex gap-2">
+   787→            <Button onClick={onAlertClassroom} className="flex-1 h-9 bg-blue-800 hover:bg-blue-900 text-white gap-1.5 text-xs">
+   788→              <Bell className="w-3.5 h-3.5" /> Alert Classroom
+   789→            </Button>
+   790→            <Button onClick={onAlertSecurity} className="flex-1 h-9 bg-rose-600 hover:bg-rose-700 text-white gap-1.5 text-xs">
+   791→              <Siren className="w-3.5 h-3.5" /> Alert Security
+   792→            </Button>
+   793→          </div>
+   794→        </div>
+   795→      </motion.div>
+   796→    </motion.div>
+   797→  )
+   798→}
+   799→
+   800→// ============ Person Card ============
+   801→function PersonCard({ person }: { person: IdentifiedPerson }) {
+   802→  const methodEmojis: Record<string, string> = {
+   803→    rfid: '🔐', face: ' ScanFace', 'id-card': '🪪', passport: '📄',
+   804→  }
+   805→  const roleColors: Record<string, string> = {
+   806→    student: '#1E3A8A', teacher: '#0D9488', staff: '#D97706', visitor: '#F97316', unknown: '#E11D48',
+   807→  }
+   808→  return (
+   809→    <motion.div
+   810→      initial={{ opacity: 0, y: 10 }}
+   811→      animate={{ opacity: 1, y: 0 }}
+   812→      className="bg-white rounded-2xl border border-slate-200 p-4 hover:shadow-md transition-all"
+   813→    >
+   814→      <div className="flex items-start justify-between mb-3">
+   815→        <div className="flex items-center gap-2">
+   816→          <div className="w-10 h-10 rounded-full flex items-center justify-center text-lg" style={{ background: roleColors[person.role] + '20' }}>
+   817→            {person.photo}
+   818→          </div>
+   819→          <div>
+   820→            <div className="text-sm font-semibold text-slate-900">{person.name}</div>
+   821→            <div className="text-[10px] text-slate-500 capitalize">{person.role}</div>
+   822→          </div>
+   823→        </div>
+   824→        <span className={`status-chip ${person.status === 'authorized' ? 'status-success' : person.status === 'flagged' ? 'status-danger' : 'status-warning'}`}>
+   825→          {person.status}
+   826→        </span>
+   827→      </div>
+   828→      <div className="space-y-1.5 text-[11px]">
+   829→        <div className="flex items-center gap-1.5 text-slate-600">
+   830→          <span className="text-sm">{methodEmojis[person.method]}</span>
+   831→          <span>{person.identifier}</span>
+   832→        </div>
+   833→        <div className="flex items-center gap-1.5 text-slate-600">
+   834→          <MapPin className="w-3 h-3 text-slate-400" />
+   835→          <span>{person.location}</span>
+   836→        </div>
+   837→        <div className="flex items-center gap-1.5 text-slate-600">
+   838→          <Clock className="w-3 h-3 text-slate-400" />
+   839→          <span>{person.time}</span>
+   840→        </div>
+   841→      </div>
+   842→    </motion.div>
+   843→  )
+   844→}
+   845→
