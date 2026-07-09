@@ -25,7 +25,7 @@ export async function createToken(payload: JwtPayload): Promise<string> {
   return new SignJWT({ ...payload })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
-    .setExpirationTime('24h')
+    .setExpirationTime('7d')  // extended from 24h to 7 days so demos don't expire mid-session
     .setSubject(payload.userId)
     .sign(secretKey)
 }

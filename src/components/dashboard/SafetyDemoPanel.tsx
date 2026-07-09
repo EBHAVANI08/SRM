@@ -20,7 +20,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import {
   Play, Pause, Siren, ShieldAlert, PersonStanding, Flame, Users,
-  AlertTriangle, Sparkles, Zap, Clock, ChevronRight, Loader2, X,
+  AlertTriangle, Sparkles, Zap, Clock, ChevronRight, Loader2, X, ScanFace,
 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -43,8 +43,17 @@ interface DemoScenario {
   description: string
   snapshotUrl: string
   // bounding box as percentages of the image (left, top, width, height)
-  // — drawn by the popup as a red overlay so the audience sees the "AI detection"
   bbox: { left: number; top: number; width: number; height: number }
+  // Face recognition result — shows which enrolled student was identified
+  // in the snapshot, with confidence. Makes the demo show the full
+  // detect → recognize → alert flow.
+  faceRecognition?: {
+    studentId: string
+    studentName: string
+    grade: string
+    confidence: number
+    matchType: 'ENROLLED' | 'UNKNOWN' | 'STAFF'
+  }[]
   icon: any
   accent: string
 }
@@ -58,9 +67,13 @@ const SCENARIOS: DemoScenario[] = [
     severity: 'HIGH',
     confidence: 0.92,
     location: 'Playground — South Side',
-    description: 'AI vision detected two students in physical altercation near the swings. Repeated pushing motions over 8 seconds. Bounding box tracked on both subjects.',
+    description: 'AI vision detected two students in physical altercation near the swings. Repeated pushing motions over 8 seconds. Face recognition identified both students.',
     snapshotUrl: '/safety-demo/fight.png',
     bbox: { left: 30, top: 35, width: 45, height: 50 },
+    faceRecognition: [
+      { studentId: 'STU-2026-0142', studentName: 'Aarav Singh', grade: '7-A', confidence: 0.94, matchType: 'ENROLLED' },
+      { studentId: 'STU-2026-0089', studentName: 'Vivaan Gupta', grade: '8-A', confidence: 0.91, matchType: 'ENROLLED' },
+    ],
     icon: Siren,
     accent: '#DC2626',
   },
@@ -72,9 +85,12 @@ const SCENARIOS: DemoScenario[] = [
     severity: 'CRITICAL',
     confidence: 0.87,
     location: 'Main Gate — Lobby',
-    description: 'AI vision flagged a metallic object in the hand of an unidentified person at the main entrance. Object classification: possible weapon. Immediate security review required.',
+    description: 'AI vision flagged a metallic object in the hand of an unidentified person at the main entrance. Face recognition: NO MATCH in enrolled database — unknown individual.',
     snapshotUrl: '/safety-demo/weapon.png',
     bbox: { left: 55, top: 45, width: 18, height: 30 },
+    faceRecognition: [
+      { studentId: 'UNKNOWN-001', studentName: 'Unknown Person', grade: '—', confidence: 0.0, matchType: 'UNKNOWN' },
+    ],
     icon: ShieldAlert,
     accent: '#B91C1C',
   },
@@ -86,9 +102,12 @@ const SCENARIOS: DemoScenario[] = [
     severity: 'HIGH',
     confidence: 0.94,
     location: 'Block A — 1st Floor Corridor',
-    description: 'AI vision detected a student falling to the ground and not getting up within 10 seconds. Possible medical emergency. Bounding box on prone subject.',
+    description: 'AI vision detected a student falling to the ground and not getting up within 10 seconds. Face recognition identified the student. Possible medical emergency.',
     snapshotUrl: '/safety-demo/fall.png',
     bbox: { left: 35, top: 50, width: 25, height: 35 },
+    faceRecognition: [
+      { studentId: 'STU-2026-0188', studentName: 'Anaya Singh', grade: '5-B', confidence: 0.96, matchType: 'ENROLLED' },
+    ],
     icon: PersonStanding,
     accent: '#EA580C',
   },
@@ -100,9 +119,12 @@ const SCENARIOS: DemoScenario[] = [
     severity: 'CRITICAL',
     confidence: 0.89,
     location: 'Main Gate — After Hours (02:14)',
-    description: 'AI vision detected an unidentified person attempting to climb the main gate at 02:14 AM, outside school hours. Person not in enrolled-face database. Bounding box on subject.',
+    description: 'AI vision detected an unidentified person attempting to climb the main gate at 02:14 AM. Face recognition: NO MATCH — person not in enrolled database. Auto-escalated to security.',
     snapshotUrl: '/safety-demo/intrusion.png',
     bbox: { left: 40, top: 25, width: 20, height: 60 },
+    faceRecognition: [
+      { studentId: 'UNKNOWN-INTRUDER', studentName: 'Unknown Intruder', grade: '—', confidence: 0.0, matchType: 'UNKNOWN' },
+    ],
     icon: AlertTriangle,
     accent: '#D97706',
   },
@@ -114,9 +136,10 @@ const SCENARIOS: DemoScenario[] = [
     severity: 'CRITICAL',
     confidence: 0.96,
     location: 'Block C — Chemistry Lab',
-    description: 'AI vision detected visible smoke rising from a lab desk. No personnel in frame. Possible fire / chemical reaction. Bounding box on smoke plume.',
+    description: 'AI vision detected visible smoke rising from a lab desk. No faces detected in frame. Possible fire / chemical reaction. Auto-alerted fire department.',
     snapshotUrl: '/safety-demo/fire.png',
     bbox: { left: 25, top: 30, width: 35, height: 40 },
+    faceRecognition: [],
     icon: Flame,
     accent: '#E11D48',
   },
@@ -128,9 +151,15 @@ const SCENARIOS: DemoScenario[] = [
     severity: 'MEDIUM',
     confidence: 0.85,
     location: 'Block B — 2nd Floor Corridor',
-    description: 'AI vision detected crowd density exceeding safe threshold (32 persons in frame, capacity 20). Risk of trampling. Bounding box on densest cluster.',
+    description: 'AI vision detected crowd density exceeding safe threshold (32 persons in frame, capacity 20). Face recognition identified 8 enrolled students in the crowd.',
     snapshotUrl: '/safety-demo/crowd.png',
     bbox: { left: 20, top: 30, width: 60, height: 50 },
+    faceRecognition: [
+      { studentId: 'STU-2026-0142', studentName: 'Aarav Singh', grade: '7-A', confidence: 0.88, matchType: 'ENROLLED' },
+      { studentId: 'STU-2026-0089', studentName: 'Diya Patel', grade: '5-B', confidence: 0.85, matchType: 'ENROLLED' },
+      { studentId: 'STU-2026-0210', studentName: 'Vivaan Gupta', grade: '8-A', confidence: 0.82, matchType: 'ENROLLED' },
+      { studentId: 'STU-2026-0188', studentName: 'Anaya Singh', grade: '5-B', confidence: 0.79, matchType: 'ENROLLED' },
+    ],
     icon: Users,
     accent: '#7C3AED',
   },
@@ -151,30 +180,53 @@ export function SafetyDemoPanel({
   const fireScenario = useCallback(async (scenario: DemoScenario) => {
     setFiring(scenario.id)
     try {
+      // Build a rich description that includes face-recognition results
+      // so the popup shows the full detect → recognize → alert flow.
+      let fullDescription = scenario.description
+      if (scenario.faceRecognition && scenario.faceRecognition.length > 0) {
+        const enrolled = scenario.faceRecognition.filter((f) => f.matchType === 'ENROLLED')
+        const unknown = scenario.faceRecognition.filter((f) => f.matchType === 'UNKNOWN')
+        if (enrolled.length > 0) {
+          fullDescription += `\n\n👤 FACE RECOGNITION: ${enrolled.length} enrolled student(s) identified:`
+          for (const f of enrolled) {
+            fullDescription += `\n   • ${f.studentName} (${f.studentId}) — Grade ${f.grade} — ${Math.round(f.confidence * 100)}% match`
+          }
+        }
+        if (unknown.length > 0) {
+          fullDescription += `\n\n⚠️ UNKNOWN FACE: ${unknown.length} person(s) not in enrolled database — flagged for security review.`
+        }
+      }
+
       const { data, error } = await apiPost('/api/safety/alerts', {
         source: 'MANUAL',
         detectionType: scenario.detectionType,
         severity: scenario.severity,
         confidence: scenario.confidence,
         location: scenario.location,
-        description: `[DEMO] ${scenario.description}`,
+        description: `[DEMO] ${fullDescription}`,
         snapshotUrl: scenario.snapshotUrl,
         // skipCooldown ensures the demo can fire repeatedly without
         // being throttled by the per-camera cooldown rule
         skipCooldown: true,
       })
       if (error) {
-        toast.error(`Failed to trigger ${scenario.label}: ${error}`)
+        toast.error(`Failed to trigger ${scenario.label}: ${error}`, {
+          description: 'If the error says "Invalid or expired token", please log out and log back in — your session may have expired.',
+          duration: 6000,
+        })
       } else {
         toast.success(`🚨 Demo alert fired: ${scenario.label}`, {
-          description: `Severity ${scenario.severity} · ${Math.round(scenario.confidence * 100)}% confidence · popup will appear within 10s`,
+          description: `Severity ${scenario.severity} · ${Math.round(scenario.confidence * 100)}% confidence · popup will appear within 10s${scenario.faceRecognition && scenario.faceRecognition.length > 0 ? ` · ${scenario.faceRecognition.length} face(s) recognized` : ''}`,
           duration: 4000,
         })
         setLastFired(scenario.id)
         onAlertCreated?.()
       }
     } catch (e: any) {
-      toast.error(`Network error: ${e?.message || 'unknown'}`)
+      toast.error(`Network error: ${e?.message || 'unknown'}`, {
+        description: 'Please check your connection and try again. If the error persists, log out and log back in.',
+        duration: 6000,
+      })
     } finally {
       setFiring(null)
     }
@@ -300,6 +352,19 @@ export function SafetyDemoPanel({
                   <span className="text-[10px] font-semibold text-slate-900 leading-tight">{s.label}</span>
                 </div>
                 <div className="text-[9px] text-slate-500 mt-0.5 truncate">{s.location}</div>
+                {/* Face recognition badge */}
+                {s.faceRecognition && s.faceRecognition.length > 0 && (
+                  <div className="flex items-center gap-0.5 mt-1">
+                    <span className="text-[8px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-1 py-0.5 rounded-sm flex items-center gap-0.5">
+                      <ScanFace className="w-2 h-2" />
+                      {s.faceRecognition[0].matchType === 'ENROLLED'
+                        ? `${s.faceRecognition.length} face${s.faceRecognition.length > 1 ? 's' : ''} recognized`
+                        : s.faceRecognition[0].matchType === 'UNKNOWN'
+                        ? 'UNKNOWN face'
+                        : 'face scan'}
+                    </span>
+                  </div>
+                )}
                 {wasLastFired && (
                   <div className="text-[8px] text-emerald-700 font-bold mt-1 flex items-center gap-0.5">
                     <Zap className="w-2 h-2" /> FIRED
