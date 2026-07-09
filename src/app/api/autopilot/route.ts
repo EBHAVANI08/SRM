@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { publishEvent } from '@/lib/eventBus'
-import { sendCommunication, checkUnacknowledgedCriticals, retryFailedCommunications } from '@/lib/comms'
+import { sendCommunication, sweepUnacknowledgedNotifications } from '@/lib/comms'
 
 export const runtime = 'nodejs'
 
@@ -74,11 +74,11 @@ export async function POST(req: NextRequest) {
     let result: any = {}
 
     if (action === 'retry_failed') {
-      const retryResult = await retryFailedCommunications(schoolId)
+      const retryResult = await sweepUnacknowledgedNotifications(new Date())
       result = { action: 'retry_failed', ...retryResult }
     } else if (action === 'check_criticals') {
-      const unacknowledged = await checkUnacknowledgedCriticals(schoolId)
-      result = { action: 'check_criticals', unacknowledgedCount: unacknowledged.length, criticals: unacknowledged }
+      const sweepResult = await sweepUnacknowledgedNotifications(new Date())
+      result = { action: 'check_criticals', unacknowledgedCount: sweepResult.escalated, criticals: sweepResult.details }
     } else {
       // Run a general checkpoint
       await publishEvent({

@@ -66,12 +66,11 @@ export function SafetyAlertPopup() {
   const [pendingAlerts, setPendingAlerts] = useState<SafetyAlert[]>([])
   const [currentIdx, setCurrentIdx] = useState(0)
   const [acting, setActing] = useState(false)
+  const [snoozedUntil, setSnoozedUntil] = useState<number | null>(null)
   const lastSeenRef = useRef<string>(new Date().toISOString())
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
-  // Only show for roles that can review alerts AND when the user is on the
-  // Safety module page (or any safety-adjacent page). We poll regardless so
-  // the popup can fire even on the dashboard, but only for authorized roles.
+  // Only show for roles that can review alerts.
   const canReview = user && ['SUPER_ADMIN', 'SCHOOL_HEAD', 'ADMIN', 'IT_TEAM'].includes(user.role)
 
   useEffect(() => {
@@ -79,14 +78,28 @@ export function SafetyAlertPopup() {
     let cancelled = false
 
     async function poll() {
+      // Respect snooze — don't poll or show popups until snooze expires
+      if (snoozedUntil && Date.now() < snoozedUntil) return
+      if (snoozedUntil && Date.now() >= snoozedUntil) {
+        setSnoozedUntil(null)
+      }
+
       const { data, error } = await apiGet<{ alerts: SafetyAlert[] }>(
         `/api/safety/alerts?status=ACTIVE&since=${encodeURIComponent(lastSeenRef.current)}&limit=10`,
       )
       if (cancelled || error || !data?.alerts?.length) return
       const newAlerts = data.alerts.filter((a) => new Date(a.triggeredAt).getTime() > new Date(lastSeenRef.current).getTime())
-      if (newAlerts.length > 0) {
+
+      // On non-Safety pages, only interrupt with CRITICAL alerts.
+      // LOW/MEDIUM/HIGH alerts are silently logged (visible in the Safety module).
+      const onSafetyPage = currentView === 'security'
+      const filtered = onSafetyPage
+        ? newAlerts
+        : newAlerts.filter((a) => a.severity === 'CRITICAL')
+
+      if (filtered.length > 0) {
         lastSeenRef.current = new Date(newAlerts[0].triggeredAt).toISOString()
-        setPendingAlerts((prev) => [...newAlerts, ...prev])
+        setPendingAlerts((prev) => [...filtered, ...prev])
         // Play alert sound
         try {
           if (!audioRef.current) {
@@ -106,7 +119,7 @@ export function SafetyAlertPopup() {
       cancelled = true
       clearInterval(interval)
     }
-  }, [canReview])
+  }, [canReview, snoozedUntil, currentView])
 
   const current = pendingAlerts[currentIdx]
 
@@ -142,6 +155,11 @@ export function SafetyAlertPopup() {
   const dismissAll = () => {
     setPendingAlerts([])
     setCurrentIdx(0)
+  }
+
+  const snooze = (minutes: number) => {
+    setSnoozedUntil(Date.now() + minutes * 60 * 1000)
+    dismissAll()
   }
 
   return (
@@ -260,9 +278,16 @@ export function SafetyAlertPopup() {
             </div>
 
             {/* Actions */}
-            <div className="px-5 py-3 border-t border-slate-200 bg-slate-50 flex items-center justify-between gap-2">
-              <div className="text-[10px] text-slate-500">
-                Reviewing as <span className="font-semibold">{user?.name}</span> ({user?.role})
+            <div className="px-5 py-3 border-t border-slate-200 bg-slate-50 flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2 text-[10px] text-slate-500">
+                <span>Reviewing as <span className="font-semibold">{user?.name}</span> ({user?.role})</span>
+                <button
+                  onClick={() => snooze(5)}
+                  className="px-1.5 py-0.5 rounded text-[9px] font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-slate-100"
+                  title="Snooze all alerts for 5 minutes"
+                >
+                  Snooze 5m
+                </button>
               </div>
               <div className="flex items-center gap-2">
                 <Button
