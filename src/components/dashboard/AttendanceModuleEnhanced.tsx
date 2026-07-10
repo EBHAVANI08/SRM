@@ -12,6 +12,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import { Switch } from '@/components/ui/switch'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '@/components/ui/select'
@@ -681,6 +683,9 @@ function DailyReportTab() {
           </div>
         </Card>
       )}
+
+      {/* Google Sheet Sync */}
+      <GoogleSheetSyncSection date={date} />
     </div>
   )
 }
@@ -697,5 +702,247 @@ function SummaryCard({ label, value, icon: Icon, color, sub }: { label: string; 
       <div className="text-[11px] text-slate-500 mt-0.5">{label}</div>
       {sub && <div className="text-[10px] text-slate-400 mt-0.5">{sub}</div>}
     </Card>
+  )
+}
+
+// ============ Google Sheet Sync Section ============
+function GoogleSheetSyncSection({ date }: { date: string }) {
+  const [config, setConfig] = useState<any>(null)
+  const [logs, setLogs] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [syncing, setSyncing] = useState(false)
+  const [showConfig, setShowConfig] = useState(false)
+
+  const fetchConfig = useCallback(async () => {
+    setLoading(true)
+    const { apiGet } = await import('@/lib/apiFetch')
+    const [cfgRes, logsRes] = await Promise.all([
+      apiGet<{ config: any }>('/api/attendance/google-sheet-sync/config'),
+      apiGet<{ logs: any[] }>('/api/attendance/google-sheet-sync/logs?limit=5'),
+    ])
+    if (cfgRes.data) setConfig(cfgRes.data.config)
+    if (logsRes.data) setLogs(logsRes.data.logs || [])
+    setLoading(false)
+  }, [])
+
+  useEffect(() => {
+    fetchConfig()
+  }, [fetchConfig])
+
+  const handleSync = async () => {
+    setSyncing(true)
+    try {
+      const { apiPost } = await import('@/lib/apiFetch')
+      const { data, error } = await apiPost<any>('/api/attendance/google-sheet-sync/trigger', { date })
+      if (error) {
+        toast.error(`Sync failed: ${error}`)
+      } else if (data?.success) {
+        toast.success(`✅ Synced ${data.rowsSynced} rows to Google Sheets`, {
+          description: data.spreadsheetUrl ? `View: ${data.spreadsheetUrl}` : undefined,
+          duration: 5000,
+        })
+        fetchConfig() // refresh logs
+      } else {
+        toast.error(`Sync failed: ${data?.error || 'unknown error'}`, {
+          description: 'Configure your Google Sheet credentials in the sync settings.',
+          duration: 6000,
+        })
+      }
+    } catch (e: any) {
+      toast.error(`Error: ${e?.message}`)
+    } finally {
+      setSyncing(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <Card className="p-4 rounded-2xl">
+        <div className="text-xs text-slate-500 flex items-center gap-2">
+          <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Loading Google Sheet sync status…
+        </div>
+      </Card>
+    )
+  }
+
+  return (
+    <Card className="p-4 border-slate-200 bg-white">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center text-base">📊</div>
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-1.5">
+              Google Sheet Sync
+              {config?.isActive && <Badge variant="outline" className="text-[9px] bg-emerald-50 text-emerald-700 border-emerald-200">AUTO-SYNC {config.syncTime}</Badge>}
+            </h3>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              Daily attendance reports auto-sync to a master Google Sheet for administration records
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" className="h-8 text-xs rounded-lg" onClick={() => setShowConfig(!showConfig)}>
+            <FileText className="w-3.5 h-3.5 mr-1" /> {config ? 'Settings' : 'Configure'}
+          </Button>
+          {config && (
+            <Button size="sm" className="h-8 text-xs rounded-lg bg-emerald-600 hover:bg-emerald-700 gap-1.5" onClick={handleSync} disabled={syncing}>
+              {syncing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+              Sync Now
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Config form */}
+      {showConfig && (
+        <GoogleSheetConfigForm
+          config={config}
+          onSaved={() => { setShowConfig(false); fetchConfig() }}
+        />
+      )}
+
+      {/* Status */}
+      {config ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
+          <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+            <div className="text-[10px] text-slate-500 uppercase">Spreadsheet ID</div>
+            <div className="text-[11px] font-mono text-slate-900 truncate">{config.spreadsheetId}</div>
+          </div>
+          <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+            <div className="text-[10px] text-slate-500 uppercase">Sheet Tab</div>
+            <div className="text-[11px] text-slate-900">{config.sheetName}</div>
+          </div>
+          <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+            <div className="text-[10px] text-slate-500 uppercase">Last Sync</div>
+            <div className="text-[11px] text-slate-900">
+              {config.lastSyncAt ? new Date(config.lastSyncAt).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' }) : 'Never'}
+              {config.lastSyncStatus && (
+                <Badge variant="outline" className={`ml-1 text-[8px] ${config.lastSyncStatus === 'SUCCESS' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+                  {config.lastSyncStatus}
+                </Badge>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-800">
+          <AlertCircle className="w-3.5 h-3.5 inline mr-1" />
+          No Google Sheet configured. Click <span className="font-semibold">Configure</span> to set up daily auto-sync. The administration will receive a master copy of all attendance reports automatically.
+        </div>
+      )}
+
+      {/* Recent sync logs */}
+      {logs.length > 0 && (
+        <div className="mt-3 pt-3 border-t border-slate-100">
+          <div className="text-[10px] font-semibold text-slate-700 uppercase tracking-wide mb-1.5">Recent Sync History</div>
+          <div className="space-y-1">
+            {logs.map((l) => (
+              <div key={l.id} className="flex items-center justify-between text-[10px] py-1">
+                <div className="flex items-center gap-2">
+                  <span className={`w-1.5 h-1.5 rounded-full ${l.status === 'SUCCESS' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                  <span className="text-slate-700 font-medium">{l.date}</span>
+                  <span className="text-slate-500">{l.rowsSynced} rows</span>
+                  {l.error && <span className="text-rose-600 truncate max-w-xs">· {l.error}</span>}
+                </div>
+                <span className="text-slate-400">{new Date(l.createdAt).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' })}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </Card>
+  )
+}
+
+function GoogleSheetConfigForm({ config, onSaved }: { config: any; onSaved: () => void }) {
+  const [spreadsheetId, setSpreadsheetId] = useState(config?.spreadsheetId || '')
+  const [sheetName, setSheetName] = useState(config?.sheetName || 'Daily Attendance')
+  const [serviceAccountEmail, setServiceAccountEmail] = useState(config?.serviceAccountEmail || '')
+  const [privateKey, setPrivateKey] = useState('')
+  const [apiKey, setApiKey] = useState('')
+  const [syncTime, setSyncTime] = useState(config?.syncTime || '18:00')
+  const [isActive, setIsActive] = useState(config?.isActive ?? true)
+  const [saving, setSaving] = useState(false)
+
+  const handleSave = async () => {
+    if (!spreadsheetId) { toast.error('Spreadsheet ID is required'); return }
+    setSaving(true)
+    try {
+      const { apiFetch } = await import('@/lib/apiFetch')
+      const res = await apiFetch('/api/attendance/google-sheet-sync/config', {
+        method: 'PUT',
+        body: JSON.stringify({
+          spreadsheetId,
+          sheetName,
+          serviceAccountEmail: serviceAccountEmail || undefined,
+          privateKey: privateKey || undefined,
+          apiKey: apiKey || undefined,
+          syncTime,
+          isActive,
+        }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        toast.success('Google Sheet sync configured')
+        onSaved()
+      } else {
+        toast.error(`Save failed: ${data.error}`)
+      }
+    } catch (e: any) {
+      toast.error(`Error: ${e?.message}`)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2.5 mb-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div>
+          <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">Google Spreadsheet ID *</label>
+          <Input value={spreadsheetId} onChange={(e) => setSpreadsheetId(e.target.value)} placeholder="1ABC...XYZ (from the sheet URL)" className="h-8 text-[11px] rounded-lg bg-white" />
+          <p className="text-[9px] text-slate-400 mt-0.5">From docs.google.com/spreadsheets/d/<b>THIS_PART</b>/edit</p>
+        </div>
+        <div>
+          <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">Sheet Tab Name</label>
+          <Input value={sheetName} onChange={(e) => setSheetName(e.target.value)} className="h-8 text-[11px] rounded-lg bg-white" />
+        </div>
+        <div>
+          <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">Daily Sync Time (24h)</label>
+          <Input type="time" value={syncTime} onChange={(e) => setSyncTime(e.target.value)} className="h-8 text-[11px] rounded-lg bg-white" />
+        </div>
+        <div>
+          <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">Active</label>
+          <div className="flex items-center gap-2 h-8">
+            <Switch checked={isActive} onCheckedChange={setIsActive} />
+            <span className="text-[10px] text-slate-600">{isActive ? 'Auto-sync enabled' : 'Paused'}</span>
+          </div>
+        </div>
+      </div>
+      <div className="pt-2 border-t border-slate-200">
+        <div className="text-[10px] font-semibold text-slate-600 mb-1.5">Authentication (choose one):</div>
+        <div className="space-y-2">
+          <div>
+            <label className="text-[10px] text-slate-500 block mb-0.5">Service Account Email (recommended for production)</label>
+            <Input value={serviceAccountEmail} onChange={(e) => setServiceAccountEmail(e.target.value)} placeholder="learnx-sync@project.iam.gserviceaccount.com" className="h-8 text-[11px] rounded-lg bg-white" />
+          </div>
+          <div>
+            <label className="text-[10px] text-slate-500 block mb-0.5">Service Account Private Key {config?.privateKeyEnc === '***CONFIGURED***' && '(configured — leave blank to keep)'}</label>
+            <Textarea value={privateKey} onChange={(e) => setPrivateKey(e.target.value)} placeholder="-----BEGIN PRIVATE KEY-----&#10;...&#10;-----END PRIVATE KEY-----" className="text-[10px] rounded-lg bg-white font-mono min-h-[50px]" />
+          </div>
+          <div>
+            <label className="text-[10px] text-slate-500 block mb-0.5">OR API Key (simpler, for public sheets) {config?.apiKey === '***CONFIGURED***' && '(configured — leave blank to keep)'}</label>
+            <Input value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="AIzaSy..." className="h-8 text-[11px] rounded-lg bg-white font-mono" />
+          </div>
+        </div>
+      </div>
+      <div className="flex justify-end gap-2 pt-1">
+        <Button size="sm" variant="outline" className="h-8 text-xs rounded-lg" onClick={onSaved}>Cancel</Button>
+        <Button size="sm" className="h-8 text-xs rounded-lg text-white gap-1.5" style={{ background: '#0D9488' }} onClick={handleSave} disabled={saving}>
+          {saving ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+          Save Configuration
+        </Button>
+      </div>
+    </div>
   )
 }

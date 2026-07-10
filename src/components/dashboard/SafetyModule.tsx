@@ -50,6 +50,8 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { SectionHeader } from './SectionHeader'
 import { SafetyDemoPanel } from './SafetyDemoPanel'
+import { OverviewHeatmap } from './OverviewHeatmap'
+import { WorkflowEditorTab } from './WorkflowEditorTab'
 import { useNotificationPreview, type PreviewRecipient } from './NotificationPreviewModal'
 import { SafetyCameraFocus } from './SafetyCameraFocus'
 import { useAppStore } from '@/lib/store'
@@ -62,7 +64,7 @@ const ACCENT = '#0EA5E9'
 // Types
 // ---------------------------------------------------------------------------
 
-type Tab = 'overview' | 'cameras' | 'detection' | 'attendance' | 'behavior' | 'visitors' | 'drill' | 'heatmap' | 'audit' | 'zones' | 'rules'
+type Tab = 'overview' | 'cameras' | 'detection' | 'attendance' | 'behavior' | 'visitors' | 'drill' | 'heatmap' | 'workflows' | 'audit' | 'zones' | 'rules'
 
 interface Camera {
   id: string
@@ -270,6 +272,7 @@ function SafetyModuleInner({ role }: { role: string }) {
     visitors: ['SUPER_ADMIN', 'SCHOOL_HEAD', 'ADMIN', 'RECEPTION'].includes(role),
     drill: ['SUPER_ADMIN', 'SCHOOL_HEAD', 'ADMIN'].includes(role),
     heatmap: ['SUPER_ADMIN', 'SCHOOL_HEAD', 'ADMIN', 'IT_TEAM'].includes(role),
+    workflows: ['SUPER_ADMIN', 'SCHOOL_HEAD', 'ADMIN'].includes(role),
     audit: ['SUPER_ADMIN', 'SCHOOL_HEAD', 'ADMIN', 'IT_TEAM'].includes(role),
     zones: true,
     rules: ['SUPER_ADMIN', 'SCHOOL_HEAD'].includes(role),
@@ -284,6 +287,7 @@ function SafetyModuleInner({ role }: { role: string }) {
     { id: 'visitors', label: 'Visitors', icon: UserCheck },
     { id: 'drill', label: 'Drill', icon: Siren },
     { id: 'heatmap', label: 'Heat Map', icon: MapPin },
+    { id: 'workflows', label: 'Workflows', icon: Zap },
     { id: 'audit', label: 'Audit Log', icon: ShieldCheck },
     { id: 'zones', label: 'Zones', icon: Grid3x3 },
     { id: 'rules', label: 'Rules', icon: Settings },
@@ -486,6 +490,9 @@ function SafetyModuleInner({ role }: { role: string }) {
           )}
           {activeTab === 'heatmap' && (
             <HeatmapTab />
+          )}
+          {activeTab === 'workflows' && (
+            <WorkflowEditorTab />
           )}
           {activeTab === 'audit' && (
             <AuditTab entries={auditEntries} onRefresh={fetchAudit} />
@@ -696,6 +703,9 @@ function OverviewTab({ stats, charts, alerts, cameras, zones, onCameraFocus }: {
           </Card>
         </div>
       )}
+
+      {/* Visual incident heatmap by zone */}
+      <OverviewHeatmap />
     </div>
   )
 }

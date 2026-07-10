@@ -999,6 +999,72 @@ model SafetyScheduledAttendance {
   @@index([schoolId, scheduledAt])
 }
 
+// ============ GOOGLE SHEET SYNC (Attendance Reports) ============
+model GoogleSheetSyncConfig {
+  id              String   @id @default(cuid())
+  schoolId        String   @default("school_default")
+  spreadsheetId   String   // Google Sheets spreadsheet ID
+  sheetName       String   @default("Daily Attendance") // tab name
+  serviceAccountEmail String? // for service-account auth
+  privateKeyEnc   String?  // encrypted service account private key
+  apiKey          String?  // alternative: simple API key auth
+  syncTime        String   @default("18:00") // HH:MM — daily sync time
+  isActive        Boolean  @default(true)
+  lastSyncAt      DateTime?
+  lastSyncStatus  String?  // SUCCESS, FAILED, PARTIAL
+  lastSyncError   String?
+  lastSyncRows    Int?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([schoolId, isActive])
+}
+
+model GoogleSheetSyncLog {
+  id              String   @id @default(cuid())
+  schoolId        String   @default("school_default")
+  configId        String
+  date            String   // YYYY-MM-DD — the attendance date synced
+  rowsSynced      Int
+  status          String   // SUCCESS, FAILED, PARTIAL
+  error           String?
+  spreadsheetUrl  String?
+  createdAt       DateTime @default(now())
+
+  @@index([schoolId, createdAt])
+  @@index([configId])
+}
+
+// ============ SAFETY INCIDENT WORKFLOWS ============
+model SafetyIncidentWorkflow {
+  id              String   @id @default(cuid())
+  schoolId        String   @default("school_default")
+  detectionType   String   // VIOLENCE, WEAPON, FALL_MEDICAL, INTRUSION, SMOKE_FIRE, CROWD_DENSITY, ANY
+  severity        String   // LOW, MEDIUM, HIGH, CRITICAL, ANY
+  name            String   // human-readable workflow name
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  steps           SafetyWorkflowStep[]
+
+  @@index([schoolId, detectionType, severity])
+}
+
+model SafetyWorkflowStep {
+  id              String   @id @default(cuid())
+  workflowId      String
+  workflow        SafetyIncidentWorkflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  order           Int      // 1, 2, 3... execution order
+  actionType      String   // NOTIFY_ROLE, NOTIFY_PARENTS, LOCKDOWN_ZONE, CALL_EMERGENCY, SOUND_SIREN, SEND_MESSAGE, ACTIVATE_PA, ESCALATE, WAIT
+  config          String   // JSON: { roles: [...], message: '...', zoneId: '...', phoneNumber: '...', durationSec: 60 }
+  delaySec        Int      @default(0) // delay before executing this step (after previous step completes)
+  description     String   // human-readable
+  createdAt       DateTime @default(now())
+
+  @@index([workflowId, order])
+}
+
 // ============ NOTIFICATIONS ============
 model Notification {
   id          String   @id @default(cuid())
