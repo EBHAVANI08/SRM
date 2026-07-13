@@ -1136,6 +1136,96 @@ model GateExitAlert {
   @@index([detectedAt])
 }
 
+// ============ GATE MONITORING — Extended AI detections ============
+
+// Pre-approved early exit permission — set by admin when a parent
+// authorizes pickup (e.g. doctor's appointment). The gate system checks
+// this BEFORE triggering an alert.
+model EarlyExitPermission {
+  id              String   @id @default(cuid())
+  schoolId        String   @default("school_default")
+  studentId       String   // FK to Student
+  studentName     String   // denormalized for fast lookup
+  approvedBy      String   // userId of admin who approved
+  approverName    String
+  reason          String   // "Doctor appointment", "Family emergency", etc.
+  validFrom       DateTime // earliest time the student can exit
+  validUntil      DateTime // latest time the permission is valid
+  guardianName    String?  // who is picking up (if applicable)
+  guardianPhone   String?
+  guardianRelation String? // "Mother", "Father", "Uncle"
+  isUsed          Boolean  @default(false) // marked true when the student actually exits
+  usedAt          DateTime?
+  createdAt       DateTime @default(now())
+
+  @@index([schoolId, studentId, validUntil])
+  @@index([validFrom, validUntil])
+}
+
+// Guardian verification — pre-approved guardians who can pick up a student.
+// Face recognition at the gate matches against this table to verify
+// that the person picking up is an approved guardian.
+model ApprovedGuardian {
+  id              String   @id @default(cuid())
+  schoolId        String   @default("school_default")
+  studentId       String   // FK to Student
+  studentName     String
+  guardianName    String
+  guardianPhone   String
+  guardianEmail   String?
+  guardianRelation String  // "Mother", "Father", "Uncle", "Aunt"
+  faceEncRef      String?  // reference to enrolled face embedding
+  photoUrl        String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([schoolId, studentId])
+  @@index([guardianPhone])
+}
+
+// Late arrival detection — student arrives after school start time
+model LateArrivalAlert {
+  id              String   @id @default(cuid())
+  schoolId        String   @default("school_default")
+  studentId       String?
+  studentName     String
+  studentGrade    String?
+  gate            String   // "ENTRANCE"
+  cameraName      String?
+  snapshotUrl     String?
+  arrivedAt       DateTime @default(now())
+  minutesLate     Int      // minutes after school start
+  parentNotifiedAt DateTime?
+  parentWhatsAppStatus String?
+  parentSmsStatus String?
+  status          String   @default("ACTIVE") // ACTIVE, ACKNOWLEDGED
+  reason          String
+  createdAt       DateTime @default(now())
+
+  @@index([schoolId, status, arrivedAt])
+  @@index([studentId, arrivedAt])
+}
+
+// Loitering detection — student remains near a gate/exit for too long
+model LoiteringAlert {
+  id              String   @id @default(cuid())
+  schoolId        String   @default("school_default")
+  studentId       String?
+  studentName     String   // "Unknown Person" if not recognized
+  location        String   // gate/zone name
+  cameraId        String?
+  cameraName      String?
+  snapshotUrl     String?
+  detectedAt      DateTime @default(now())
+  durationSec     Int      // how long they were loitering
+  thresholdSec    Int      // what the loitering threshold was
+  status          String   @default("ACTIVE")
+  createdAt       DateTime @default(now())
+
+  @@index([schoolId, status, detectedAt])
+}
+
 // ============ NOTIFICATIONS ============
 model Notification {
   id          String   @id @default(cuid())
