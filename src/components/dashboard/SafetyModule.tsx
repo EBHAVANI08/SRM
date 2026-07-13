@@ -32,7 +32,7 @@ import {
   Activity, ChevronRight, TrendingUp, TrendingDown, Clock, MapPin, Video,
   RefreshCw, Flame, AlertCircle, ShieldAlert, PersonStanding, Volume2,
   Megaphone, Grid2x2, Grid3x3, FileText, ShieldCheck, Trash2, Pencil, Plus,
-  UserCheck, UserX, Flame as FlameIcon, Play, Pause, Hash, Lock, Unlock,
+  UserCheck, UserX, Flame as FlameIcon, Play, Pause, Hash, Lock, Unlock, DoorOpen,
   Calendar, ChevronUp, ChevronDown, Wifi, WifiOff, Settings, Loader2, Mail,
 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
@@ -52,6 +52,7 @@ import { SectionHeader } from './SectionHeader'
 import { SafetyDemoPanel } from './SafetyDemoPanel'
 import { OverviewHeatmap } from './OverviewHeatmap'
 import { WorkflowEditorTab } from './WorkflowEditorTab'
+import { GateExitMonitorTab } from './GateExitMonitorTab'
 import { useNotificationPreview, type PreviewRecipient } from './NotificationPreviewModal'
 import { SafetyCameraFocus } from './SafetyCameraFocus'
 import { useAppStore } from '@/lib/store'
@@ -64,7 +65,7 @@ const ACCENT = '#0EA5E9'
 // Types
 // ---------------------------------------------------------------------------
 
-type Tab = 'overview' | 'cameras' | 'detection' | 'attendance' | 'behavior' | 'visitors' | 'drill' | 'heatmap' | 'workflows' | 'audit' | 'zones' | 'rules'
+type Tab = 'overview' | 'cameras' | 'detection' | 'attendance' | 'behavior' | 'visitors' | 'drill' | 'heatmap' | 'workflows' | 'gate-exit' | 'audit' | 'zones' | 'rules'
 
 interface Camera {
   id: string
@@ -273,6 +274,7 @@ function SafetyModuleInner({ role }: { role: string }) {
     drill: ['SUPER_ADMIN', 'SCHOOL_HEAD', 'ADMIN'].includes(role),
     heatmap: ['SUPER_ADMIN', 'SCHOOL_HEAD', 'ADMIN', 'IT_TEAM'].includes(role),
     workflows: ['SUPER_ADMIN', 'SCHOOL_HEAD', 'ADMIN'].includes(role),
+    'gate-exit': ['SUPER_ADMIN', 'SCHOOL_HEAD', 'ADMIN', 'IT_TEAM', 'RECEPTION'].includes(role),
     audit: ['SUPER_ADMIN', 'SCHOOL_HEAD', 'ADMIN', 'IT_TEAM'].includes(role),
     zones: true,
     rules: ['SUPER_ADMIN', 'SCHOOL_HEAD'].includes(role),
@@ -288,6 +290,7 @@ function SafetyModuleInner({ role }: { role: string }) {
     { id: 'drill', label: 'Drill', icon: Siren },
     { id: 'heatmap', label: 'Heat Map', icon: MapPin },
     { id: 'workflows', label: 'Workflows', icon: Zap },
+    { id: 'gate-exit', label: 'Gate Exit', icon: DoorOpen },
     { id: 'audit', label: 'Audit Log', icon: ShieldCheck },
     { id: 'zones', label: 'Zones', icon: Grid3x3 },
     { id: 'rules', label: 'Rules', icon: Settings },
@@ -493,6 +496,9 @@ function SafetyModuleInner({ role }: { role: string }) {
           )}
           {activeTab === 'workflows' && (
             <WorkflowEditorTab />
+          )}
+          {activeTab === 'gate-exit' && (
+            <GateExitMonitorTab />
           )}
           {activeTab === 'audit' && (
             <AuditTab entries={auditEntries} onRefresh={fetchAudit} />

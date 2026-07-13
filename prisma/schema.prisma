@@ -1065,6 +1065,77 @@ model SafetyWorkflowStep {
   @@index([workflowId, order])
 }
 
+// ============ GATE EXIT MONITORING (HIK-Connect integration) ============
+// Detects students exiting through school gates during school hours
+// (9:00 AM - 3:30 PM) via HIK-connect cameras + face recognition,
+// and auto-notifies admins + parents via WhatsApp/SMS/Email.
+
+model GateExitConfig {
+  id              String   @id @default(cuid())
+  schoolId        String   @default("school_default")
+  // School hours — any student exiting during this window is flagged
+  schoolStart     String   @default("09:00") // HH:MM
+  schoolEnd       String   @default("15:30") // HH:MM
+  // Gate camera config — the HIK-connect cameras at entrance/exit gates
+  entranceCameraId String?  // FK to SafetyCamera
+  exitCameraId     String?  // FK to SafetyCamera
+  // HIK-Connect credentials (encrypted)
+  hikUsernameEnc  String?  // encrypted HIK-connect username
+  hikPasswordEnc  String?  // encrypted HIK-connect password
+  hikSiteId       String?  // HIK-connect site ID
+  // Notification config
+  notifyAdminRoles String   @default("[\"SUPER_ADMIN\",\"SCHOOL_HEAD\",\"ADMIN\",\"RECEPTION\"]") // JSON array
+  notifyParentChannels String @default("[\"WHATSAPP\",\"SMS\",\"EMAIL\"]") // JSON array
+  // Grace period — students exiting within X minutes of school end are not flagged
+  gracePeriodMin  Int      @default(15)
+  isActive        Boolean  @default(true)
+  // Polling interval for the HIK-connect API (seconds)
+  pollIntervalSec Int      @default(30)
+  lastPollAt      DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([schoolId, isActive])
+}
+
+model GateExitAlert {
+  id              String   @id @default(cuid())
+  schoolId        String   @default("school_default")
+  // Student info (denormalized for fast retrieval)
+  studentId       String?  // null if face not recognized (unknown person)
+  studentName     String   // "Unknown Student" if not recognized
+  studentGrade    String?  // e.g. "7-A"
+  studentPhoto    String?  // emoji or photo URL
+  // Detection details
+  gate            String   // "ENTRANCE" or "EXIT"
+  cameraId        String?
+  cameraName      String?
+  snapshotUrl     String?  // CCTV snapshot of the exit
+  detectedAt      DateTime @default(now())
+  // Face recognition
+  faceConfidence  Float?   // 0..1
+  faceMatchType   String   @default("ENROLLED") // ENROLLED, UNKNOWN, STAFF
+  // Notification status
+  adminNotifiedAt DateTime?
+  parentNotifiedAt DateTime?
+  parentWhatsAppStatus String?  // SENT, DELIVERED, READ, FAILED
+  parentSmsStatus  String?
+  parentEmailStatus String?
+  // Alert status
+  status          String   @default("ACTIVE") // ACTIVE, ACKNOWLEDGED, RESOLVED, FALSE_ALARM
+  acknowledgedBy  String?
+  acknowledgedAt  DateTime?
+  // Reason text (e.g. "Student exited via main gate during school hours (09:30 AM)")
+  reason          String
+  // Link to the SafetyAlert record (so it shows in the global popup)
+  safetyAlertId   String?
+  createdAt       DateTime @default(now())
+
+  @@index([schoolId, status, detectedAt])
+  @@index([studentId, detectedAt])
+  @@index([detectedAt])
+}
+
 // ============ NOTIFICATIONS ============
 model Notification {
   id          String   @id @default(cuid())
