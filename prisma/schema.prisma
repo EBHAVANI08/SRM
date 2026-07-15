@@ -1226,6 +1226,76 @@ model LoiteringAlert {
   @@index([schoolId, status, detectedAt])
 }
 
+// ============ INTEGRATION CONFIG (WhatsApp, SMS, Payment, Push) ============
+model IntegrationConfig {
+  id              String   @id @default(cuid())
+  schoolId        String   @default("school_default")
+  provider        String   // WHATSAPP, SMS, RAZORPAY, STRIPE, FCM_PUSH
+  isActive        Boolean  @default(false)
+  // Credentials (stored encrypted in production via safety/crypto.ts)
+  apiKeyEnc       String?  // auth key / access token / API key
+  apiSecretEnc    String?  // secret key / auth token
+  phoneNumberId   String?  // WhatsApp phone number ID / Twilio from-number
+  businessName    String?  // sender ID / business name
+  webhookUrl      String?  // webhook URL for payment callbacks
+  metadata        String?  // JSON for additional config
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([schoolId, provider])
+  @@index([schoolId, isActive])
+}
+
+// ============ PAYMENTS (Online Fee Payment Gateway) ============
+model PaymentOrder {
+  id              String   @id @default(cuid())
+  schoolId        String   @default("school_default")
+  orderId         String   @unique // gateway order ID (e.g. razorpay order ID)
+  paymentId       String?  // gateway payment ID (set after payment success)
+  studentId       String?
+  studentName     String
+  grade           String?
+  parentName      String
+  parentPhone     String
+  parentEmail     String?
+  feeType         String   // Tuition Q4, Transport, Exam Fee, etc.
+  amount          Float    // in INR
+  currency        String   @default("INR")
+  status          String   @default("CREATED") // CREATED, PAID, FAILED, REFUNDED
+  gateway         String   @default("RAZORPAY") // RAZORPAY, STRIPE, MANUAL
+  signature       String?  // payment signature for verification
+  receiptNo       String?  // internal receipt number
+  invoiceNo       String?  // generated invoice number
+  description     String?
+  createdAt       DateTime @default(now())
+  paidAt          DateTime?
+  verifiedAt      DateTime?
+  rawResponse     String?  // JSON of the full gateway response
+  createdAt2      DateTime @default(now()) // alias for queries
+
+  @@index([schoolId, status, createdAt])
+  @@index([studentId])
+  @@index([orderId])
+}
+
+// ============ PUSH NOTIFICATION SUBSCRIPTIONS ============
+model PushSubscription {
+  id              String   @id @default(cuid())
+  schoolId        String   @default("school_default")
+  userId          String   // FK to User
+  endpoint        String   @unique // FCM device token or web push endpoint
+  p256dhKey       String?  // web push P-256 public key
+  authKey         String?  // web push auth secret
+  userAgent       String?  // browser/device info
+  platform        String   @default("WEB") // WEB, ANDROID, IOS
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([schoolId, userId])
+  @@index([userId, isActive])
+}
+
 // ============ NOTIFICATIONS ============
 model Notification {
   id          String   @id @default(cuid())
