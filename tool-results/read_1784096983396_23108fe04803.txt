@@ -1,0 +1,625 @@
+     1→'use client'
+     2→
+     3→import { useState } from 'react'
+     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→import {
+     6→  X, CheckCircle2, Clock, Search, Plus, Send, ChevronRight, ChevronLeft,
+     7→  Calendar, FileText, Eye, Upload, User, MapPin, Heart, Phone, Mail,
+     8→  Sparkles, Bot, Download, RefreshCw, Users, AlertCircle, Video, Building2
+     9→} from 'lucide-react'
+    10→import { Card } from '@/components/ui/card'
+    11→import { Button } from '@/components/ui/button'
+    12→import { Input } from '@/components/ui/input'
+    13→import { Label } from '@/components/ui/label'
+    14→import { Badge } from '@/components/ui/badge'
+    15→import { Textarea } from '@/components/ui/textarea'
+    16→import {
+    17→  Select, SelectContent, SelectItem, SelectTrigger, SelectValue
+    18→} from '@/components/ui/select'
+    19→import { SectionHeader } from './SectionHeader'
+    20→import { useNotificationPreview } from './NotificationPreviewModal'
+    21→import { ApplicationStatusModal, type Applicant as StatusApplicant } from './ApplicationStatusModal'
+    22→import { toast } from 'sonner'
+    23→
+    24→interface Applicant {
+    25→  id: string
+    26→  name: string
+    27→  grade: string
+    28→  status: 'applied' | 'document' | 'interview' | 'confirmed' | 'waitlist' | 'rejected'
+    29→  date: string
+    30→  parentName: string
+    31→  parentPhone: string
+    32→  parentEmail: string
+    33→  score: number
+    34→  avatarColor: string
+    35→  initials: string
+    36→}
+    37→
+    38→const APPLICANTS: Applicant[] = [
+    39→  { id: 'APP-001', name: 'Aarav Sharma', grade: 'Grade 1', status: 'confirmed', date: '12 Feb 2026', parentName: 'Suresh Sharma', parentPhone: '+91 98765 43210', parentEmail: 'suresh@email.com', score: 92, avatarColor: '#22C55E', initials: 'AS' },
+    40→  { id: 'APP-002', name: 'Diya Patel', grade: 'KG-A', status: 'interview', date: '14 Feb 2026', parentName: 'Nilesh Patel', parentPhone: '+91 98200 12345', parentEmail: 'nilesh@email.com', score: 88, avatarColor: '#F59E0B', initials: 'DP' },
+    41→  { id: 'APP-003', name: 'Vivaan Gupta', grade: 'Grade 5', status: 'confirmed', date: '15 Feb 2026', parentName: 'Rajesh Gupta', parentPhone: '+91 99876 54321', parentEmail: 'rajesh@email.com', score: 94, avatarColor: '#22C55E', initials: 'VG' },
+    42→  { id: 'APP-004', name: 'Ananya Reddy', grade: 'Grade 8', status: 'waitlist', date: '16 Feb 2026', parentName: 'Krishna Reddy', parentPhone: '+91 98111 22222', parentEmail: 'krishna@email.com', score: 86, avatarColor: '#6B7280', initials: 'AR' },
+    43→  { id: 'APP-005', name: 'Reyansh Kumar', grade: 'Grade 3', status: 'document', date: '17 Feb 2026', parentName: 'Amit Kumar', parentPhone: '+91 97000 88888', parentEmail: 'amit@email.com', score: 90, avatarColor: '#1E3A8A', initials: 'RK' },
+    44→  { id: 'APP-006', name: 'Myra Singh', grade: 'LKG', status: 'interview', date: '18 Feb 2026', parentName: 'Rohit Singh', parentPhone: '+91 98222 33344', parentEmail: 'rohit@email.com', score: 84, avatarColor: '#0D9488', initials: 'MS' },
+    45→]
+    46→
+    47→const GRADES = ['LKG', 'UKG', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10']
+    48→const TIME_SLOTS = ['09:00 AM', '09:30 AM', '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM', '12:00 PM', '02:00 PM', '02:30 PM', '03:00 PM', '03:30 PM']
+    49→
+    50→const GRADE_TEACHERS: Record<string, { name: string; dept: string; phone: string; email: string }> = {
+    51→  'LKG': { name: 'Mrs. Anita Verma', dept: 'Pre-Primary', phone: '+91 99001 11111', email: 'anita.verma@learnx.edu' },
+    52→  'UKG': { name: 'Mrs. Kavita Joshi', dept: 'Pre-Primary', phone: '+91 99001 22222', email: 'kavita.joshi@learnx.edu' },
+    53→  'Grade 1': { name: 'Mrs. Anita Verma', dept: 'Primary', phone: '+91 99001 11111', email: 'anita.verma@learnx.edu' },
+    54→  'Grade 2': { name: 'Mr. Suresh Rao', dept: 'Primary', phone: '+91 99001 33333', email: 'suresh.rao@learnx.edu' },
+    55→  'Grade 3': { name: 'Mrs. Meena Iyer', dept: 'Primary', phone: '+91 99001 44444', email: 'meena.iyer@learnx.edu' },
+    56→  'Grade 4': { name: 'Mr. Ramesh Kumar', dept: 'Primary', phone: '+91 99001 55555', email: 'ramesh.kumar@learnx.edu' },
+    57→  'Grade 5': { name: 'Dr. Priya Sharma', dept: 'Middle', phone: '+91 99001 66666', email: 'priya.sharma@learnx.edu' },
+    58→  'Grade 6': { name: 'Dr. Priya Sharma', dept: 'Middle', phone: '+91 99001 66666', email: 'priya.sharma@learnx.edu' },
+    59→  'Grade 7': { name: 'Mr. Arun Nair', dept: 'Middle', phone: '+91 99001 77777', email: 'arun.nair@learnx.edu' },
+    60→  'Grade 8': { name: 'Mrs. Deepa Menon', dept: 'Middle', phone: '+91 99001 88888', email: 'deepa.menon@learnx.edu' },
+    61→  'Grade 9': { name: 'Dr. Vikram Rao', dept: 'Senior', phone: '+91 99001 99999', email: 'vikram.rao@learnx.edu' },
+    62→  'Grade 10': { name: 'Dr. Vikram Rao', dept: 'Senior', phone: '+91 99001 99999', email: 'vikram.rao@learnx.edu' },
+    63→}
+    64→
+    65→const STEPS = [
+    66→  { id: 1, label: 'Student Details', icon: User },
+    67→  { id: 2, label: 'Parent / Guardian', icon: Users },
+    68→  { id: 3, label: 'Address & Medical', icon: MapPin },
+    69→  { id: 4, label: 'Documents & Review', icon: FileText },
+    70→]
+    71→
+    72→const STATUS_COLORS: Record<string, string> = {
+    73→  applied: '#6B7280',
+    74→  document: '#F59E0B',
+    75→  interview: '#1E3A8A',
+    76→  confirmed: '#22C55E',
+    77→  waitlist: '#A855F7',
+    78→  rejected: '#EF4444',
+    79→}
+    80→
+    81→export function AdmissionsModuleEnhanced() {
+    82→  const { preview } = useNotificationPreview()
+    83→  const [applicants, setApplicants] = useState<Applicant[]>(APPLICANTS)
+    84→  const [search, setSearch] = useState('')
+    85→  const [showNewApp, setShowNewApp] = useState(false)
+    86→  const [step, setStep] = useState(1)
+    87→  const [showSchedule, setShowSchedule] = useState(false)
+    88→  const [scheduleFor, setScheduleFor] = useState<Applicant | null>(null)
+    89→  const [statusFor, setStatusFor] = useState<Applicant | null>(null)
+    90→  const [selectedDate, setSelectedDate] = useState('')
+    91→  const [selectedTime, setSelectedTime] = useState('')
+    92→  const [photoUploaded, setPhotoUploaded] = useState(false)
+    93→  const [formData, setFormData] = useState({
+    94→    firstName: '', lastName: '', dob: '', gender: '', grade: '', prevSchool: '',
+    95→    parentName: '', parentPhone: '', parentEmail: '', occupation: '', relation: '',
+    96→    address: '', city: '', state: '', pincode: '',
+    97→    bloodGroup: '', allergies: '', conditions: '', medications: '',
+    98→  })
+    99→
+   100→  const filtered = applicants.filter((a) =>
+   101→    a.name.toLowerCase().includes(search.toLowerCase()) || a.id.toLowerCase().includes(search.toLowerCase())
+   102→  )
+   103→
+   104→  const stats = {
+   105→    total: applicants.length,
+   106→    confirmed: applicants.filter((a) => a.status === 'confirmed').length,
+   107→    interview: applicants.filter((a) => a.status === 'interview').length,
+   108→    pending: applicants.filter((a) => a.status === 'applied' || a.status === 'document').length,
+   109→  }
+   110→
+   111→  const handleNext = () => {
+   112→    if (step === 1 && (!formData.firstName || !formData.grade)) {
+   113→      toast.error('Please fill student first name and grade')
+   114→      return
+   115→    }
+   116→    if (step === 2 && (!formData.parentName || !formData.parentPhone)) {
+   117→      toast.error('Please fill parent name and phone')
+   118→      return
+   119→    }
+   120→    if (step < 4) setStep(step + 1)
+   121→  }
+   122→
+   123→  const handleSubmit = () => {
+   124→    const newApp: Applicant = {
+   125→      id: `APP-${String(applicants.length + 7).padStart(3, '0')}`,
+   126→      name: `${formData.firstName} ${formData.lastName}`.trim() || 'New Applicant',
+   127→      grade: formData.grade || 'Grade 1',
+   128→      status: 'applied',
+   129→      date: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+   130→      parentName: formData.parentName || 'Parent',
+   131→      parentPhone: formData.parentPhone || '+91 00000 00000',
+   132→      parentEmail: formData.parentEmail || 'parent@email.com',
+   133→      score: Math.floor(Math.random() * 20) + 75,
+   134→      avatarColor: '#1E3A8A',
+   135→      initials: (formData.firstName[0] || 'N') + (formData.lastName[0] || 'A'),
+   136→    }
+   137→    setApplicants([newApp, ...applicants])
+   138→    setShowNewApp(false)
+   139→    setStep(1)
+   140→    setFormData({ firstName: '', lastName: '', dob: '', gender: '', grade: '', prevSchool: '', parentName: '', parentPhone: '', parentEmail: '', occupation: '', relation: '', address: '', city: '', state: '', pincode: '', bloodGroup: '', allergies: '', conditions: '', medications: '' })
+   141→    setPhotoUploaded(false)
+   142→    toast.success(`✅ Application submitted for ${newApp.name}. Application ID: ${newApp.id}`)
+   143→  }
+   144→
+   145→  const openSchedule = (app: Applicant) => {
+   146→    setScheduleFor(app)
+   147→    setSelectedDate('')
+   148→    setSelectedTime('')
+   149→    setShowSchedule(true)
+   150→  }
+   151→
+   152→  const confirmSchedule = () => {
+   153→    if (!scheduleFor) return
+   154→    if (!selectedDate || !selectedTime) {
+   155→      toast.error('Please select interview date and time')
+   156→      return
+   157→    }
+   158→    const teacher = GRADE_TEACHERS[scheduleFor.grade] || GRADE_TEACHERS['Grade 5']
+   159→    // Update applicant status
+   160→    setApplicants(applicants.map((a) => a.id === scheduleFor.id ? { ...a, status: 'interview' } : a))
+   161→
+   162→    // Notify parent
+   163→    preview({
+   164→      recipients: [{
+   165→        id: scheduleFor.id,
+   166→        name: scheduleFor.parentName,
+   167→        contact: scheduleFor.parentPhone,
+   168→        channel: 'WHATSAPP',
+   169→        recipientType: 'PARENT',
+   170→      }],
+   171→      templateName: 'interview_scheduled_parent',
+   172→      templateData: {
+   173→        studentName: scheduleFor.name,
+   174→        grade: scheduleFor.grade,
+   175→        interviewDate: selectedDate,
+   176→        interviewTime: selectedTime,
+   177→        interviewer: teacher.name,
+   178→      },
+   179→      source: 'admissions_interview_scheduler',
+   180→    })
+   181→
+   182→    // Notify teacher
+   183→    setTimeout(() => {
+   184→      preview({
+   185→        recipients: [{
+   186→          id: teacher.email,
+   187→          name: teacher.name,
+   188→          contact: teacher.phone,
+   189→          channel: 'WHATSAPP',
+   190→          recipientType: 'STAFF',
+   191→        }],
+   192→        body: `Dear ${teacher.name}, an interview has been assigned to you.\n\nStudent: ${scheduleFor.name}\nGrade: ${scheduleFor.grade}\nDate: ${selectedDate}\nTime: ${selectedTime}\nParent: ${scheduleFor.parentName} (${scheduleFor.parentPhone})\n\nPlease confirm your availability. — LearnX Admissions`,
+   193→        subject: `Interview Assignment: ${scheduleFor.name}`,
+   194→        source: 'admissions_interview_scheduler',
+   195→      })
+   196→    }, 200)
+   197→
+   198→    toast.success(`✅ Interview scheduled for ${scheduleFor.name} on ${selectedDate} at ${selectedTime}. Notifications being sent.`)
+   199→    setShowSchedule(false)
+   200→  }
+   201→
+   202→  return (
+   203→    <div className="p-4 lg:p-8 space-y-6 animate-page-enter max-w-[1600px] mx-auto">
+   204→      <SectionHeader
+   205→        emoji="🎓"
+   206→        title="Admissions Management"
+   207→        subtitle="AI-powered admissions CRM with 4-step applications & interview scheduling"
+   208→        accent="#1E3A8A"
+   209→        onNew={() => { setShowNewApp(true); setStep(1) }}
+   210→        newLabel="New Application"
+   211→        onRefresh={() => toast.success('✅ Admissions data refreshed')}
+   212→        aiActions={[
+   213→          { label: 'applications scored', count: 1284 },
+   214→          { label: 'interviews scheduled', count: 47 },
+   215→        ]}
+   216→      />
+   217→
+   218→      {/* Stats */}
+   219→      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+   220→        {[
+   221→          { label: 'Total Applications', value: stats.total, icon: FileText, color: '#1E3A8A' },
+   222→          { label: 'Confirmed', value: stats.confirmed, icon: CheckCircle2, color: '#22C55E' },
+   223→          { label: 'Interview Stage', value: stats.interview, icon: Calendar, color: '#F59E0B' },
+   224→          { label: 'Pending Review', value: stats.pending, icon: Clock, color: '#6B7280' },
+   225→        ].map((s, i) => (
+   226→          <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
+   227→            <Card className="p-5 rounded-2xl">
+   228→              <div className="flex items-start justify-between mb-3">
+   229→                <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white" style={{ background: s.color }}>
+   230→                  <s.icon className="w-5 h-5" />
+   231→                </div>
+   232→              </div>
+   233→              <div className="text-2xl font-semibold text-slate-900">{s.value}</div>
+   234→              <div className="text-xs text-slate-500 mt-0.5">{s.label}</div>
+   235→            </Card>
+   236→          </motion.div>
+   237→        ))}
+   238→      </div>
+   239→
+   240→      {/* Search */}
+   241→      <div className="flex items-center justify-between flex-wrap gap-3">
+   242→        <div className="relative flex-1 max-w-md">
+   243→          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+   244→          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name or application ID…" className="pl-9 h-9 rounded-lg text-xs" />
+   245→        </div>
+   246→        <Button variant="outline" size="sm" className="h-9 rounded-lg gap-1 text-xs" onClick={() => toast.success('Exported to CSV')}>
+   247→          <Download className="w-3.5 h-3.5" /> Export
+   248→        </Button>
+   249→      </div>
+   250→
+   251→      {/* Applicant list */}
+   252→      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+   253→        {filtered.map((app, i) => (
+   254→          <motion.div
+   255→            key={app.id}
+   256→            initial={{ opacity: 0, y: 10 }}
+   257→            animate={{ opacity: 1, y: 0 }}
+   258→            transition={{ delay: i * 0.05 }}
+   259→          >
+   260→            <Card
+   261→              className="p-5 rounded-2xl hover:shadow-lg transition-shadow cursor-pointer"
+   262→              onClick={() => setStatusFor(app)}
+   263→            >
+   264→              <div className="flex items-start justify-between mb-3">
+   265→                <div className="flex items-center gap-3">
+   266→                  <div className="w-11 h-11 rounded-full flex items-center justify-center text-white font-semibold" style={{ background: app.avatarColor }}>
+   267→                    {app.initials}
+   268→                  </div>
+   269→                  <div>
+   270→                    <div className="text-sm font-semibold text-slate-900">{app.name}</div>
+   271→                    <div className="text-[11px] text-slate-500">{app.id} · {app.grade}</div>
+   272→                  </div>
+   273→                </div>
+   274→                <Badge variant="outline" className="text-[10px] capitalize" style={{ color: STATUS_COLORS[app.status], borderColor: STATUS_COLORS[app.status] + '40' }}>
+   275→                  {app.status}
+   276→                </Badge>
+   277→              </div>
+   278→              <div className="space-y-1.5 mb-3">
+   279→                <div className="flex items-center gap-2 text-[11px] text-slate-600">
+   280→                  <Users className="w-3 h-3 text-slate-400" /> {app.parentName}
+   281→                </div>
+   282→                <div className="flex items-center gap-2 text-[11px] text-slate-600">
+   283→                  <Phone className="w-3 h-3 text-slate-400" /> {app.parentPhone}
+   284→                </div>
+   285→                <div className="flex items-center gap-2 text-[11px] text-slate-600">
+   286→                  <Calendar className="w-3 h-3 text-slate-400" /> Applied: {app.date}
+   287→                </div>
+   288→              </div>
+   289→              <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+   290→                <div className="flex items-center gap-1.5">
+   291→                  <Sparkles className="w-3 h-3 text-amber-500" />
+   292→                  <span className="text-[11px] text-slate-500">AI Score</span>
+   293→                  <span className="text-sm font-bold text-slate-900">{app.score}</span>
+   294→                </div>
+   295→                <span className="text-[10px] font-semibold text-blue-700 flex items-center gap-0.5">
+   296→                  <Eye className="w-3 h-3" /> View Status
+   297→                </span>
+   298→              </div>
+   299→              {/* Action buttons row — clicking these does NOT open the status modal (stopPropagation) */}
+   300→              {((app.status === 'applied' || app.status === 'document' || app.status === 'interview') || app.status === 'confirmed') && (
+   301→                <div className="mt-3 pt-3 border-t border-slate-100 flex justify-end" onClick={(e) => e.stopPropagation()}>
+   302→                  {(app.status === 'applied' || app.status === 'document') && (
+   303→                    <Button size="sm" className="h-7 text-[11px] rounded-lg" style={{ background: '#1E3A8A' }} onClick={() => openSchedule(app)}>
+   304→                      <Calendar className="w-3 h-3 mr-1" /> Schedule Interview
+   305→                    </Button>
+   306→                  )}
+   307→                  {app.status === 'interview' && (
+   308→                    <Button size="sm" variant="outline" className="h-7 text-[11px] rounded-lg" onClick={() => openSchedule(app)}>
+   309→                      <RefreshCw className="w-3 h-3 mr-1" /> Reschedule
+   310→                    </Button>
+   311→                  )}
+   312→                  {app.status === 'confirmed' && (
+   313→                    <Badge variant="outline" className="bg-emerald-50 text-emerald-700 text-[10px]">Admitted</Badge>
+   314→                  )}
+   315→                </div>
+   316→              )}
+   317→            </Card>
+   318→          </motion.div>
+   319→        ))}
+   320→      </div>
+   321→
+   322→      {/* New Application Modal — 4 Step */}
+   323→      <AnimatePresence>
+   324→        {showNewApp && (
+   325→          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm" onClick={() => setShowNewApp(false)}>
+   326→            <motion.div initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0 }} onClick={(e) => e.stopPropagation()} className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+   327→              <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+   328→                <div className="flex items-center gap-3">
+   329→                  <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center"><FileText className="w-5 h-5 text-blue-700" /></div>
+   330→                  <div>
+   331→                    <h3 className="text-sm font-semibold text-slate-900">New Admission Application</h3>
+   332→                    <p className="text-xs text-slate-500">Step {step} of 4 · {STEPS[step - 1].label}</p>
+   333→                  </div>
+   334→                </div>
+   335→                <button onClick={() => setShowNewApp(false)} className="p-1.5 rounded-lg hover:bg-slate-100"><X className="w-5 h-5 text-slate-500" /></button>
+   336→              </div>
+   337→
+   338→              {/* Stepper */}
+   339→              <div className="px-6 py-3 bg-slate-50 border-b border-slate-200">
+   340→                <div className="flex items-center justify-between">
+   341→                  {STEPS.map((s, i) => (
+   342→                    <div key={s.id} className="flex items-center flex-1">
+   343→                      <div className="flex items-center gap-2">
+   344→                        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold ${step > s.id ? 'bg-emerald-600 text-white' : step === s.id ? 'bg-blue-700 text-white' : 'bg-slate-200 text-slate-500'}`}>
+   345→                          {step > s.id ? <CheckCircle2 className="w-4 h-4" /> : s.id}
+   346→                        </div>
+   347→                        <span className={`text-[11px] font-medium hidden sm:block ${step >= s.id ? 'text-slate-900' : 'text-slate-400'}`}>{s.label}</span>
+   348→                      </div>
+   349→                      {i < STEPS.length - 1 && <div className={`flex-1 h-0.5 mx-2 ${step > s.id ? 'bg-emerald-400' : 'bg-slate-200'}`} />}
+   350→                    </div>
+   351→                  ))}
+   352→                </div>
+   353→              </div>
+   354→
+   355→              <div className="flex-1 overflow-y-auto p-6">
+   356→                {step === 1 && (
+   357→                  <div className="space-y-4">
+   358→                    {/* Photo upload */}
+   359→                    <div className="flex flex-col items-center pb-4 border-b border-slate-100">
+   360→                      <button onClick={() => setPhotoUploaded(true)} className="w-24 h-24 rounded-full border-2 border-dashed border-slate-300 flex items-center justify-center hover:border-blue-500 hover:bg-blue-50 transition-colors">
+   361→                        {photoUploaded ? (
+   362→                          <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-100 to-teal-100 flex items-center justify-center text-2xl">🎓</div>
+   363→                        ) : (
+   364→                          <div className="text-center">
+   365→                            <Upload className="w-5 h-5 text-slate-400 mx-auto mb-1" />
+   366→                            <span className="text-[10px] text-slate-500">Upload Photo</span>
+   367→                          </div>
+   368→                        )}
+   369→                      </button>
+   370→                      <span className="text-[11px] text-slate-500 mt-2">{photoUploaded ? 'Photo uploaded ✓' : 'Click to upload student photo'}</span>
+   371→                    </div>
+   372→                    <div className="grid grid-cols-2 gap-3">
+   373→                      <div>
+   374→                        <Label className="text-[11px] text-slate-600 mb-1.5">First Name *</Label>
+   375→                        <Input value={formData.firstName} onChange={(e) => setFormData({ ...formData, firstName: e.target.value })} className="h-9 text-xs rounded-lg" placeholder="Aarav" />
+   376→                      </div>
+   377→                      <div>
+   378→                        <Label className="text-[11px] text-slate-600 mb-1.5">Last Name</Label>
+   379→                        <Input value={formData.lastName} onChange={(e) => setFormData({ ...formData, lastName: e.target.value })} className="h-9 text-xs rounded-lg" placeholder="Sharma" />
+   380→                      </div>
+   381→                      <div>
+   382→                        <Label className="text-[11px] text-slate-600 mb-1.5">Date of Birth *</Label>
+   383→                        <Input type="date" value={formData.dob} onChange={(e) => setFormData({ ...formData, dob: e.target.value })} className="h-9 text-xs rounded-lg" />
+   384→                      </div>
+   385→                      <div>
+   386→                        <Label className="text-[11px] text-slate-600 mb-1.5">Gender</Label>
+   387→                        <Select value={formData.gender} onValueChange={(v) => setFormData({ ...formData, gender: v })}>
+   388→                          <SelectTrigger className="h-9 text-xs rounded-lg"><SelectValue placeholder="Select" /></SelectTrigger>
+   389→                          <SelectContent>
+   390→                            <SelectItem value="Male">Male</SelectItem>
+   391→                            <SelectItem value="Female">Female</SelectItem>
+   392→                            <SelectItem value="Other">Other</SelectItem>
+   393→                          </SelectContent>
+   394→                        </Select>
+   395→                      </div>
+   396→                      <div>
+   397→                        <Label className="text-[11px] text-slate-600 mb-1.5">Applying for Grade *</Label>
+   398→                        <Select value={formData.grade} onValueChange={(v) => setFormData({ ...formData, grade: v })}>
+   399→                          <SelectTrigger className="h-9 text-xs rounded-lg"><SelectValue placeholder="Select grade" /></SelectTrigger>
+   400→                          <SelectContent>
+   401→                            {GRADES.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+   402→                          </SelectContent>
+   403→                        </Select>
+   404→                      </div>
+   405→                      <div>
+   406→                        <Label className="text-[11px] text-slate-600 mb-1.5">Previous School</Label>
+   407→                        <Input value={formData.prevSchool} onChange={(e) => setFormData({ ...formData, prevSchool: e.target.value })} className="h-9 text-xs rounded-lg" placeholder="Previous school name" />
+   408→                      </div>
+   409→                    </div>
+   410→                  </div>
+   411→                )}
+   412→                {step === 2 && (
+   413→                  <div className="space-y-3">
+   414→                    <div className="grid grid-cols-2 gap-3">
+   415→                      <div>
+   416→                        <Label className="text-[11px] text-slate-600 mb-1.5">Parent / Guardian Name *</Label>
+   417→                        <Input value={formData.parentName} onChange={(e) => setFormData({ ...formData, parentName: e.target.value })} className="h-9 text-xs rounded-lg" placeholder="Suresh Sharma" />
+   418→                      </div>
+   419→                      <div>
+   420→                        <Label className="text-[11px] text-slate-600 mb-1.5">Relationship</Label>
+   421→                        <Select value={formData.relation} onValueChange={(v) => setFormData({ ...formData, relation: v })}>
+   422→                          <SelectTrigger className="h-9 text-xs rounded-lg"><SelectValue placeholder="Select" /></SelectTrigger>
+   423→                          <SelectContent>
+   424→                            <SelectItem value="Father">Father</SelectItem>
+   425→                            <SelectItem value="Mother">Mother</SelectItem>
+   426→                            <SelectItem value="Guardian">Guardian</SelectItem>
+   427→                          </SelectContent>
+   428→                        </Select>
+   429→                      </div>
+   430→                      <div>
+   431→                        <Label className="text-[11px] text-slate-600 mb-1.5">Phone *</Label>
+   432→                        <Input value={formData.parentPhone} onChange={(e) => setFormData({ ...formData, parentPhone: e.target.value })} className="h-9 text-xs rounded-lg" placeholder="+91 98765 43210" />
+   433→                      </div>
+   434→                      <div>
+   435→                        <Label className="text-[11px] text-slate-600 mb-1.5">Email</Label>
+   436→                        <Input type="email" value={formData.parentEmail} onChange={(e) => setFormData({ ...formData, parentEmail: e.target.value })} className="h-9 text-xs rounded-lg" placeholder="parent@email.com" />
+   437→                      </div>
+   438→                      <div className="col-span-2">
+   439→                        <Label className="text-[11px] text-slate-600 mb-1.5">Occupation</Label>
+   440→                        <Input value={formData.occupation} onChange={(e) => setFormData({ ...formData, occupation: e.target.value })} className="h-9 text-xs rounded-lg" placeholder="Software Engineer" />
+   441→                      </div>
+   442→                    </div>
+   443→                  </div>
+   444→                )}
+   445→                {step === 3 && (
+   446→                  <div className="space-y-3">
+   447→                    <div>
+   448→                      <Label className="text-[11px] text-slate-600 mb-1.5">Residential Address</Label>
+   449→                      <Textarea value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} rows={2} className="text-xs rounded-lg" placeholder="House no, Street, Area" />
+   450→                    </div>
+   451→                    <div className="grid grid-cols-3 gap-3">
+   452→                      <div>
+   453→                        <Label className="text-[11px] text-slate-600 mb-1.5">City</Label>
+   454→                        <Input value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value })} className="h-9 text-xs rounded-lg" placeholder="Bengaluru" />
+   455→                      </div>
+   456→                      <div>
+   457→                        <Label className="text-[11px] text-slate-600 mb-1.5">State</Label>
+   458→                        <Input value={formData.state} onChange={(e) => setFormData({ ...formData, state: e.target.value })} className="h-9 text-xs rounded-lg" placeholder="Karnataka" />
+   459→                      </div>
+   460→                      <div>
+   461→                        <Label className="text-[11px] text-slate-600 mb-1.5">Pincode</Label>
+   462→                        <Input value={formData.pincode} onChange={(e) => setFormData({ ...formData, pincode: e.target.value })} className="h-9 text-xs rounded-lg" placeholder="560001" />
+   463→                      </div>
+   464→                    </div>
+   465→                    <div className="pt-4 border-t border-slate-100">
+   466→                      <h4 className="text-xs font-semibold text-slate-900 mb-3 flex items-center gap-1.5"><Heart className="w-3.5 h-3.5 text-rose-500" /> Medical Information</h4>
+   467→                      <div className="grid grid-cols-2 gap-3">
+   468→                        <div>
+   469→                          <Label className="text-[11px] text-slate-600 mb-1.5">Blood Group</Label>
+   470→                          <Select value={formData.bloodGroup} onValueChange={(v) => setFormData({ ...formData, bloodGroup: v })}>
+   471→                            <SelectTrigger className="h-9 text-xs rounded-lg"><SelectValue placeholder="Select" /></SelectTrigger>
+   472→                            <SelectContent>
+   473→                              {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+   474→                            </SelectContent>
+   475→                          </Select>
+   476→                        </div>
+   477→                        <div>
+   478→                          <Label className="text-[11px] text-slate-600 mb-1.5">Allergies</Label>
+   479→                          <Input value={formData.allergies} onChange={(e) => setFormData({ ...formData, allergies: e.target.value })} className="h-9 text-xs rounded-lg" placeholder="Peanuts, Dust, None" />
+   480→                        </div>
+   481→                        <div>
+   482→                          <Label className="text-[11px] text-slate-600 mb-1.5">Medical Conditions</Label>
+   483→                          <Input value={formData.conditions} onChange={(e) => setFormData({ ...formData, conditions: e.target.value })} className="h-9 text-xs rounded-lg" placeholder="Asthma, None" />
+   484→                        </div>
+   485→                        <div>
+   486→                          <Label className="text-[11px] text-slate-600 mb-1.5">Current Medications</Label>
+   487→                          <Input value={formData.medications} onChange={(e) => setFormData({ ...formData, medications: e.target.value })} className="h-9 text-xs rounded-lg" placeholder="Inhaler, None" />
+   488→                        </div>
+   489→                      </div>
+   490→                    </div>
+   491→                  </div>
+   492→                )}
+   493→                {step === 4 && (
+   494→                  <div className="space-y-4">
+   495→                    <div>
+   496→                      <h4 className="text-xs font-semibold text-slate-900 mb-2">Required Documents</h4>
+   497→                      <div className="space-y-2">
+   498→                        {['Birth Certificate', 'Aadhaar Card', 'Passport-size Photo', 'Previous Report Card', 'Transfer Certificate (if applicable)'].map((doc) => (
+   499→                          <div key={doc} className="flex items-center justify-between p-2.5 rounded-lg border border-slate-200">
+   500→                            <div className="flex items-center gap-2">
+   501→                              <FileText className="w-3.5 h-3.5 text-slate-400" />
+   502→                              <span className="text-xs text-slate-700">{doc}</span>
+   503→                            </div>
+   504→                            <Button size="sm" variant="outline" className="h-7 text-[11px] rounded-lg" onClick={() => toast.success(`${doc} uploaded`)}>
+   505→                              <Upload className="w-3 h-3 mr-1" /> Upload
+   506→                            </Button>
+   507→                          </div>
+   508→                        ))}
+   509→                      </div>
+   510→                    </div>
+   511→                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
+   512→                      <h4 className="text-xs font-semibold text-slate-900 mb-3">Review Application</h4>
+   513→                      <div className="grid grid-cols-2 gap-2 text-[11px]">
+   514→                        <div><span className="text-slate-500">Name:</span> <span className="font-medium text-slate-900">{formData.firstName} {formData.lastName}</span></div>
+   515→                        <div><span className="text-slate-500">Grade:</span> <span className="font-medium text-slate-900">{formData.grade || '—'}</span></div>
+   516→                        <div><span className="text-slate-500">Parent:</span> <span className="font-medium text-slate-900">{formData.parentName || '—'}</span></div>
+   517→                        <div><span className="text-slate-500">Phone:</span> <span className="font-medium text-slate-900">{formData.parentPhone || '—'}</span></div>
+   518→                        <div><span className="text-slate-500">City:</span> <span className="font-medium text-slate-900">{formData.city || '—'}</span></div>
+   519→                        <div><span className="text-slate-500">Blood:</span> <span className="font-medium text-slate-900">{formData.bloodGroup || '—'}</span></div>
+   520→                      </div>
+   521→                    </div>
+   522→                  </div>
+   523→                )}
+   524→              </div>
+   525→
+   526→              <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
+   527→                <Button variant="outline" size="sm" className="text-xs h-9 rounded-lg" disabled={step === 1} onClick={() => setStep(step - 1)}>
+   528→                  <ChevronLeft className="w-3.5 h-3.5 mr-1" /> Back
+   529→                </Button>
+   530→                {step < 4 ? (
+   531→                  <Button size="sm" className="text-xs h-9 rounded-lg text-white" style={{ background: '#1E3A8A' }} onClick={handleNext}>
+   532→                    Next <ChevronRight className="w-3.5 h-3.5 ml-1" />
+   533→                  </Button>
+   534→                ) : (
+   535→                  <Button size="sm" className="text-xs h-9 rounded-lg text-white bg-emerald-600 hover:bg-emerald-700" onClick={handleSubmit}>
+   536→                    <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Submit Application
+   537→                  </Button>
+   538→                )}
+   539→              </div>
+   540→            </motion.div>
+   541→          </motion.div>
+   542→        )}
+   543→      </AnimatePresence>
+   544→
+   545→      {/* Interview Scheduling Modal */}
+   546→      <AnimatePresence>
+   547→        {showSchedule && scheduleFor && (
+   548→          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm" onClick={() => setShowSchedule(false)}>
+   549→            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} onClick={(e) => e.stopPropagation()} className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden">
+   550→              <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+   551→                <div className="flex items-center gap-3">
+   552→                  <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center"><Calendar className="w-5 h-5 text-amber-700" /></div>
+   553→                  <div>
+   554→                    <h3 className="text-sm font-semibold text-slate-900">Schedule Interview</h3>
+   555→                    <p className="text-xs text-slate-500">{scheduleFor.name} · {scheduleFor.grade}</p>
+   556→                  </div>
+   557→                </div>
+   558→                <button onClick={() => setShowSchedule(false)} className="p-1.5 rounded-lg hover:bg-slate-100"><X className="w-5 h-5 text-slate-500" /></button>
+   559→              </div>
+   560→              <div className="p-6 space-y-4">
+   561→                {/* Auto-assigned teacher */}
+   562→                <div className="p-3 rounded-lg bg-blue-50 border border-blue-200">
+   563→                  <div className="flex items-center gap-2 mb-1">
+   564→                    <Sparkles className="w-3.5 h-3.5 text-blue-700" />
+   565→                    <span className="text-[11px] font-semibold text-blue-900 uppercase tracking-wider">AI Assigned Interviewer</span>
+   566→                  </div>
+   567→                  <div className="flex items-center gap-3 mt-2">
+   568→                    <div className="w-9 h-9 rounded-full bg-blue-700 text-white flex items-center justify-center text-xs font-semibold">
+   569→                      {(GRADE_TEACHERS[scheduleFor.grade]?.name || 'Priya Sharma').split(' ').map((w) => w[0]).join('').slice(0, 2)}
+   570→                    </div>
+   571→                    <div className="flex-1">
+   572→                      <div className="text-sm font-semibold text-slate-900">{GRADE_TEACHERS[scheduleFor.grade]?.name || 'Dr. Priya Sharma'}</div>
+   573→                      <div className="text-[11px] text-slate-500">{GRADE_TEACHERS[scheduleFor.grade]?.dept || 'Middle School'} · {GRADE_TEACHERS[scheduleFor.grade]?.email || 'priya.sharma@learnx.edu'}</div>
+   574→                    </div>
+   575→                    <Badge variant="outline" className="text-[10px] bg-white">Auto-match</Badge>
+   576→                  </div>
+   577→                </div>
+   578→
+   579→                <div>
+   580→                  <Label className="text-[11px] text-slate-600 mb-1.5">Interview Date</Label>
+   581→                  <Input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="h-9 text-xs rounded-lg" min={new Date().toISOString().split('T')[0]} />
+   582→                </div>
+   583→
+   584→                <div>
+   585→                  <Label className="text-[11px] text-slate-600 mb-2">Available Time Slots</Label>
+   586→                  <div className="grid grid-cols-4 gap-2">
+   587→                    {TIME_SLOTS.map((t) => (
+   588→                      <button key={t} onClick={() => setSelectedTime(t)} className={`px-2 py-2 rounded-lg text-[11px] font-medium border transition-colors ${selectedTime === t ? 'bg-blue-700 text-white border-blue-700' : 'bg-white border-slate-200 text-slate-700 hover:border-blue-400'}`}>
+   589→                        {t}
+   590→                      </button>
+   591→                    ))}
+   592→                  </div>
+   593→                </div>
+   594→
+   595→                <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 flex items-start gap-2">
+   596→                  <AlertCircle className="w-3.5 h-3.5 text-amber-700 mt-0.5 flex-shrink-0" />
+   597→                  <div className="text-[11px] text-amber-900">
+   598→                    On confirm, automated alerts will be sent to <b>parent</b> ({scheduleFor.parentPhone}) and <b>teacher</b> ({GRADE_TEACHERS[scheduleFor.grade]?.phone || 'N/A'}) via WhatsApp.
+   599→                  </div>
+   600→                </div>
+   601→              </div>
+   602→              <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-2">
+   603→                <Button variant="outline" size="sm" className="text-xs h-9 rounded-lg" onClick={() => setShowSchedule(false)}>Cancel</Button>
+   604→                <Button size="sm" className="text-xs h-9 rounded-lg text-white" style={{ background: '#1E3A8A' }} onClick={confirmSchedule}>
+   605→                  <Send className="w-3.5 h-3.5 mr-1" /> Confirm & Notify
+   606→                </Button>
+   607→              </div>
+   608→            </motion.div>
+   609→          </motion.div>
+   610→        )}
+   611→      </AnimatePresence>
+   612→
+   613→      {/* Application Status Modal — opens on card click */}
+   614→      <AnimatePresence>
+   615→        {statusFor && (
+   616→          <ApplicationStatusModal
+   617→            applicant={statusFor as StatusApplicant}
+   618→            onClose={() => setStatusFor(null)}
+   619→          />
+   620→        )}
+   621→      </AnimatePresence>
+   622→    </div>
+   623→  )
+   624→}
+   625→

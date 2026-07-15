@@ -1,0 +1,949 @@
+     1→'use client'
+     2→
+     3→import { useState, useEffect, useCallback } from 'react'
+     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→import {
+     6→  X, CheckCircle2, Clock, Search, Send, Users, UserCheck, UserX, Bell,
+     7→  Sparkles, Bot, Download, RefreshCw, Calendar, ChevronRight, Building2,
+     8→  AlertCircle, Check, X as XIcon, FileText
+     9→} from 'lucide-react'
+    10→import { Card } from '@/components/ui/card'
+    11→import { Button } from '@/components/ui/button'
+    12→import { Input } from '@/components/ui/input'
+    13→import { Label } from '@/components/ui/label'
+    14→import { Badge } from '@/components/ui/badge'
+    15→import { Switch } from '@/components/ui/switch'
+    16→import { Textarea } from '@/components/ui/textarea'
+    17→import {
+    18→  Select, SelectContent, SelectItem, SelectTrigger, SelectValue
+    19→} from '@/components/ui/select'
+    20→import { SectionHeader } from './SectionHeader'
+    21→import { useNotificationPreview } from './NotificationPreviewModal'
+    22→import { toast } from 'sonner'
+    23→
+    24→interface ClassStudent {
+    25→  id: string
+    26→  name: string
+    27→  rollNo: string
+    28→  status: 'present' | 'absent' | 'late' | 'unmarked'
+    29→  parentName: string
+    30→  parentPhone: string
+    31→  avatarColor: string
+    32→  initials: string
+    33→}
+    34→
+    35→interface TeacherRecord {
+    36→  id: string
+    37→  name: string
+    38→  dept: string
+    39→  status: 'present' | 'absent' | 'late' | 'on-leave'
+    40→  checkIn: string
+    41→  phone: string
+    42→}
+    43→
+    44→const CLASS_STUDENTS: ClassStudent[] = [
+    45→  { id: 'STU-001', name: 'Aarav Sharma', rollNo: '01', status: 'unmarked', parentName: 'Suresh Sharma', parentPhone: '+91 98765 43210', avatarColor: '#1E3A8A', initials: 'AS' },
+    46→  { id: 'STU-002', name: 'Diya Patel', rollNo: '02', status: 'unmarked', parentName: 'Nilesh Patel', parentPhone: '+91 98200 12345', avatarColor: '#F59E0B', initials: 'DP' },
+    47→  { id: 'STU-003', name: 'Vivaan Gupta', rollNo: '03', status: 'unmarked', parentName: 'Rajesh Gupta', parentPhone: '+91 99876 54321', avatarColor: '#22C55E', initials: 'VG' },
+    48→  { id: 'STU-004', name: 'Ananya Reddy', rollNo: '04', status: 'unmarked', parentName: 'Krishna Reddy', parentPhone: '+91 98111 22222', avatarColor: '#E11D48', initials: 'AR' },
+    49→  { id: 'STU-005', name: 'Reyansh Kumar', rollNo: '05', status: 'unmarked', parentName: 'Amit Kumar', parentPhone: '+91 97000 88888', avatarColor: '#0D9488', initials: 'RK' },
+    50→  { id: 'STU-006', name: 'Sara Khan', rollNo: '06', status: 'unmarked', parentName: 'Imran Khan', parentPhone: '+91 98888 77777', avatarColor: '#7C3AED', initials: 'SK' },
+    51→  { id: 'STU-007', name: 'Arjun Nair', rollNo: '07', status: 'unmarked', parentName: 'Vikram Nair', parentPhone: '+91 97000 11111', avatarColor: '#F97316', initials: 'AN' },
+    52→  { id: 'STU-008', name: 'Myra Singh', rollNo: '08', status: 'unmarked', parentName: 'Rohit Singh', parentPhone: '+91 98222 33344', avatarColor: '#6366F1', initials: 'MS' },
+    53→  { id: 'STU-009', name: 'Kabir Mehta', rollNo: '09', status: 'unmarked', parentName: 'Sanjay Mehta', parentPhone: '+91 98000 55555', avatarColor: '#A855F7', initials: 'KM' },
+    54→  { id: 'STU-010', name: 'Isha Verma', rollNo: '10', status: 'unmarked', parentName: 'Anil Verma', parentPhone: '+91 98333 66666', avatarColor: '#06B6D4', initials: 'IV' },
+    55→]
+    56→
+    57→const TEACHERS: TeacherRecord[] = [
+    58→  { id: 'T-001', name: 'Mrs. Anita Verma', dept: 'Pre-Primary', status: 'present', checkIn: '07:45 AM', phone: '+91 99001 11111' },
+    59→  { id: 'T-002', name: 'Mr. Rajesh Kumar', dept: 'Mathematics', status: 'present', checkIn: '07:50 AM', phone: '+91 99001 22222' },
+    60→  { id: 'T-003', name: 'Mrs. Meena Iyer', dept: 'Science', status: 'late', checkIn: '08:20 AM', phone: '+91 99001 33333' },
+    61→  { id: 'T-004', name: 'Dr. Priya Sharma', dept: 'English', status: 'present', checkIn: '07:55 AM', phone: '+91 99001 44444' },
+    62→  { id: 'T-005', name: 'Mr. Sunil Joshi', dept: 'Social Studies', status: 'absent', checkIn: '-', phone: '+91 99001 55555' },
+    63→  { id: 'T-006', name: 'Mrs. Deepa Menon', dept: 'Hindi', status: 'on-leave', checkIn: '-', phone: '+91 99001 66666' },
+    64→  { id: 'T-007', name: 'Dr. Vikram Rao', dept: 'Physics', status: 'present', checkIn: '08:00 AM', phone: '+91 99001 77777' },
+    65→  { id: 'T-008', name: 'Mr. Arun Nair', dept: 'Physical Education', status: 'present', checkIn: '07:58 AM', phone: '+91 99001 88888' },
+    66→]
+    67→
+    68→const DEPARTMENTS = ['All Departments', 'Pre-Primary', 'Mathematics', 'Science', 'English', 'Social Studies', 'Hindi', 'Physics', 'Physical Education']
+    69→
+    70→export function AttendanceModuleEnhanced() {
+    71→  const { preview } = useNotificationPreview()
+    72→  const [tab, setTab] = useState<'student' | 'teacher' | 'report'>('student')
+    73→  const [grade, setGrade] = useState('Grade 7')
+    74→  const [section, setSection] = useState('A')
+    75→  const [students, setStudents] = useState<ClassStudent[]>(CLASS_STUDENTS)
+    76→  const [search, setSearch] = useState('')
+    77→  const [deptFilter, setDeptFilter] = useState('All Departments')
+    78→
+    79→  const today = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: '2-digit', month: 'short', year: 'numeric' })
+    80→
+    81→  const markStatus = (id: string, status: ClassStudent['status']) => {
+    82→    setStudents(students.map((s) => s.id === id ? { ...s, status } : s))
+    83→    const stu = students.find((s) => s.id === id)
+    84→    if (stu && status === 'absent') {
+    85→      // Auto-trigger parent notification preview for absent
+    86→      preview({
+    87→        recipients: [{
+    88→          id: stu.id,
+    89→          name: stu.parentName,
+    90→          contact: stu.parentPhone,
+    91→          channel: 'WHATSAPP',
+    92→          recipientType: 'PARENT',
+    93→        }],
+    94→        templateName: 'absent_alert_whatsapp',
+    95→        templateData: {
+    96→          studentName: stu.name,
+    97→          date: today,
+    98→        },
+    99→        source: 'attendance_auto_absent',
+   100→      })
+   101→      toast.info(`📤 Absent alert queued for ${stu.parentName}`)
+   102→    }
+   103→  }
+   104→
+   105→  const markAllPresent = () => {
+   106→    setStudents(students.map((s) => ({ ...s, status: 'present' })))
+   107→    toast.success(`✅ All ${students.length} students marked present`)
+   108→  }
+   109→
+   110→  const sendBulkAbsentAlerts = () => {
+   111→    const absent = students.filter((s) => s.status === 'absent')
+   112→    if (absent.length === 0) {
+   113→      toast.info('No absent students to alert')
+   114→      return
+   115→    }
+   116→    preview({
+   117→      recipients: absent.map((s) => ({
+   118→        id: s.id,
+   119→        name: s.parentName,
+   120→        contact: s.parentPhone,
+   121→        channel: 'WHATSAPP',
+   122→        recipientType: 'PARENT',
+   123→      })),
+   124→      templateName: 'absent_alert_whatsapp',
+   125→      templateData: { date: today },
+   126→      source: 'attendance_bulk_absent',
+   127→    })
+   128→    toast.success(`📤 Queued WhatsApp alerts for ${absent.length} absent student(s)`)
+   129→  }
+   130→
+   131→  const filteredStudents = students.filter((s) => s.name.toLowerCase().includes(search.toLowerCase()) || s.rollNo.includes(search))
+   132→  const filteredTeachers = TEACHERS.filter((t) => deptFilter === 'All Departments' || t.dept === deptFilter)
+   133→
+   134→  const stats = {
+   135→    present: students.filter((s) => s.status === 'present').length,
+   136→    absent: students.filter((s) => s.status === 'absent').length,
+   137→    late: students.filter((s) => s.status === 'late').length,
+   138→    unmarked: students.filter((s) => s.status === 'unmarked').length,
+   139→  }
+   140→  const teacherStats = {
+   141→    present: TEACHERS.filter((t) => t.status === 'present').length,
+   142→    absent: TEACHERS.filter((t) => t.status === 'absent').length,
+   143→    late: TEACHERS.filter((t) => t.status === 'late').length,
+   144→    onLeave: TEACHERS.filter((t) => t.status === 'on-leave').length,
+   145→  }
+   146→
+   147→  return (
+   148→    <div className="p-4 lg:p-8 space-y-6 animate-page-enter max-w-[1600px] mx-auto">
+   149→      <SectionHeader
+   150→        emoji="✅"
+   151→        title="Attendance Management"
+   152→        subtitle="One-click attendance + instant parent alerts on absence"
+   153→        accent="#22C55E"
+   154→        onRefresh={() => toast.success('✅ Attendance synced')}
+   155→        aiActions={[
+   156→          { label: 'auto-alerts sent today', count: 24 },
+   157→          { label: 'AI pattern detections', count: 6 },
+   158→        ]}
+   159→      />
+   160→
+   161→      {/* Tab switch */}
+   162→      <div className="flex gap-1 p-1 rounded-xl bg-slate-100 w-fit">
+   163→        <button onClick={() => setTab('student')} className={`px-4 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5 ${tab === 'student' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>
+   164→          <Users className="w-3.5 h-3.5" /> Student Attendance
+   165→        </button>
+   166→        <button onClick={() => setTab('teacher')} className={`px-4 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5 ${tab === 'teacher' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>
+   167→          <Building2 className="w-3.5 h-3.5" /> Teacher Attendance
+   168→        </button>
+   169→        <button onClick={() => setTab('report')} className={`px-4 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5 ${tab === 'report' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>
+   170→          <FileText className="w-3.5 h-3.5" /> Daily Report
+   171→        </button>
+   172→      </div>
+   173→
+   174→      {/* Stats */}
+   175→      {tab === 'student' ? (
+   176→        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+   177→          {[
+   178→            { label: 'Present', value: stats.present, icon: UserCheck, color: '#22C55E' },
+   179→            { label: 'Absent', value: stats.absent, icon: UserX, color: '#EF4444' },
+   180→            { label: 'Late', value: stats.late, icon: Clock, color: '#F59E0B' },
+   181→            { label: 'Unmarked', value: stats.unmarked, icon: AlertCircle, color: '#6B7280' },
+   182→          ].map((s, i) => (
+   183→            <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
+   184→              <Card className="p-5 rounded-2xl">
+   185→                <div className="flex items-start justify-between mb-3">
+   186→                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white" style={{ background: s.color }}><s.icon className="w-5 h-5" /></div>
+   187→                </div>
+   188→                <div className="text-2xl font-semibold text-slate-900">{s.value}</div>
+   189→                <div className="text-xs text-slate-500 mt-0.5">{s.label}</div>
+   190→              </Card>
+   191→            </motion.div>
+   192→          ))}
+   193→        </div>
+   194→      ) : (
+   195→        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+   196→          {[
+   197→            { label: 'Present', value: teacherStats.present, icon: UserCheck, color: '#22C55E' },
+   198→            { label: 'Late', value: teacherStats.late, icon: Clock, color: '#F59E0B' },
+   199→            { label: 'Absent', value: teacherStats.absent, icon: UserX, color: '#EF4444' },
+   200→            { label: 'On Leave', value: teacherStats.onLeave, icon: Calendar, color: '#6B7280' },
+   201→          ].map((s, i) => (
+   202→            <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
+   203→              <Card className="p-5 rounded-2xl">
+   204→                <div className="flex items-start justify-between mb-3">
+   205→                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white" style={{ background: s.color }}><s.icon className="w-5 h-5" /></div>
+   206→                </div>
+   207→                <div className="text-2xl font-semibold text-slate-900">{s.value}</div>
+   208→                <div className="text-xs text-slate-500 mt-0.5">{s.label}</div>
+   209→              </Card>
+   210→            </motion.div>
+   211→          ))}
+   212→        </div>
+   213→      )}
+   214→
+   215→      <AnimatePresence mode="wait">
+   216→        {tab === 'student' && (
+   217→          <motion.div key="student" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
+   218→            {/* Class selector */}
+   219→            <Card className="p-4 rounded-2xl">
+   220→              <div className="flex flex-wrap items-end gap-3">
+   221→                <div>
+   222→                  <Label className="text-[11px] text-slate-600 mb-1.5">Grade</Label>
+   223→                  <Select value={grade} onValueChange={setGrade}>
+   224→                    <SelectTrigger className="h-9 text-xs rounded-lg w-40"><SelectValue /></SelectTrigger>
+   225→                    <SelectContent>
+   226→                      {['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10'].map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+   227→                    </SelectContent>
+   228→                  </Select>
+   229→                </div>
+   230→                <div>
+   231→                  <Label className="text-[11px] text-slate-600 mb-1.5">Section</Label>
+   232→                  <Select value={section} onValueChange={setSection}>
+   233→                    <SelectTrigger className="h-9 text-xs rounded-lg w-24"><SelectValue /></SelectTrigger>
+   234→                    <SelectContent>
+   235→                      {['A', 'B', 'C', 'D'].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+   236→                    </SelectContent>
+   237→                  </Select>
+   238→                </div>
+   239→                <div className="flex-1 min-w-[200px]">
+   240→                  <Label className="text-[11px] text-slate-600 mb-1.5">Search</Label>
+   241→                  <div className="relative">
+   242→                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+   243→                    <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search student…" className="pl-9 h-9 text-xs rounded-lg" />
+   244→                  </div>
+   245→                </div>
+   246→                <div className="text-xs text-slate-500 flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> {today}</div>
+   247→                <div className="flex gap-2 ml-auto">
+   248→                  <Button size="sm" variant="outline" className="h-9 text-xs rounded-lg" onClick={markAllPresent}>
+   249→                    <Check className="w-3.5 h-3.5 mr-1" /> Mark All Present
+   250→                  </Button>
+   251→                  <Button size="sm" className="h-9 text-xs rounded-lg bg-rose-600 hover:bg-rose-700 text-white" onClick={sendBulkAbsentAlerts}>
+   252→                    <Bell className="w-3.5 h-3.5 mr-1" /> Alert Absent Parents
+   253→                  </Button>
+   254→                </div>
+   255→              </div>
+   256→            </Card>
+   257→
+   258→            {/* Student list with one-click mark */}
+   259→            <Card className="rounded-2xl overflow-hidden">
+   260→              <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+   261→                <div>
+   262→                  <h3 className="text-sm font-semibold text-slate-900">{grade} - {section}</h3>
+   263→                  <p className="text-[11px] text-slate-500">{filteredStudents.length} students · Click P / A / L to mark</p>
+   264→                </div>
+   265→                <Badge variant="outline" className="text-[10px]">
+   266→                  {stats.present + stats.absent + stats.late}/{students.length} marked
+   267→                </Badge>
+   268→              </div>
+   269→              <div className="divide-y divide-slate-100 max-h-[600px] overflow-y-auto">
+   270→                {filteredStudents.map((s) => (
+   271→                  <div key={s.id} className="flex items-center justify-between px-4 py-3 hover:bg-slate-50">
+   272→                    <div className="flex items-center gap-3">
+   273→                      <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-semibold" style={{ background: s.avatarColor }}>{s.initials}</div>
+   274→                      <div>
+   275→                        <div className="text-sm font-medium text-slate-900">{s.name}</div>
+   276→                        <div className="text-[11px] text-slate-500">Roll #{s.rollNo} · {s.parentName}</div>
+   277→                      </div>
+   278→                    </div>
+   279→                    <div className="flex items-center gap-2">
+   280→                      {s.status !== 'unmarked' && (
+   281→                        <Badge variant="outline" className={`text-[10px] capitalize mr-1 ${
+   282→                          s.status === 'present' ? 'bg-emerald-50 text-emerald-700' :
+   283→                          s.status === 'absent' ? 'bg-rose-50 text-rose-700' :
+   284→                          'bg-amber-50 text-amber-700'
+   285→                        }`}>{s.status}</Badge>
+   286→                      )}
+   287→                      <div className="flex gap-1">
+   288→                        <button onClick={() => markStatus(s.id, 'present')} className={`w-8 h-8 rounded-lg text-[11px] font-bold transition-colors ${s.status === 'present' ? 'bg-emerald-600 text-white' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}`} title="Present">P</button>
+   289→                        <button onClick={() => markStatus(s.id, 'absent')} className={`w-8 h-8 rounded-lg text-[11px] font-bold transition-colors ${s.status === 'absent' ? 'bg-rose-600 text-white' : 'bg-rose-50 text-rose-700 hover:bg-rose-100'}`} title="Absent">A</button>
+   290→                        <button onClick={() => markStatus(s.id, 'late')} className={`w-8 h-8 rounded-lg text-[11px] font-bold transition-colors ${s.status === 'late' ? 'bg-amber-500 text-white' : 'bg-amber-50 text-amber-700 hover:bg-amber-100'}`} title="Late">L</button>
+   291→                      </div>
+   292→                    </div>
+   293→                  </div>
+   294→                ))}
+   295→              </div>
+   296→            </Card>
+   297→          </motion.div>
+   298→        )}
+   299→
+   300→        {tab === 'teacher' && (
+   301→          <motion.div key="teacher" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
+   302→            <Card className="p-4 rounded-2xl">
+   303→              <div className="flex items-end gap-3 flex-wrap">
+   304→                <div>
+   305→                  <Label className="text-[11px] text-slate-600 mb-1.5">Department</Label>
+   306→                  <Select value={deptFilter} onValueChange={setDeptFilter}>
+   307→                    <SelectTrigger className="h-9 text-xs rounded-lg w-56"><SelectValue /></SelectTrigger>
+   308→                    <SelectContent>
+   309→                      {DEPARTMENTS.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+   310→                    </SelectContent>
+   311→                  </Select>
+   312→                </div>
+   313→                <Button size="sm" variant="outline" className="h-9 text-xs rounded-lg ml-auto" onClick={() => toast.success('Exported teacher attendance')}>
+   314→                  <Download className="w-3.5 h-3.5 mr-1" /> Export
+   315→                </Button>
+   316→              </div>
+   317→            </Card>
+   318→
+   319→            <Card className="rounded-2xl overflow-hidden">
+   320→              <div className="overflow-x-auto">
+   321→                <table className="w-full text-xs">
+   322→                  <thead>
+   323→                    <tr className="border-b border-slate-200 bg-slate-50/50">
+   324→                      <th className="text-left px-4 py-3 font-semibold text-slate-600">Teacher</th>
+   325→                      <th className="text-left px-4 py-3 font-semibold text-slate-600">Department</th>
+   326→                      <th className="text-left px-4 py-3 font-semibold text-slate-600">Check-In</th>
+   327→                      <th className="text-left px-4 py-3 font-semibold text-slate-600">Status</th>
+   328→                      <th className="text-left px-4 py-3 font-semibold text-slate-600">Action</th>
+   329→                    </tr>
+   330→                  </thead>
+   331→                  <tbody>
+   332→                    {filteredTeachers.map((t) => (
+   333→                      <tr key={t.id} className="border-b border-slate-100 hover:bg-slate-50">
+   334→                        <td className="px-4 py-3">
+   335→                          <div className="flex items-center gap-2">
+   336→                            <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-[11px] font-semibold text-slate-700">
+   337→                              {t.name.split(' ').map((w) => w[0]).join('').slice(0, 2)}
+   338→                            </div>
+   339→                            <div>
+   340→                              <div className="font-medium text-slate-900">{t.name}</div>
+   341→                              <div className="text-[10px] text-slate-500">{t.id}</div>
+   342→                            </div>
+   343→                          </div>
+   344→                        </td>
+   345→                        <td className="px-4 py-3 text-slate-700">{t.dept}</td>
+   346→                        <td className="px-4 py-3 text-slate-700 font-mono">{t.checkIn}</td>
+   347→                        <td className="px-4 py-3">
+   348→                          <Badge variant="outline" className={`text-[10px] capitalize ${
+   349→                            t.status === 'present' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+   350→                            t.status === 'late' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+   351→                            t.status === 'absent' ? 'bg-rose-50 text-rose-700 border-rose-200' :
+   352→                            'bg-slate-50 text-slate-600'
+   353→                          }`}>{t.status.replace('-', ' ')}</Badge>
+   354→                        </td>
+   355→                        <td className="px-4 py-3">
+   356→                          {(t.status === 'absent' || t.status === 'late') && (
+   357→                            <Button size="sm" variant="outline" className="h-7 text-[11px] rounded-lg" onClick={() => {
+   358→                              preview({
+   359→                                recipients: [{
+   360→                                  id: t.id,
+   361→                                  name: t.name,
+   362→                                  contact: t.phone,
+   363→                                  channel: 'SMS',
+   364→                                  recipientType: 'STAFF',
+   365→                                }],
+   366→                                body: `Dear ${t.name}, you were marked ${t.status.toUpperCase()} today (${today}). Please inform the office if there is an emergency. — LearnX School`,
+   367→                                source: 'teacher_attendance_alert',
+   368→                              })
+   369→                              toast.info(`📤 Alert queued for ${t.name}`)
+   370→                            }}>
+   371→                              <Send className="w-3 h-3 mr-1" /> Alert
+   372→                            </Button>
+   373→                          )}
+   374→                          {t.status === 'present' && <span className="text-[10px] text-emerald-600">On time</span>}
+   375→                          {t.status === 'on-leave' && <span className="text-[10px] text-slate-500">Approved</span>}
+   376→                        </td>
+   377→                      </tr>
+   378→                    ))}
+   379→                  </tbody>
+   380→                </table>
+   381→              </div>
+   382→            </Card>
+   383→          </motion.div>
+   384→        )}
+   385→      </AnimatePresence>
+   386→
+   387→      {/* Daily Report Tab */}
+   388→      {tab === 'report' && <DailyReportTab />}
+   389→    </div>
+   390→  )
+   391→}
+   392→
+   393→// ============ Daily Report Tab ============
+   394→function DailyReportTab() {
+   395→  const [report, setReport] = useState<any>(null)
+   396→  const [loading, setLoading] = useState(true)
+   397→  const [date, setDate] = useState(new Date().toISOString().split('T')[0])
+   398→  const [expandedClass, setExpandedClass] = useState<string | null>(null)
+   399→
+   400→  const fetchReport = useCallback(async () => {
+   401→    setLoading(true)
+   402→    try {
+   403→      const { apiGet } = await import('@/lib/apiFetch')
+   404→      const { data, error } = await apiGet<{ success: boolean; report: any }>(`/api/attendance/daily-report?date=${date}`)
+   405→      if (error) {
+   406→        toast.error(`Failed to load report: ${error}`)
+   407→      } else if (data?.report) {
+   408→        setReport(data.report)
+   409→      }
+   410→    } catch (e: any) {
+   411→      toast.error(`Error: ${e?.message}`)
+   412→    } finally {
+   413→      setLoading(false)
+   414→    }
+   415→  }, [date])
+   416→
+   417→  useEffect(() => {
+   418→    fetchReport()
+   419→  }, [fetchReport])
+   420→
+   421→  if (loading) {
+   422→    return (
+   423→      <Card className="p-8 rounded-2xl">
+   424→        <div className="flex items-center justify-center gap-2 text-xs text-slate-500">
+   425→          <RefreshCw className="w-4 h-4 animate-spin" />
+   426→          Loading daily attendance report…
+   427→        </div>
+   428→      </Card>
+   429→    )
+   430→  }
+   431→
+   432→  if (!report) {
+   433→    return (
+   434→      <Card className="p-8 rounded-2xl text-center">
+   435→        <AlertCircle className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+   436→        <p className="text-xs text-slate-500">No report data available.</p>
+   437→      </Card>
+   438→    )
+   439→  }
+   440→
+   441→  const s = report.summary
+   442→
+   443→  return (
+   444→    <div className="space-y-4">
+   445→      {/* Date picker + refresh */}
+   446→      <Card className="p-4 rounded-2xl">
+   447→        <div className="flex items-center justify-between flex-wrap gap-2">
+   448→          <div className="flex items-center gap-2">
+   449→            <Calendar className="w-4 h-4 text-slate-500" />
+   450→            <input
+   451→              type="date"
+   452→              value={date}
+   453→              onChange={(e) => setDate(e.target.value)}
+   454→              className="text-xs border border-slate-200 rounded-lg px-2 py-1.5"
+   455→            />
+   456→            <Badge variant="outline" className="text-[10px]">
+   457→              {new Date(date).toLocaleDateString('en-IN', { weekday: 'long', day: '2-digit', month: 'short', year: 'numeric' })}
+   458→            </Badge>
+   459→          </div>
+   460→          <Button size="sm" variant="outline" className="h-8 text-xs rounded-lg gap-1.5" onClick={fetchReport}>
+   461→            <RefreshCw className="w-3 h-3" /> Refresh
+   462→          </Button>
+   463→        </div>
+   464→      </Card>
+   465→
+   466→      {/* Summary cards */}
+   467→      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+   468→        <SummaryCard label="Total Students" value={s.total} icon={Users} color="#1E3A8A" />
+   469→        <SummaryCard label="Present" value={s.present} icon={UserCheck} color="#22C55E" sub={`${s.attendanceRate}% rate`} />
+   470→        <SummaryCard label="Absent" value={s.absent} icon={UserX} color="#EF4444" sub={`${s.notifiedParents} notified`} />
+   471→        <SummaryCard label="Late" value={s.late} icon={Clock} color="#F59E0B" />
+   472→      </div>
+   473→
+   474→      {/* Notification status banner */}
+   475→      <Card className={`p-4 rounded-2xl border-2 ${s.pendingNotifications > 0 ? 'border-amber-300 bg-amber-50' : 'border-emerald-300 bg-emerald-50'}`}>
+   476→        <div className="flex items-center gap-2">
+   477→          {s.pendingNotifications > 0 ? (
+   478→            <>
+   479→              <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+   480→              <div className="text-xs">
+   481→                <span className="font-semibold text-amber-900">{s.pendingNotifications} absent students' parents NOT yet notified.</span>
+   482→                <span className="text-amber-700"> {s.notifiedParents} of {s.absent} have been notified via WhatsApp/SMS/Email.</span>
+   483→              </div>
+   484→            </>
+   485→          ) : (
+   486→            <>
+   487→              <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+   488→              <div className="text-xs">
+   489→                <span className="font-semibold text-emerald-900">All absent students' parents have been notified.</span>
+   490→                <span className="text-emerald-700"> {s.notifiedParents} notifications sent.</span>
+   491→              </div>
+   492→            </>
+   493→          )}
+   494→        </div>
+   495→      </Card>
+   496→
+   497→      {/* Grade-wise breakdown */}
+   498→      <Card className="rounded-2xl overflow-hidden">
+   499→        <div className="px-5 py-3 border-b border-slate-100">
+   500→          <h3 className="text-sm font-semibold text-slate-900">Grade-wise Breakdown</h3>
+   501→          <p className="text-[11px] text-slate-500">Attendance rate per grade</p>
+   502→        </div>
+   503→        <div className="overflow-x-auto">
+   504→          <table className="w-full text-xs">
+   505→            <thead>
+   506→              <tr className="border-b border-slate-200 bg-slate-50/50">
+   507→                <th className="text-left px-4 py-3 font-semibold text-slate-600">Grade</th>
+   508→                <th className="text-center px-4 py-3 font-semibold text-slate-600">Classes</th>
+   509→                <th className="text-center px-4 py-3 font-semibold text-slate-600">Total</th>
+   510→                <th className="text-center px-4 py-3 font-semibold text-slate-600">Present</th>
+   511→                <th className="text-center px-4 py-3 font-semibold text-slate-600">Absent</th>
+   512→                <th className="text-center px-4 py-3 font-semibold text-slate-600">Late</th>
+   513→                <th className="text-center px-4 py-3 font-semibold text-slate-600">Rate</th>
+   514→              </tr>
+   515→            </thead>
+   516→            <tbody>
+   517→              {report.byGrade.length === 0 ? (
+   518→                <tr>
+   519→                  <td colSpan={7} className="text-center py-6 text-slate-400">No attendance records for this date.</td>
+   520→                </tr>
+   521→              ) : (
+   522→                report.byGrade.map((g: any) => (
+   523→                  <tr key={g.grade} className="border-b border-slate-100 hover:bg-slate-50">
+   524→                    <td className="px-4 py-3 font-semibold text-slate-900">{g.grade}</td>
+   525→                    <td className="px-4 py-3 text-center text-slate-600">{g.classes}</td>
+   526→                    <td className="px-4 py-3 text-center text-slate-600">{g.total}</td>
+   527→                    <td className="px-4 py-3 text-center"><Badge variant="outline" className="bg-emerald-50 text-emerald-700 text-[10px]">{g.present}</Badge></td>
+   528→                    <td className="px-4 py-3 text-center"><Badge variant="outline" className="bg-rose-50 text-rose-700 text-[10px]">{g.absent}</Badge></td>
+   529→                    <td className="px-4 py-3 text-center"><Badge variant="outline" className="bg-amber-50 text-amber-700 text-[10px]">{g.late}</Badge></td>
+   530→                    <td className="px-4 py-3 text-center">
+   531→                      <div className="flex items-center justify-center gap-1.5">
+   532→                        <div className="w-16 h-1.5 rounded-full bg-slate-200 overflow-hidden">
+   533→                          <div
+   534→                            className="h-full rounded-full"
+   535→                            style={{
+   536→                              width: `${g.rate}%`,
+   537→                              background: g.rate >= 90 ? '#22C55E' : g.rate >= 75 ? '#F59E0B' : '#EF4444',
+   538→                            }}
+   539→                          />
+   540→                        </div>
+   541→                        <span className="font-semibold text-slate-700 text-[10px]">{g.rate}%</span>
+   542→                      </div>
+   543→                    </td>
+   544→                  </tr>
+   545→                ))
+   546→              )}
+   547→            </tbody>
+   548→          </table>
+   549→        </div>
+   550→      </Card>
+   551→
+   552→      {/* Class-wise breakdown (expandable) */}
+   553→      <Card className="rounded-2xl overflow-hidden">
+   554→        <div className="px-5 py-3 border-b border-slate-100">
+   555→          <h3 className="text-sm font-semibold text-slate-900">Class-wise Breakdown</h3>
+   556→          <p className="text-[11px] text-slate-500">Click a class to see individual students + notification status</p>
+   557→        </div>
+   558→        <div className="divide-y divide-slate-100">
+   559→          {report.byClass.length === 0 ? (
+   560→            <div className="py-6 text-center text-slate-400 text-xs">No class data.</div>
+   561→          ) : (
+   562→            report.byClass.map((c: any) => (
+   563→              <div key={c.classKey}>
+   564→                <button
+   565→                  onClick={() => setExpandedClass(expandedClass === c.classKey ? null : c.classKey)}
+   566→                  className="w-full px-5 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors"
+   567→                >
+   568→                  <div className="flex items-center gap-3">
+   569→                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-[10px] font-bold"
+   570→                      style={{ background: c.rate >= 90 ? '#22C55E' : c.rate >= 75 ? '#F59E0B' : '#EF4444' }}>
+   571→                      {c.rate}%
+   572→                    </div>
+   573→                    <div className="text-left">
+   574→                      <div className="text-xs font-semibold text-slate-900">{c.grade} - Section {c.section}</div>
+   575→                      <div className="text-[10px] text-slate-500">
+   576→                        {c.present} present · {c.absent} absent · {c.late} late · {c.total} total
+   577→                      </div>
+   578→                    </div>
+   579→                  </div>
+   580→                  <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform ${expandedClass === c.classKey ? 'rotate-90' : ''}`} />
+   581→                </button>
+   582→                {expandedClass === c.classKey && (
+   583→                  <div className="px-5 py-3 bg-slate-50/50 border-t border-slate-100">
+   584→                    <table className="w-full text-[11px]">
+   585→                      <thead>
+   586→                        <tr className="text-slate-500">
+   587→                          <th className="text-left py-1.5">Student</th>
+   588→                          <th className="text-left py-1.5">Status</th>
+   589→                          <th className="text-left py-1.5">Check-in</th>
+   590→                          <th className="text-left py-1.5">Method</th>
+   591→                          <th className="text-left py-1.5">Parent Notified?</th>
+   592→                        </tr>
+   593→                      </thead>
+   594→                      <tbody>
+   595→                        {c.students.map((st: any) => (
+   596→                          <tr key={st.id} className="border-t border-slate-200/50">
+   597→                            <td className="py-1.5 text-slate-900 font-medium">{st.name}</td>
+   598→                            <td className="py-1.5">
+   599→                              <Badge variant="outline" className={`text-[9px] ${
+   600→                                st.status === 'PRESENT' ? 'bg-emerald-50 text-emerald-700' :
+   601→                                st.status === 'ABSENT' ? 'bg-rose-50 text-rose-700' :
+   602→                                st.status === 'LATE' ? 'bg-amber-50 text-amber-700' :
+   603→                                'bg-slate-50 text-slate-500'
+   604→                              }`}>{st.status}</Badge>
+   605→                            </td>
+   606→                            <td className="py-1.5 text-slate-600 font-mono">{st.checkIn ? new Date(st.checkIn).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '—'}</td>
+   607→                            <td className="py-1.5 text-slate-600">{st.method || '—'}</td>
+   608→                            <td className="py-1.5">
+   609→                              {st.status === 'ABSENT' ? (
+   610→                                st.notification?.sent ? (
+   611→                                  <div className="flex items-center gap-1">
+   612→                                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+   613→                                    <span className="text-[10px] text-emerald-700 font-semibold">{st.notification.channel}</span>
+   614→                                    <span className="text-[9px] text-slate-500">{st.notification.status}</span>
+   615→                                  </div>
+   616→                                ) : (
+   617→                                  <div className="flex items-center gap-1">
+   618→                                    <AlertCircle className="w-3 h-3 text-amber-600" />
+   619→                                    <span className="text-[10px] text-amber-700 font-semibold">NOT NOTIFIED</span>
+   620→                                  </div>
+   621→                                )
+   622→                              ) : (
+   623→                                <span className="text-slate-400 text-[10px]">—</span>
+   624→                              )}
+   625→                            </td>
+   626→                          </tr>
+   627→                        ))}
+   628→                      </tbody>
+   629→                    </table>
+   630→                  </div>
+   631→                )}
+   632→              </div>
+   633→            ))
+   634→          )}
+   635→        </div>
+   636→      </Card>
+   637→
+   638→      {/* Absentees with notification status */}
+   639→      {report.absentees.length > 0 && (
+   640→        <Card className="rounded-2xl overflow-hidden">
+   641→          <div className="px-5 py-3 border-b border-slate-100">
+   642→            <h3 className="text-sm font-semibold text-slate-900">Absent Students — Parent Notification Status</h3>
+   643→            <p className="text-[11px] text-slate-500">{report.absentees.length} absent · {s.notifiedParents} notified · {s.pendingNotifications} pending</p>
+   644→          </div>
+   645→          <div className="overflow-x-auto">
+   646→            <table className="w-full text-xs">
+   647→              <thead>
+   648→                <tr className="border-b border-slate-200 bg-slate-50/50">
+   649→                  <th className="text-left px-4 py-3 font-semibold text-slate-600">Student</th>
+   650→                  <th className="text-left px-4 py-3 font-semibold text-slate-600">Grade</th>
+   651→                  <th className="text-left px-4 py-3 font-semibold text-slate-600">Parent</th>
+   652→                  <th className="text-left px-4 py-3 font-semibold text-slate-600">Phone</th>
+   653→                  <th className="text-left px-4 py-3 font-semibold text-slate-600">Notification</th>
+   654→                </tr>
+   655→              </thead>
+   656→              <tbody>
+   657→                {report.absentees.map((a: any) => (
+   658→                  <tr key={a.studentId} className="border-b border-slate-100 hover:bg-slate-50">
+   659→                    <td className="px-4 py-3 font-medium text-slate-900">{a.name}</td>
+   660→                    <td className="px-4 py-3 text-slate-600">{a.grade}-{a.section}</td>
+   661→                    <td className="px-4 py-3 text-slate-600">{a.parentName}</td>
+   662→                    <td className="px-4 py-3 text-slate-600 font-mono">{a.parentPhone}</td>
+   663→                    <td className="px-4 py-3">
+   664→                      {a.notification.sent ? (
+   665→                        <div className="flex items-center gap-1.5">
+   666→                          <Badge variant="outline" className="bg-emerald-50 text-emerald-700 text-[9px]">
+   667→                            {a.notification.channel}
+   668→                          </Badge>
+   669→                          <span className="text-[9px] text-slate-500">
+   670→                            {a.notification.status} · {new Date(a.notification.sentAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+   671→                          </span>
+   672→                        </div>
+   673→                      ) : (
+   674→                        <Badge variant="outline" className="bg-amber-50 text-amber-700 text-[9px]">
+   675→                          <AlertCircle className="w-2.5 h-2.5 mr-0.5" /> PENDING
+   676→                        </Badge>
+   677→                      )}
+   678→                    </td>
+   679→                  </tr>
+   680→                ))}
+   681→              </tbody>
+   682→            </table>
+   683→          </div>
+   684→        </Card>
+   685→      )}
+   686→
+   687→      {/* Google Sheet Sync */}
+   688→      <GoogleSheetSyncSection date={date} />
+   689→    </div>
+   690→  )
+   691→}
+   692→
+   693→function SummaryCard({ label, value, icon: Icon, color, sub }: { label: string; value: number; icon: any; color: string; sub?: string }) {
+   694→  return (
+   695→    <Card className="p-4 rounded-2xl">
+   696→      <div className="flex items-start justify-between mb-2">
+   697→        <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white" style={{ background: color }}>
+   698→          <Icon className="w-4 h-4" />
+   699→        </div>
+   700→      </div>
+   701→      <div className="text-2xl font-semibold text-slate-900">{value}</div>
+   702→      <div className="text-[11px] text-slate-500 mt-0.5">{label}</div>
+   703→      {sub && <div className="text-[10px] text-slate-400 mt-0.5">{sub}</div>}
+   704→    </Card>
+   705→  )
+   706→}
+   707→
+   708→// ============ Google Sheet Sync Section ============
+   709→function GoogleSheetSyncSection({ date }: { date: string }) {
+   710→  const [config, setConfig] = useState<any>(null)
+   711→  const [logs, setLogs] = useState<any[]>([])
+   712→  const [loading, setLoading] = useState(true)
+   713→  const [syncing, setSyncing] = useState(false)
+   714→  const [showConfig, setShowConfig] = useState(false)
+   715→
+   716→  const fetchConfig = useCallback(async () => {
+   717→    setLoading(true)
+   718→    const { apiGet } = await import('@/lib/apiFetch')
+   719→    const [cfgRes, logsRes] = await Promise.all([
+   720→      apiGet<{ config: any }>('/api/attendance/google-sheet-sync/config'),
+   721→      apiGet<{ logs: any[] }>('/api/attendance/google-sheet-sync/logs?limit=5'),
+   722→    ])
+   723→    if (cfgRes.data) setConfig(cfgRes.data.config)
+   724→    if (logsRes.data) setLogs(logsRes.data.logs || [])
+   725→    setLoading(false)
+   726→  }, [])
+   727→
+   728→  useEffect(() => {
+   729→    fetchConfig()
+   730→  }, [fetchConfig])
+   731→
+   732→  const handleSync = async () => {
+   733→    setSyncing(true)
+   734→    try {
+   735→      const { apiPost } = await import('@/lib/apiFetch')
+   736→      const { data, error } = await apiPost<any>('/api/attendance/google-sheet-sync/trigger', { date })
+   737→      if (error) {
+   738→        toast.error(`Sync failed: ${error}`)
+   739→      } else if (data?.success) {
+   740→        toast.success(`✅ Synced ${data.rowsSynced} rows to Google Sheets`, {
+   741→          description: data.spreadsheetUrl ? `View: ${data.spreadsheetUrl}` : undefined,
+   742→          duration: 5000,
+   743→        })
+   744→        fetchConfig() // refresh logs
+   745→      } else {
+   746→        toast.error(`Sync failed: ${data?.error || 'unknown error'}`, {
+   747→          description: 'Configure your Google Sheet credentials in the sync settings.',
+   748→          duration: 6000,
+   749→        })
+   750→      }
+   751→    } catch (e: any) {
+   752→      toast.error(`Error: ${e?.message}`)
+   753→    } finally {
+   754→      setSyncing(false)
+   755→    }
+   756→  }
+   757→
+   758→  if (loading) {
+   759→    return (
+   760→      <Card className="p-4 rounded-2xl">
+   761→        <div className="text-xs text-slate-500 flex items-center gap-2">
+   762→          <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Loading Google Sheet sync status…
+   763→        </div>
+   764→      </Card>
+   765→    )
+   766→  }
+   767→
+   768→  return (
+   769→    <Card className="p-4 border-slate-200 bg-white">
+   770→      <div className="flex items-center justify-between mb-3">
+   771→        <div className="flex items-center gap-2">
+   772→          <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center text-base">📊</div>
+   773→          <div>
+   774→            <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-1.5">
+   775→              Google Sheet Sync
+   776→              {config?.isActive && <Badge variant="outline" className="text-[9px] bg-emerald-50 text-emerald-700 border-emerald-200">AUTO-SYNC {config.syncTime}</Badge>}
+   777→            </h3>
+   778→            <p className="text-[11px] text-slate-500 mt-0.5">
+   779→              Daily attendance reports auto-sync to a master Google Sheet for administration records
+   780→            </p>
+   781→          </div>
+   782→        </div>
+   783→        <div className="flex gap-2">
+   784→          <Button size="sm" variant="outline" className="h-8 text-xs rounded-lg" onClick={() => setShowConfig(!showConfig)}>
+   785→            <FileText className="w-3.5 h-3.5 mr-1" /> {config ? 'Settings' : 'Configure'}
+   786→          </Button>
+   787→          {config && (
+   788→            <Button size="sm" className="h-8 text-xs rounded-lg bg-emerald-600 hover:bg-emerald-700 gap-1.5" onClick={handleSync} disabled={syncing}>
+   789→              {syncing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+   790→              Sync Now
+   791→            </Button>
+   792→          )}
+   793→        </div>
+   794→      </div>
+   795→
+   796→      {/* Config form */}
+   797→      {showConfig && (
+   798→        <GoogleSheetConfigForm
+   799→          config={config}
+   800→          onSaved={() => { setShowConfig(false); fetchConfig() }}
+   801→        />
+   802→      )}
+   803→
+   804→      {/* Status */}
+   805→      {config ? (
+   806→        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
+   807→          <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+   808→            <div className="text-[10px] text-slate-500 uppercase">Spreadsheet ID</div>
+   809→            <div className="text-[11px] font-mono text-slate-900 truncate">{config.spreadsheetId}</div>
+   810→          </div>
+   811→          <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+   812→            <div className="text-[10px] text-slate-500 uppercase">Sheet Tab</div>
+   813→            <div className="text-[11px] text-slate-900">{config.sheetName}</div>
+   814→          </div>
+   815→          <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+   816→            <div className="text-[10px] text-slate-500 uppercase">Last Sync</div>
+   817→            <div className="text-[11px] text-slate-900">
+   818→              {config.lastSyncAt ? new Date(config.lastSyncAt).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' }) : 'Never'}
+   819→              {config.lastSyncStatus && (
+   820→                <Badge variant="outline" className={`ml-1 text-[8px] ${config.lastSyncStatus === 'SUCCESS' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+   821→                  {config.lastSyncStatus}
+   822→                </Badge>
+   823→              )}
+   824→            </div>
+   825→          </div>
+   826→        </div>
+   827→      ) : (
+   828→        <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-800">
+   829→          <AlertCircle className="w-3.5 h-3.5 inline mr-1" />
+   830→          No Google Sheet configured. Click <span className="font-semibold">Configure</span> to set up daily auto-sync. The administration will receive a master copy of all attendance reports automatically.
+   831→        </div>
+   832→      )}
+   833→
+   834→      {/* Recent sync logs */}
+   835→      {logs.length > 0 && (
+   836→        <div className="mt-3 pt-3 border-t border-slate-100">
+   837→          <div className="text-[10px] font-semibold text-slate-700 uppercase tracking-wide mb-1.5">Recent Sync History</div>
+   838→          <div className="space-y-1">
+   839→            {logs.map((l) => (
+   840→              <div key={l.id} className="flex items-center justify-between text-[10px] py-1">
+   841→                <div className="flex items-center gap-2">
+   842→                  <span className={`w-1.5 h-1.5 rounded-full ${l.status === 'SUCCESS' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+   843→                  <span className="text-slate-700 font-medium">{l.date}</span>
+   844→                  <span className="text-slate-500">{l.rowsSynced} rows</span>
+   845→                  {l.error && <span className="text-rose-600 truncate max-w-xs">· {l.error}</span>}
+   846→                </div>
+   847→                <span className="text-slate-400">{new Date(l.createdAt).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' })}</span>
+   848→              </div>
+   849→            ))}
+   850→          </div>
+   851→        </div>
+   852→      )}
+   853→    </Card>
+   854→  )
+   855→}
+   856→
+   857→function GoogleSheetConfigForm({ config, onSaved }: { config: any; onSaved: () => void }) {
+   858→  const [spreadsheetId, setSpreadsheetId] = useState(config?.spreadsheetId || '')
+   859→  const [sheetName, setSheetName] = useState(config?.sheetName || 'Daily Attendance')
+   860→  const [serviceAccountEmail, setServiceAccountEmail] = useState(config?.serviceAccountEmail || '')
+   861→  const [privateKey, setPrivateKey] = useState('')
+   862→  const [apiKey, setApiKey] = useState('')
+   863→  const [syncTime, setSyncTime] = useState(config?.syncTime || '18:00')
+   864→  const [isActive, setIsActive] = useState(config?.isActive ?? true)
+   865→  const [saving, setSaving] = useState(false)
+   866→
+   867→  const handleSave = async () => {
+   868→    if (!spreadsheetId) { toast.error('Spreadsheet ID is required'); return }
+   869→    setSaving(true)
+   870→    try {
+   871→      const { apiFetch } = await import('@/lib/apiFetch')
+   872→      const res = await apiFetch('/api/attendance/google-sheet-sync/config', {
+   873→        method: 'PUT',
+   874→        body: JSON.stringify({
+   875→          spreadsheetId,
+   876→          sheetName,
+   877→          serviceAccountEmail: serviceAccountEmail || undefined,
+   878→          privateKey: privateKey || undefined,
+   879→          apiKey: apiKey || undefined,
+   880→          syncTime,
+   881→          isActive,
+   882→        }),
+   883→      })
+   884→      const data = await res.json()
+   885→      if (data.success) {
+   886→        toast.success('Google Sheet sync configured')
+   887→        onSaved()
+   888→      } else {
+   889→        toast.error(`Save failed: ${data.error}`)
+   890→      }
+   891→    } catch (e: any) {
+   892→      toast.error(`Error: ${e?.message}`)
+   893→    } finally {
+   894→      setSaving(false)
+   895→    }
+   896→  }
+   897→
+   898→  return (
+   899→    <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2.5 mb-2">
+   900→      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+   901→        <div>
+   902→          <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">Google Spreadsheet ID *</label>
+   903→          <Input value={spreadsheetId} onChange={(e) => setSpreadsheetId(e.target.value)} placeholder="1ABC...XYZ (from the sheet URL)" className="h-8 text-[11px] rounded-lg bg-white" />
+   904→          <p className="text-[9px] text-slate-400 mt-0.5">From docs.google.com/spreadsheets/d/<b>THIS_PART</b>/edit</p>
+   905→        </div>
+   906→        <div>
+   907→          <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">Sheet Tab Name</label>
+   908→          <Input value={sheetName} onChange={(e) => setSheetName(e.target.value)} className="h-8 text-[11px] rounded-lg bg-white" />
+   909→        </div>
+   910→        <div>
+   911→          <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">Daily Sync Time (24h)</label>
+   912→          <Input type="time" value={syncTime} onChange={(e) => setSyncTime(e.target.value)} className="h-8 text-[11px] rounded-lg bg-white" />
+   913→        </div>
+   914→        <div>
+   915→          <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">Active</label>
+   916→          <div className="flex items-center gap-2 h-8">
+   917→            <Switch checked={isActive} onCheckedChange={setIsActive} />
+   918→            <span className="text-[10px] text-slate-600">{isActive ? 'Auto-sync enabled' : 'Paused'}</span>
+   919→          </div>
+   920→        </div>
+   921→      </div>
+   922→      <div className="pt-2 border-t border-slate-200">
+   923→        <div className="text-[10px] font-semibold text-slate-600 mb-1.5">Authentication (choose one):</div>
+   924→        <div className="space-y-2">
+   925→          <div>
+   926→            <label className="text-[10px] text-slate-500 block mb-0.5">Service Account Email (recommended for production)</label>
+   927→            <Input value={serviceAccountEmail} onChange={(e) => setServiceAccountEmail(e.target.value)} placeholder="learnx-sync@project.iam.gserviceaccount.com" className="h-8 text-[11px] rounded-lg bg-white" />
+   928→          </div>
+   929→          <div>
+   930→            <label className="text-[10px] text-slate-500 block mb-0.5">Service Account Private Key {config?.privateKeyEnc === '***CONFIGURED***' && '(configured — leave blank to keep)'}</label>
+   931→            <Textarea value={privateKey} onChange={(e) => setPrivateKey(e.target.value)} placeholder="-----BEGIN PRIVATE KEY-----&#10;...&#10;-----END PRIVATE KEY-----" className="text-[10px] rounded-lg bg-white font-mono min-h-[50px]" />
+   932→          </div>
+   933→          <div>
+   934→            <label className="text-[10px] text-slate-500 block mb-0.5">OR API Key (simpler, for public sheets) {config?.apiKey === '***CONFIGURED***' && '(configured — leave blank to keep)'}</label>
+   935→            <Input value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="AIzaSy..." className="h-8 text-[11px] rounded-lg bg-white font-mono" />
+   936→          </div>
+   937→        </div>
+   938→      </div>
+   939→      <div className="flex justify-end gap-2 pt-1">
+   940→        <Button size="sm" variant="outline" className="h-8 text-xs rounded-lg" onClick={onSaved}>Cancel</Button>
+   941→        <Button size="sm" className="h-8 text-xs rounded-lg text-white gap-1.5" style={{ background: '#0D9488' }} onClick={handleSave} disabled={saving}>
+   942→          {saving ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+   943→          Save Configuration
+   944→        </Button>
+   945→      </div>
+   946→    </div>
+   947→  )
+   948→}
+   949→

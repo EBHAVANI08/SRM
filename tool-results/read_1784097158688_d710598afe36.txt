@@ -1,0 +1,795 @@
+     1→'use client'
+     2→
+     3→import { useState, useEffect } from 'react'
+     4→import { motion } from 'framer-motion'
+     5→import {
+     6→  Sparkles, TrendingUp, TrendingDown, ArrowUpRight, Activity, Users,
+     7→  Brain, Zap, Target, Bell, ChevronRight, Bot, Database, Cpu,
+     8→  Plus, Filter, Download, MoreVertical, Eye, Edit, CheckCircle2,
+     9→  AlertTriangle, Clock, Calendar, Search, X, ArrowRight, Lightbulb,
+    10→  Play, Settings, RefreshCw, FileText, Send, MessageSquare, Phone
+    11→} from 'lucide-react'
+    12→import { useAppStore } from '@/lib/store'
+    13→import { MODULES } from '@/lib/modules'
+    14→import type { ModuleConfig } from '@/lib/modules'
+    15→import { Card } from '@/components/ui/card'
+    16→import { Button } from '@/components/ui/button'
+    17→import { Badge } from '@/components/ui/badge'
+    18→import {
+    19→  AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid,
+    20→  BarChart, Bar, PieChart, Pie, Cell, LineChart, Line, RadialBarChart, RadialBar, Legend
+    21→} from 'recharts'
+    22→import { ActionPopup } from './ActionPopup'
+    23→import { SectionHeader } from './SectionHeader'
+    24→
+    25→const MODULE_DATA: Record<string, any> = {
+    26→  'front-desk': {
+    27→    stats: [
+    28→      { label: 'Visitors Today', value: '47', trend: '+12%', icon: Users },
+    29→      { label: 'Pending Approvals', value: '3', trend: '-2', icon: Clock },
+    30→      { label: 'Avg Check-in Time', value: '42s', trend: '-18%', icon: Zap },
+    31→      { label: 'Gate Passes Issued', value: '128', trend: '+8%', icon: FileText },
+    32→    ],
+    33→    cards: [
+    34→      { title: 'Smart Visitor Check-In', desc: 'AI face capture + OTP verification + auto gate pass', action: 'Start Check-In', emoji: '🚪', iconBg: '#1E3A8A' },
+    35→      { title: 'Appointment Manager', desc: 'Schedule meetings, sync with staff calendar', action: 'View Schedule', emoji: '📅', iconBg: '#0D9488' },
+    36→      { title: 'Visitor History', desc: 'Searchable database with AI anomaly flags', action: 'Open History', emoji: '📋', iconBg: '#6B7280' },
+    37→      { title: 'Gate Pass Generator', desc: 'Auto-fill digital passes with QR codes', action: 'Generate Pass', emoji: '🎟️', iconBg: '#D97706' },
+    38→    ],
+    39→    table: [
+    40→      { name: 'Rajesh Kumar', purpose: 'Parent Meeting', time: '10:30 AM', status: 'Checked-In', host: 'Mrs. Verma' },
+    41→      { name: 'Tech Vendor', purpose: 'Hardware Delivery', time: '11:15 AM', status: 'Pending', host: 'IT Team' },
+    42→      { name: 'Sunita Reddy', purpose: 'Fee Payment', time: '11:45 AM', status: 'Checked-In', host: 'Reception' },
+    43→      { name: 'CBSE Inspector', purpose: 'Audit Visit', time: '02:00 PM', status: 'Scheduled', host: 'Principal' },
+    44→      { name: 'Alumni Meet', purpose: 'Reunion Planning', time: '03:30 PM', status: 'Scheduled', host: 'Admin' },
+    45→    ],
+    46→  },
+    47→  admissions: {
+    48→    stats: [
+    49→      { label: 'Applications (2026-27)', value: '1,284', trend: '+24%', icon: FileText },
+    50→      { label: 'Confirmed Seats', value: '612', trend: '+18%', icon: CheckCircle2 },
+    51→      { label: 'KG Registrations', value: '184', trend: '+32%', icon: Users },
+    52→      { label: 'Conversion Rate', value: '68.5%', trend: '+5.2%', icon: TrendingUp },
+    53→    ],
+    54→    cards: [
+    55→      { title: 'Online Application Form', desc: 'AI-validated multi-step form with document upload', action: 'New Application', emoji: '📝', iconBg: '#1E3A8A' },
+    56→      { title: 'AI Prospect Scoring', desc: 'ML model scores prospects on 14 parameters', action: 'View Scores', emoji: '🎯', iconBg: '#F97316' },
+    57→      { title: 'Document Vault', desc: 'AI OCR auto-categorizes & verifies documents', action: 'Open Vault', emoji: '🗄️', iconBg: '#0D9488' },
+    58→      { title: 'Interview Scheduler', desc: 'AI matches slots with panel availability', action: 'Schedule Interview', emoji: '🎤', iconBg: '#0EA5E9' },
+    59→      { title: 'KG Registration Analytics', desc: 'Trend analysis with demographic insights', action: 'View Analytics', emoji: '📊', iconBg: '#D97706' },
+    60→      { title: 'Waitlist Management', desc: 'Auto-promote based on AI priority scoring', action: 'View Waitlist', emoji: '⏳', iconBg: '#6B7280' },
+    61→    ],
+    62→    trend: [
+    63→      { month: 'Sep', apps: 820 }, { month: 'Oct', apps: 940 }, { month: 'Nov', apps: 1080 },
+    64→      { month: 'Dec', apps: 1140 }, { month: 'Jan', apps: 1220 }, { month: 'Feb', apps: 1284 },
+    65→    ],
+    66→    table: [
+    67→      { name: 'Aarav Sharma', grade: 'KG-A', score: 92, status: 'Confirmed', date: '12 Feb 2026' },
+    68→      { name: 'Diya Patel', grade: 'Grade 1', score: 88, status: 'Interview', date: '14 Feb 2026' },
+    69→      { name: 'Vivaan Gupta', grade: 'Grade 5', score: 94, status: 'Confirmed', date: '15 Feb 2026' },
+    70→      { name: 'Ananya Reddy', grade: 'Grade 8', score: 86, status: 'Waitlist', date: '16 Feb 2026' },
+    71→      { name: 'Reyansh Kumar', grade: 'KG-B', score: 90, status: 'Document', date: '17 Feb 2026' },
+    72→    ],
+    73→  },
+    74→  attendance: {
+    75→    stats: [
+    76→      { label: 'Present Today', value: '2,683', trend: '94.2%', icon: CheckCircle2 },
+    77→      { label: 'Absent', value: '164', trend: '5.8%', icon: X },
+    78→      { label: 'Late Arrivals', value: '47', trend: '+3', icon: Clock },
+    79→      { label: 'On Leave', value: '23', trend: '-5', icon: Calendar },
+    80→    ],
+    81→    cards: [
+    82→      { title: 'Biometric Attendance', desc: 'Fingerprint scanners across 12 gates', action: 'View Devices', emoji: '🔐', iconBg: '#1E3A8A' },
+    83→      { title: 'RFID Card System', desc: 'Tap-and-go with auto SMS to parents', action: 'Manage Cards', emoji: '💳', iconBg: '#0D9488' },
+    84→      { title: 'AI Face Recognition', desc: 'Contactless attendance with anti-spoofing', action: 'View Cameras', emoji: '📷', iconBg: '#F97316' },
+    85→      { title: 'Leave Management', desc: 'AI predicts leave patterns & auto-approves routine', action: 'Apply Leave', emoji: '🌴', iconBg: '#22C55E' },
+    86→      { title: 'Anomaly Detection', desc: 'AI flags unusual absence patterns', action: 'View Anomalies', emoji: '⚠️', iconBg: '#EF4444' },
+    87→      { title: 'Auto SMS/WhatsApp', desc: 'Instant parent notification for absentees', action: 'Configure', emoji: '💬', iconBg: '#0EA5E9' },
+    88→    ],
+    89→    breakdown: [
+    90→      { name: 'Biometric', value: 48, color: '#1E3A8A' },
+    91→      { name: 'RFID', value: 32, color: '#0D9488' },
+    92→      { name: 'Face AI', value: 18, color: '#F97316' },
+    93→      { name: 'Manual', value: 2, color: '#D1D5DB' },
+    94→    ],
+    95→    trend: [
+    96→      { day: 'Mon', value: 92.1 }, { day: 'Tue', value: 93.4 }, { day: 'Wed', value: 94.2 },
+    97→      { day: 'Thu', value: 93.8 }, { day: 'Fri', value: 94.5 }, { day: 'Sat', value: 95.1 }, { day: 'Today', value: 94.2 },
+    98→    ],
+    99→    table: [
+   100→      { name: 'Aarav Singh', grade: '7-A', status: 'Present', time: '08:12', method: 'Face AI' },
+   101→      { name: 'Diya Sharma', grade: '5-B', status: 'Late', time: '08:34', method: 'Biometric' },
+   102→      { name: 'Vivaan Kumar', grade: '8-A', status: 'Absent', time: '-', method: '-' },
+   103→      { name: 'Ananya Reddy', grade: '6-C', status: 'Present', time: '08:08', method: 'RFID' },
+   104→      { name: 'Reyansh Gupta', grade: '3-A', status: 'Present', time: '08:15', method: 'Face AI' },
+   105→    ],
+   106→  },
+   107→}
+   108→
+   109→export function ModuleView({ moduleKey }: { moduleKey: string }) {
+   110→  const user = useAppStore((s) => s.user)
+   111→  const setAIAssistantOpen = useAppStore((s) => s.setAIAssistantOpen)
+   112→  const currentModule = MODULES.find((m) => m.key === moduleKey)
+   113→  const [selectedCard, setSelectedCard] = useState<{ title: string; desc: string } | null>(null)
+   114→  const [aiInsight, setAiInsight] = useState('')
+   115→
+   116→  useEffect(() => {
+   117→    fetch('/api/ai/analytics', {
+   118→      method: 'POST',
+   119→      headers: { 'Content-Type': 'application/json' },
+   120→      body: JSON.stringify({ module: moduleKey, timeRange: '7d', userRole: user?.role }),
+   121→    })
+   122→      .then((r) => r.json())
+   123→      .then((data) => setAiInsight(data.aiInsights || ''))
+   124→      .catch(() => {})
+   125→  }, [moduleKey, user?.role])
+   126→
+   127→  if (!currentModule) return null
+   128→
+   129→  const data = MODULE_DATA[moduleKey] || generateGenericData(currentModule)
+   130→
+   131→  const trendDataKey = data.trend && data.trend[0]
+   132→    ? ('month' in data.trend[0] ? 'apps' : 'present' in data.trend[0] ? 'present' : 'value')
+   133→    : 'value'
+   134→  const trendXKey = data.trend && data.trend[0]
+   135→    ? ('month' in data.trend[0] ? 'month' : 'day' in data.trend[0] ? 'day' : 'name')
+   136→    : 'name'
+   137→
+   138→  return (
+   139→    <div className="p-4 lg:p-8 space-y-6 animate-page-enter max-w-[1600px] mx-auto">
+   140→      {/* Section Header — clean white matching reference */}
+   141→      <SectionHeader
+   142→        emoji={currentModule.emoji}
+   143→        title={currentModule.title}
+   144→        subtitle="Powered by LearnX Intelligence"
+   145→        accent={currentModule.accent}
+   146→        onNew={() => setSelectedCard({ title: `New ${currentModule.shortTitle} Entry`, desc: currentModule.description })}
+   147→        onExport={() => {}}
+   148→        newLabel="New Entry"
+   149→        aiActions={[
+   150→          { label: 'auto-tasks today', count: Math.floor(Math.random() * 30) + 10 },
+   151→          { label: 'AI predictions', count: Math.floor(Math.random() * 15) + 5 },
+   152→          { label: 'smart alerts sent', count: Math.floor(Math.random() * 20) + 3 },
+   153→        ]}
+   154→      />
+   155→
+   156→      {/* SUB-MODULES & ACTIONS — FIRST (as requested) */}
+   157→      {data.cards && (
+   158→        <div>
+   159→          <div className="flex items-center justify-between mb-4">
+   160→            <div>
+   161→              <h3 className="text-base font-semibold text-slate-900">Sub-Modules & Actions</h3>
+   162→              <p className="text-xs text-slate-500 mt-0.5">{data.cards.length} features · Click any card to perform the action</p>
+   163→            </div>
+   164→            <Button variant="outline" size="sm" className="h-8 text-xs gap-1 rounded-lg">
+   165→              <Plus className="w-3 h-3" /> Add Custom
+   166→            </Button>
+   167→          </div>
+   168→          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
+   169→            {data.cards.map((card: any, i: number) => (
+   170→              <SubModuleCard
+   171→                key={i}
+   172→                card={card}
+   173→                module={currentModule}
+   174→                onClick={() => setSelectedCard({ title: card.title, desc: card.desc })}
+   175→              />
+   176→            ))}
+   177→          </div>
+   178→        </div>
+   179→      )}
+   180→
+   181→      {/* AI Automation Panel — shows what AI is doing automatically */}
+   182→      <Card className="p-5 elevated-card rounded-2xl bg-gradient-to-br from-blue-50/50 to-orange-50/30 border-blue-100">
+   183→        <div className="flex items-start gap-4">
+   184→          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-700 to-blue-900 flex items-center justify-center text-white flex-shrink-0">
+   185→            <Bot className="w-5 h-5" />
+   186→          </div>
+   187→          <div className="flex-1">
+   188→            <div className="flex items-center gap-2 mb-3">
+   189→              <h3 className="text-sm font-semibold text-slate-900">AI Automation Engine</h3>
+   190→              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-semibold border border-emerald-200">
+   191→                <span className="dot-pulse" />
+   192→                Running 24/7
+   193→              </span>
+   194→              <span className="text-[10px] text-slate-400">·</span>
+   195→              <span className="text-[10px] text-slate-500 font-medium">Learning from 14,847 records</span>
+   196→            </div>
+   197→            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-3">
+   198→              <div className="p-2.5 rounded-lg bg-white border border-slate-200">
+   199→                <div className="flex items-center gap-1.5 mb-1">
+   200→                  <Zap className="w-3 h-3 text-orange-500" />
+   201→                  <span className="text-[10px] font-semibold text-slate-600 uppercase">Auto-Tasks</span>
+   202→                </div>
+   203→                <div className="text-sm font-bold text-slate-900">247 today</div>
+   204→                <div className="text-[9px] text-emerald-600 font-semibold mt-0.5">↑ 18% vs avg</div>
+   205→              </div>
+   206→              <div className="p-2.5 rounded-lg bg-white border border-slate-200">
+   207→                <div className="flex items-center gap-1.5 mb-1">
+   208→                  <Brain className="w-3 h-3 text-blue-700" />
+   209→                  <span className="text-[10px] font-semibold text-slate-600 uppercase">Predictions</span>
+   210→                </div>
+   211→                <div className="text-sm font-bold text-slate-900">84 today</div>
+   212→                <div className="text-[9px] text-emerald-600 font-semibold mt-0.5">91.4% accurate</div>
+   213→              </div>
+   214→              <div className="p-2.5 rounded-lg bg-white border border-slate-200">
+   215→                <div className="flex items-center gap-1.5 mb-1">
+   216→                  <Bell className="w-3 h-3 text-rose-500" />
+   217→                  <span className="text-[10px] font-semibold text-slate-600 uppercase">Smart Alerts</span>
+   218→                </div>
+   219→                <div className="text-sm font-bold text-slate-900">12 sent</div>
+   220→                <div className="text-[9px] text-slate-500 font-semibold mt-0.5">0 false positives</div>
+   221→              </div>
+   222→              <div className="p-2.5 rounded-lg bg-white border border-slate-200">
+   223→                <div className="flex items-center gap-1.5 mb-1">
+   224→                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+   225→                  <span className="text-[10px] font-semibold text-slate-600 uppercase">Auto-Approved</span>
+   226→                </div>
+   227→                <div className="text-sm font-bold text-slate-900">94%</div>
+   228→                <div className="text-[9px] text-emerald-600 font-semibold mt-0.5">6% human review</div>
+   229→              </div>
+   230→            </div>
+   231→
+   232→            {/* Active AI workflows */}
+   233→            <div className="space-y-1.5">
+   234→              <div className="text-[10px] font-semibold text-slate-600 uppercase tracking-wider mb-1">Active AI Workflows</div>
+   235→              {getAIWorkflows(moduleKey).map((wf, i) => (
+   236→                <div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-100">
+   237→                  <div className="w-6 h-6 rounded-md bg-emerald-50 flex items-center justify-center flex-shrink-0">
+   238→                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+   239→                  </div>
+   240→                  <div className="flex-1 min-w-0">
+   241→                    <span className="text-[11px] font-medium text-slate-700">{wf.name}</span>
+   242→                  </div>
+   243→                  <span className="text-[9px] text-slate-400 font-mono">{wf.trigger}</span>
+   244→                </div>
+   245→              ))}
+   246→            </div>
+   247→
+   248→            <p className="text-[11px] text-slate-500 mt-3 leading-relaxed">
+   249→              AI is automatically handling routine tasks, predicting issues before they occur, sending smart alerts, and auto-approving 94% of routine requests — reducing manual work by <span className="font-semibold text-slate-900">82%</span>. The engine continuously learns from every interaction to improve accuracy.
+   250→            </p>
+   251→          </div>
+   252→        </div>
+   253→      </Card>
+   254→
+   255→      {/* AI Insight banner */}
+   256→      {aiInsight && (
+   257→        <Card className="p-5 bg-gradient-to-br from-orange-50 to-amber-50 border-orange-100 rounded-2xl">
+   258→          <div className="flex items-start gap-4">
+   259→            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-700 to-blue-900 flex items-center justify-center text-white flex-shrink-0">
+   260→              <Brain className="w-4 h-4" />
+   261→            </div>
+   262→            <div className="flex-1">
+   263→              <div className="flex items-center gap-2 mb-1.5">
+   264→                <span className="text-xs font-semibold text-slate-900">AI Insight</span>
+   265→                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-semibold border border-emerald-200">
+   266→                  <span className="dot-pulse" />
+   267→                  Live
+   268→                </span>
+   269→              </div>
+   270→              <div className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{aiInsight}</div>
+   271→            </div>
+   272→            <Button
+   273→              size="sm"
+   274→              variant="ghost"
+   275→              className="text-xs h-7 text-orange-600 hover:bg-orange-50"
+   276→              onClick={() => setAIAssistantOpen(true)}
+   277→            >
+   278→              Ask more
+   279→              <ArrowRight className="w-3 h-3 ml-1" />
+   280→            </Button>
+   281→          </div>
+   282→        </Card>
+   283→      )}
+   284→
+   285→      {/* KPI Stats */}
+   286→      {data.stats && (
+   287→        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+   288→          {data.stats.map((stat: any, i: number) => (
+   289→            <motion.div
+   290→              key={i}
+   291→              initial={{ opacity: 0, y: 10 }}
+   292→              animate={{ opacity: 1, y: 0 }}
+   293→              transition={{ delay: i * 0.05 }}
+   294→            >
+   295→              <Card className="p-5 elevated-card rounded-2xl">
+   296→                <div className="flex items-start justify-between mb-4">
+   297→                  <div
+   298→                    className="w-10 h-10 rounded-xl flex items-center justify-center text-white"
+   299→                    style={{ background: currentModule.accent }}
+   300→                  >
+   301→                    <stat.icon className="w-5 h-5" />
+   302→                  </div>
+   303→                  <div className="text-[11px] font-semibold text-slate-500">
+   304→                    {stat.trend}
+   305→                  </div>
+   306→                </div>
+   307→                <div className="text-2xl font-semibold text-slate-900 mb-1 tracking-tight">{stat.value}</div>
+   308→                <div className="text-xs text-slate-500">{stat.label}</div>
+   309→              </Card>
+   310→            </motion.div>
+   311→          ))}
+   312→        </div>
+   313→      )}
+   314→
+   315→      {/* Charts row */}
+   316→      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+   317→        {data.trend && (
+   318→          <Card className="lg:col-span-2 p-6 elevated-card rounded-2xl">
+   319→            <div className="flex items-center justify-between mb-5">
+   320→              <div>
+   321→                <h3 className="text-base font-semibold text-slate-900">7-Day Trend</h3>
+   322→                <p className="text-xs text-slate-500 mt-0.5">AI-powered analytics</p>
+   323→              </div>
+   324→              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-semibold border border-emerald-200">
+   325→                <span className="dot-pulse" />
+   326→                Live
+   327→              </span>
+   328→            </div>
+   329→            <ResponsiveContainer width="100%" height={220}>
+   330→              <AreaChart data={data.trend} margin={{ top: 5, right: 5, bottom: 5, left: -25 }}>
+   331→                <defs>
+   332→                  <linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
+   333→                    <stop offset="0%" stopColor={currentModule.accent} stopOpacity={0.3} />
+   334→                    <stop offset="100%" stopColor={currentModule.accent} stopOpacity={0} />
+   335→                  </linearGradient>
+   336→                </defs>
+   337→                <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
+   338→                <XAxis dataKey={trendXKey} stroke="#94A3B8" fontSize={11} tickLine={false} axisLine={false} />
+   339→                <YAxis stroke="#94A3B8" fontSize={11} tickLine={false} axisLine={false} />
+   340→                <Tooltip
+   341→                  contentStyle={{
+   342→                    background: '#FFFFFF',
+   343→                    border: '1px solid #E2E8F0',
+   344→                    borderRadius: '12px',
+   345→                    fontSize: '12px',
+   346→                    boxShadow: '0 4px 16px rgba(15,23,42,0.08)',
+   347→                  }}
+   348→                />
+   349→                <Area
+   350→                  type="monotone"
+   351→                  dataKey={trendDataKey}
+   352→                  stroke={currentModule.accent}
+   353→                  strokeWidth={2.5}
+   354→                  fill="url(#trendGrad)"
+   355→                  dot={{ r: 3, fill: currentModule.accent, strokeWidth: 2, stroke: '#fff' }}
+   356→                  activeDot={{ r: 5, fill: currentModule.accent }}
+   357→                />
+   358→              </AreaChart>
+   359→            </ResponsiveContainer>
+   360→          </Card>
+   361→        )}
+   362→
+   363→        {data.breakdown && (
+   364→          <Card className="p-6 elevated-card rounded-2xl">
+   365→            <div className="flex items-center justify-between mb-5">
+   366→              <div>
+   367→                <h3 className="text-base font-semibold text-slate-900">Distribution</h3>
+   368→                <p className="text-xs text-slate-500 mt-0.5">By method</p>
+   369→              </div>
+   370→              <Database className="w-4 h-4 text-slate-500" />
+   371→            </div>
+   372→            <ResponsiveContainer width="100%" height={180}>
+   373→              <PieChart>
+   374→                <Pie data={data.breakdown} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={3} dataKey="value">
+   375→                  {data.breakdown.map((entry: any, i: number) => (
+   376→                    <Cell key={i} fill={entry.color} />
+   377→                  ))}
+   378→                </Pie>
+   379→                <Tooltip
+   380→                  contentStyle={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', fontSize: '12px' }}
+   381→                />
+   382→              </PieChart>
+   383→            </ResponsiveContainer>
+   384→            <div className="space-y-2 mt-3">
+   385→              {data.breakdown.map((b: any) => (
+   386→                <div key={b.name} className="flex items-center justify-between text-xs">
+   387→                  <div className="flex items-center gap-2">
+   388→                    <span className="w-2 h-2 rounded-full" style={{ background: b.color }} />
+   389→                    <span className="text-slate-600">{b.name}</span>
+   390→                  </div>
+   391→                  <span className="font-semibold text-slate-900">{b.value}%</span>
+   392→                </div>
+   393→              ))}
+   394→            </div>
+   395→          </Card>
+   396→        )}
+   397→      </div>
+   398→
+   399→      {/* Recent records table */}
+   400→      {data.table && (
+   401→        <Card className="p-6 elevated-card rounded-2xl">
+   402→          <div className="flex items-center justify-between mb-5">
+   403→            <div>
+   404→              <h3 className="text-base font-semibold text-slate-900">Recent Records</h3>
+   405→              <p className="text-xs text-slate-500 mt-0.5">Latest activity in this module</p>
+   406→            </div>
+   407→            <div className="flex gap-2">
+   408→              <Button variant="outline" size="sm" className="h-8 text-xs gap-1 rounded-lg">
+   409→                <Filter className="w-3 h-3" /> Filter
+   410→              </Button>
+   411→              <Button variant="outline" size="sm" className="h-8 text-xs gap-1 rounded-lg">
+   412→                <Download className="w-3 h-3" /> Export
+   413→              </Button>
+   414→            </div>
+   415→          </div>
+   416→          <div className="overflow-x-auto">
+   417→            <table className="w-full premium-table">
+   418→              <thead>
+   419→                <tr>
+   420→                  {Object.keys(data.table[0]).map((key) => (
+   421→                    <th key={key} className="text-left">
+   422→                      {key.charAt(0).toUpperCase() + key.slice(1)}
+   423→                    </th>
+   424→                  ))}
+   425→                  <th className="text-right">Actions</th>
+   426→                </tr>
+   427→              </thead>
+   428→              <tbody>
+   429→                {data.table.map((row: any, i: number) => (
+   430→                  <tr key={i}>
+   431→                    {Object.entries(row).map(([key, val]: any) => (
+   432→                      <td key={key}>
+   433→                        {key === 'status' ? (
+   434→                          <span className={`status-chip ${
+   435→                            val === 'Present' || val === 'Confirmed' || val === 'Checked-In' || val === 'Paid' || val === 'Active' || val === 'Approved'
+   436→                              ? 'status-success'
+   437→                              : val === 'Pending' || val === 'Waitlist' || val === 'Scheduled' || val === 'Interview' || val === 'Late'
+   438→                              ? 'status-warning'
+   439→                              : val === 'Absent' || val === 'Overdue' || val === 'Rejected'
+   440→                              ? 'status-danger'
+   441→                              : 'status-info'
+   442→                          }`}>
+   443→                            {val}
+   444→                          </span>
+   445→                        ) : key === 'score' || key === 'aiScore' ? (
+   446→                          <div className="flex items-center gap-2">
+   447→                            <div className="w-12 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+   448→                              <div
+   449→                                className="h-full"
+   450→                                style={{ width: `${val}%`, background: currentModule.accent }}
+   451→                              />
+   452→                            </div>
+   453→                            <span className="text-xs font-semibold text-slate-900">{val}</span>
+   454→                          </div>
+   455→                        ) : (
+   456→                          <span className="text-slate-700">{val}</span>
+   457→                        )}
+   458→                      </td>
+   459→                    ))}
+   460→                    <td>
+   461→                      <div className="flex items-center justify-end gap-1">
+   462→                        <button className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-900 transition-colors">
+   463→                          <Eye className="w-3.5 h-3.5" />
+   464→                        </button>
+   465→                        <button className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-900 transition-colors">
+   466→                          <Edit className="w-3.5 h-3.5" />
+   467→                        </button>
+   468→                        <button className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-900 transition-colors">
+   469→                          <MoreVertical className="w-3.5 h-3.5" />
+   470→                        </button>
+   471→                      </div>
+   472→                    </td>
+   473→                  </tr>
+   474→                ))}
+   475→              </tbody>
+   476→            </table>
+   477→          </div>
+   478→        </Card>
+   479→      )}
+   480→
+   481→      {/* AI Features section */}
+   482→      {currentModule.aiPowered && (
+   483→        <Card className="p-6 elevated-card rounded-2xl bg-gradient-to-br from-slate-50 to-orange-50/30">
+   484→          <div className="flex items-start gap-4">
+   485→            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-700 to-blue-900 flex items-center justify-center text-white flex-shrink-0">
+   486→              <Bot className="w-6 h-6" />
+   487→            </div>
+   488→            <div className="flex-1">
+   489→              <div className="flex items-center gap-2 mb-3">
+   490→                <h3 className="text-base font-semibold text-slate-900">AI Capabilities</h3>
+   491→                <span className="ai-badge">
+   492→                  <Sparkles className="w-2.5 h-2.5 mr-0.5" />
+   493→                  Powered by LearnX AI
+   494→                </span>
+   495→              </div>
+   496→              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+   497→                {currentModule.features.map((f) => (
+   498→                  <div key={f} className="flex items-center gap-2 p-3 rounded-xl bg-white border border-slate-200">
+   499→                    <CheckCircle2 className="w-3.5 h-3.5 text-orange-500 flex-shrink-0" />
+   500→                    <span className="text-xs text-slate-700">{f}</span>
+   501→                  </div>
+   502→                ))}
+   503→              </div>
+   504→              <div className="flex gap-2 mt-4">
+   505→                <Button
+   506→                  size="sm"
+   507→                  onClick={() => setAIAssistantOpen(true)}
+   508→                  className="h-8 text-xs gap-1.5 bg-blue-800 hover:bg-blue-900 text-white rounded-lg"
+   509→                >
+   510→                  <Sparkles className="w-3 h-3" />
+   511→                  Ask AI about this module
+   512→                </Button>
+   513→                <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5 rounded-lg">
+   514→                  <Database className="w-3 h-3" />
+   515→                  View RAG Sources
+   516→                </Button>
+   517→              </div>
+   518→            </div>
+   519→          </div>
+   520→        </Card>
+   521→      )}
+   522→
+   523→      {/* Functional Action Popup */}
+   524→      {selectedCard && (
+   525→        <ActionPopup
+   526→          title={selectedCard.title}
+   527→          description={selectedCard.desc}
+   528→          moduleKey={moduleKey}
+   529→          accent={currentModule.accent}
+   530→          onClose={() => setSelectedCard(null)}
+   531→        />
+   532→      )}
+   533→    </div>
+   534→  )
+   535→}
+   536→
+   537→function SubModuleCard({ card, module, onClick }: { card: any; module: ModuleConfig; onClick: () => void }) {
+   538→  return (
+   539→    <motion.div
+   540→      initial={{ opacity: 0, y: 10 }}
+   541→      animate={{ opacity: 1, y: 0 }}
+   542→      className="module-card group"
+   543→      style={{ ['--card-accent' as any]: module.accent }}
+   544→      onClick={onClick}
+   545→    >
+   546→      <div className="flex items-start justify-between mb-4">
+   547→        <div
+   548→          className="w-11 h-11 rounded-xl flex items-center justify-center text-xl group-hover:scale-110 transition-transform"
+   549→          style={{ background: (card.iconBg || module.accent) + '15' }}
+   550→        >
+   551→          <span className="leading-none">{card.emoji || '⚡'}</span>
+   552→        </div>
+   553→        {module.aiPowered && (
+   554→          <span className="ai-badge">
+   555→            <Sparkles className="w-2.5 h-2.5 mr-0.5" />
+   556→            AI
+   557→          </span>
+   558→        )}
+   559→      </div>
+   560→      <h4 className="text-sm font-semibold text-slate-900 mb-1.5 tracking-tight">{card.title}</h4>
+   561→      <p className="text-xs text-slate-500 leading-relaxed mb-4">{card.desc}</p>
+   562→      <div className="flex items-center justify-between text-xs">
+   563→        <button className="flex items-center gap-1 font-semibold" style={{ color: module.accent }}>
+   564→          {card.action}
+   565→          <ArrowUpRight className="w-3 h-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+   566→        </button>
+   567→        <button className="text-slate-400 hover:text-slate-600">Details</button>
+   568→      </div>
+   569→    </motion.div>
+   570→  )
+   571→}
+   572→
+   573→function generateGenericData(module: ModuleConfig) {
+   574→  // Emoji picker based on feature keywords
+   575→  const emojiFor = (feature: string): { emoji: string; iconBg: string } => {
+   576→    const f = feature.toLowerCase()
+   577→    const colorPalette = ['#1E3A8A', '#F97316', '#0D9488', '#0EA5E9', '#22C55E', '#D97706', '#E11D48', '#6B7280']
+   578→    const idx = module.features.indexOf(feature) % colorPalette.length
+   579→    const iconBg = colorPalette[idx]
+   580→    if (f.includes('ai') || f.includes('engine') || f.includes('intelligen')) return { emoji: '🤖', iconBg }
+   581→    if (f.includes('payment') || f.includes('fee') || f.includes('salary') || f.includes('payroll')) return { emoji: '💰', iconBg }
+   582→    if (f.includes('sms') || f.includes('notif') || f.includes('alert') || f.includes('message')) return { emoji: '🔔', iconBg }
+   583→    if (f.includes('email') || f.includes('mail')) return { emoji: '📧', iconBg }
+   584→    if (f.includes('document') || f.includes('cert') || f.includes('report')) return { emoji: '📄', iconBg }
+   585→    if (f.includes('calendar') || f.includes('schedule') || f.includes('timetable')) return { emoji: '📅', iconBg }
+   586→    if (f.includes('attendance') || f.includes('present')) return { emoji: '✅', iconBg }
+   587→    if (f.includes('exam') || f.includes('test') || f.includes('question')) return { emoji: '📝', iconBg }
+   588→    if (f.includes('student') || f.includes('admission')) return { emoji: '🎓', iconBg }
+   589→    if (f.includes('teacher') || f.includes('staff') || f.includes('hr')) return { emoji: '👨‍🏫', iconBg }
+   590→    if (f.includes('parent')) return { emoji: '👨‍👩‍👧', iconBg }
+   591→    if (f.includes('transport') || f.includes('bus') || f.includes('vehicle')) return { emoji: '🚌', iconBg }
+   592→    if (f.includes('hostel') || f.includes('room')) return { emoji: '🏨', iconBg }
+   593→    if (f.includes('canteen') || f.includes('mess') || f.includes('food')) return { emoji: '🍽️', iconBg }
+   594→    if (f.includes('library') || f.includes('book')) return { emoji: '📚', iconBg }
+   595→    if (f.includes('sport') || f.includes('game') || f.includes('activity')) return { emoji: '🏆', iconBg }
+   596→    if (f.includes('health') || f.includes('medical') || f.includes('wellness')) return { emoji: '🏥', iconBg }
+   597→    if (f.includes('security') || f.includes('safety') || f.includes('cctv')) return { emoji: '🛡️', iconBg }
+   598→    if (f.includes('biometric') || f.includes('face') || f.includes('rfid')) return { emoji: '🔐', iconBg }
+   599→    if (f.includes('analytics') || f.includes('report') || f.includes('insight')) return { emoji: '📊', iconBg }
+   600→    if (f.includes('workflow') || f.includes('automation')) return { emoji: '⚙️', iconBg }
+   601→    if (f.includes('career') || f.includes('counsel')) return { emoji: '🧭', iconBg }
+   602→    if (f.includes('mock') || f.includes('practice')) return { emoji: '🎯', iconBg }
+   603→    if (f.includes('event')) return { emoji: '🎉', iconBg }
+   604→    if (f.includes('alumni')) return { emoji: '👥', iconBg }
+   605→    if (f.includes('finance') || f.includes('account') || f.includes('budget')) return { emoji: '💼', iconBg }
+   606→    if (f.includes('setting') || f.includes('config')) return { emoji: '⚙️', iconBg }
+   607→    if (f.includes('curriculum') || f.includes('syllabus') || f.includes('lesson')) return { emoji: '📖', iconBg }
+   608→    if (f.includes('substitut')) return { emoji: '🔄', iconBg }
+   609→    return { emoji: '⚡', iconBg }
+   610→  }
+   611→
+   612→  return {
+   613→    stats: module.stats?.map((s, i) => ({
+   614→      ...s,
+   615→      icon: [Users, Activity, TrendingUp, Target][i % 4],
+   616→    })) || [],
+   617→    cards: module.features.map((f) => {
+   618→      const { emoji, iconBg } = emojiFor(f)
+   619→      return {
+   620→        title: f,
+   621→        desc: `AI-powered ${f.toLowerCase()} with intelligent automation`,
+   622→        action: 'Open',
+   623→        emoji,
+   624→        iconBg,
+   625→      }
+   626→    }),
+   627→    trend: [
+   628→      { day: 'Mon', value: 82 }, { day: 'Tue', value: 85 }, { day: 'Wed', value: 87 },
+   629→      { day: 'Thu', value: 89 }, { day: 'Fri', value: 90 }, { day: 'Sat', value: 91 }, { day: 'Today', value: 92 },
+   630→    ],
+   631→    breakdown: [
+   632→      { name: 'Active', value: 65, color: module.accent },
+   633→      { name: 'Idle', value: 25, color: '#0D9488' },
+   634→      { name: 'Maintenance', value: 10, color: '#D1D5DB' },
+   635→    ],
+   636→    table: [
+   637→      { id: 'TXN-001', name: 'AI Auto-Task', status: 'Completed', time: '2 min ago', method: 'AI Engine' },
+   638→      { id: 'TXN-002', name: 'Data Sync', status: 'Active', time: '5 min ago', method: 'Scheduled' },
+   639→      { id: 'TXN-003', name: 'AI Analysis', status: 'Processing', time: '8 min ago', method: 'RAG Pipeline' },
+   640→      { id: 'TXN-004', name: 'Report Gen', status: 'Completed', time: '12 min ago', method: 'AI Engine' },
+   641→      { id: 'TXN-005', name: 'Smart Alert', status: 'Sent', time: '15 min ago', method: 'AI Engine' },
+   642→    ],
+   643→  }
+   644→}
+   645→
+   646→// Module-specific AI workflows for the automation panel
+   647→function getAIWorkflows(moduleKey: string): { name: string; trigger: string }[] {
+   648→  const workflows: Record<string, { name: string; trigger: string }[]> = {
+   649→    'admissions': [
+   650→      { name: 'Auto-score prospects using ML model', trigger: 'on application' },
+   651→      { name: 'Verify documents via AI OCR', trigger: 'on upload' },
+   652→      { name: 'Send personalized offer letters', trigger: 'on approval' },
+   653→      { name: 'Predict conversion likelihood', trigger: 'daily 6 AM' },
+   654→    ],
+   655→    'attendance': [
+   656→      { name: 'Auto-mark attendance via face recognition', trigger: 'on entry' },
+   657→      { name: 'Send SMS to parents of absentees', trigger: '5 min after assembly' },
+   658→      { name: 'Detect absence anomalies', trigger: 'real-time' },
+   659→      { name: 'Auto-approve routine leave requests', trigger: 'on application' },
+   660→    ],
+   661→    'fees': [
+   662→      { name: 'Predict defaulters 14 days before due', trigger: 'daily 8 AM' },
+   663→      { name: 'Send reminders via SMS/WhatsApp/Email', trigger: '7/3/1 days before' },
+   664→      { name: 'Auto-generate receipts & invoices', trigger: 'on payment' },
+   665→      { name: 'Recommend scholarships for eligible students', trigger: 'weekly' },
+   666→    ],
+   667→    'examinations': [
+   668→      { name: 'Auto-generate seating arrangements', trigger: 'on schedule' },
+   669→      { name: 'AI score verification (detect cheating)', trigger: 'on evaluation' },
+   670→      { name: 'Auto-send exam schedule to parents/students via WhatsApp', trigger: 'on schedule' },
+   671→      { name: 'Auto-send results to parents the moment published', trigger: 'on result publish' },
+   672→    ],
+   673→    'transport': [
+   674→      { name: 'Predict bus ETA using live GPS + traffic', trigger: 'real-time' },
+   675→      { name: 'Alert parents on pickup/drop', trigger: 'on boarding' },
+   676→      { name: 'Detect route deviations', trigger: 'real-time' },
+   677→      { name: 'Optimize routes for fuel efficiency', trigger: 'weekly' },
+   678→    ],
+   679→    'hrms': [
+   680→      { name: 'Predict staff attrition risk', trigger: 'monthly' },
+   681→      { name: 'Auto-process payroll with PF/ESI', trigger: 'monthly 1st' },
+   682→      { name: 'Flag unusual leave patterns', trigger: 'real-time' },
+   683→      { name: 'Auto-approve routine leave requests', trigger: 'on application' },
+   684→    ],
+   685→    'hostel': [
+   686→      { name: 'Optimize room allocation by compatibility', trigger: 'on admission' },
+   687→      { name: 'Auto-track mess attendance', trigger: 'on meal' },
+   688→      { name: 'Predict maintenance needs', trigger: 'weekly' },
+   689→      { name: 'Alert warden on late returns', trigger: 'after curfew' },
+   690→    ],
+   691→    'canteen': [
+   692→      { name: 'Optimize menu based on demand prediction', trigger: 'daily 6 AM' },
+   693→      { name: 'Auto-reorder inventory when low', trigger: 'on threshold' },
+   694→      { name: 'Track food waste & suggest portions', trigger: 'daily' },
+   695→      { name: 'Personalized meal recommendations', trigger: 'on order' },
+   696→    ],
+   697→    'health': [
+   698→      { name: 'Flag students with abnormal BMI/vitals', trigger: 'on checkup' },
+   699→      { name: 'Send vaccination reminders', trigger: 'on schedule' },
+   700→      { name: 'Mental wellness early warning', trigger: 'on survey' },
+   701→      { name: 'Auto-schedule follow-up checkups', trigger: 'on diagnosis' },
+   702→    ],
+   703→    'security': [
+   704→      { name: 'AI CCTV analytics for intrusions', trigger: 'real-time' },
+   705→      { name: 'Auto-escalate critical alerts', trigger: 'on detection' },
+   706→      { name: 'Detect fire/smoke via vision AI', trigger: 'real-time' },
+   707→      { name: 'Compliance audit auto-generation', trigger: 'monthly' },
+   708→    ],
+   709→    'communication': [
+   710→      { name: 'Personalize messages using AI', trigger: 'on send' },
+   711→      { name: 'Auto-translate to regional languages', trigger: 'on send' },
+   712→      { name: 'Schedule optimal send times', trigger: 'AI optimized' },
+   713→      { name: 'Track delivery & read rates', trigger: 'real-time' },
+   714→    ],
+   715→    'events': [
+   716→      { name: 'Detect scheduling conflicts', trigger: 'on create' },
+   717→      { name: 'Auto-send invitations & reminders', trigger: 'on schedule' },
+   718→      { name: 'Track RSVP & attendance', trigger: 'real-time' },
+   719→      { name: 'Suggest optimal venue based on headcount', trigger: 'on create' },
+   720→    ],
+   721→    'report-cards': [
+   722→      { name: 'AI-generate holistic remarks', trigger: 'on result' },
+   723→      { name: 'Auto-calculate grades & GPA', trigger: 'on evaluation' },
+   724→      { name: 'Auto-send report cards to parents via WhatsApp/SMS/Email', trigger: 'on publish' },
+   725→      { name: 'Schedule PTM based on availability + notify parents', trigger: 'on result' },
+   726→    ],
+   727→    'timetable': [
+   728→      { name: 'Generate conflict-free timetables', trigger: 'on request' },
+   729→      { name: 'Auto-allocate substitute teachers + notify', trigger: 'on absence' },
+   730→      { name: 'Auto-share timetable to students/parents/staff', trigger: 'on generate' },
+   731→      { name: 'Balance teacher workload', trigger: 'on generate' },
+   732→    ],
+   733→    'academic': [
+   734→      { name: 'AI suggest lesson plans from curriculum', trigger: 'on topic select' },
+   735→      { name: 'Auto-track syllabus coverage & alert if behind', trigger: 'weekly' },
+   736→      { name: 'Auto-assign & grade homework with AI', trigger: 'on assign' },
+   737→      { name: 'Notify parents of pending assignments via WhatsApp', trigger: 'daily 6 PM' },
+   738→    ],
+   739→    'documents': [
+   740→      { name: 'AI OCR extract text from documents', trigger: 'on upload' },
+   741→      { name: 'Auto-categorize & tag documents', trigger: 'on upload' },
+   742→      { name: 'Verify document authenticity', trigger: 'on upload' },
+   743→      { name: 'Flag expiring documents', trigger: 'daily' },
+   744→    ],
+   745→    'curriculum': [
+   746→      { name: 'Suggest learning outcomes mapping', trigger: 'on create' },
+   747→      { name: 'Auto-align with CBSE/ICSE standards', trigger: 'on save' },
+   748→      { name: 'Identify curriculum gaps & auto-notify HOD', trigger: 'weekly' },
+   749→      { name: 'Recommend supplementary content to teachers', trigger: 'on demand' },
+   750→    ],
+   751→    'activities': [
+   752→      { name: 'Identify student talents via AI', trigger: 'on participation' },
+   753→      { name: 'Recommend activities by interest', trigger: 'on enrolment' },
+   754→      { name: 'Track performance & skill growth', trigger: 'on event' },
+   755→      { name: 'Auto-schedule practice sessions', trigger: 'weekly' },
+   756→    ],
+   757→    'alumni': [
+   758→      { name: 'Match alumni mentors with students', trigger: 'on request' },
+   759→      { name: 'Auto-send reunion invitations', trigger: 'on schedule' },
+   760→      { name: 'Track donation drives & follow-ups', trigger: 'on campaign' },
+   761→      { name: 'Suggest networking connections', trigger: 'on profile view' },
+   762→    ],
+   763→    'finance': [
+   764→      { name: 'Auto-categorize transactions', trigger: 'on entry' },
+   765→      { name: 'Predict cash flow 90 days ahead', trigger: 'daily' },
+   766→      { name: 'Flag unusual expenses', trigger: 'real-time' },
+   767→      { name: 'Auto-generate GST returns', trigger: 'monthly' },
+   768→    ],
+   769→    'parent-portal': [
+   770→      { name: 'Auto-summarize child progress weekly', trigger: 'every Friday' },
+   771→      { name: 'Send personalized insights to parents', trigger: 'on event' },
+   772→      { name: 'Predict academic concerns early', trigger: 'on trend' },
+   773→      { name: 'Auto-schedule PTM bookings', trigger: 'on request' },
+   774→    ],
+   775→    'biometric': [
+   776→      { name: 'Anti-spoofing face verification', trigger: 'on scan' },
+   777→      { name: 'Sync devices in real-time', trigger: 'continuous' },
+   778→      { name: 'Detect device tampering', trigger: 'real-time' },
+   779→      { name: 'Auto-fallback to manual on failure', trigger: 'on error' },
+   780→    ],
+   781→    'admin-engine': [
+   782→      { name: 'Execute scheduled workflows', trigger: 'on schedule' },
+   783→      { name: 'Trigger webhooks on events', trigger: 'on event' },
+   784→      { name: 'Auto-retry failed tasks', trigger: 'on failure' },
+   785→      { name: 'Generate audit trail entries', trigger: 'on action' },
+   786→    ],
+   787→  }
+   788→  return workflows[moduleKey] || [
+   789→    { name: 'Auto-monitor operations 24/7', trigger: 'real-time' },
+   790→    { name: 'Predict issues before they occur', trigger: 'continuous' },
+   791→    { name: 'Send smart contextual alerts', trigger: 'on threshold' },
+   792→    { name: 'Auto-approve routine requests', trigger: 'on submit' },
+   793→  ]
+   794→}
+   795→

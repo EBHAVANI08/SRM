@@ -140,6 +140,77 @@ export function AdmissionsModuleEnhanced() {
     setFormData({ firstName: '', lastName: '', dob: '', gender: '', grade: '', prevSchool: '', parentName: '', parentPhone: '', parentEmail: '', occupation: '', relation: '', address: '', city: '', state: '', pincode: '', bloodGroup: '', allergies: '', conditions: '', medications: '' })
     setPhotoUploaded(false)
     toast.success(`✅ Application submitted for ${newApp.name}. Application ID: ${newApp.id}`)
+
+    // AUTOMATION 1: Instant confirmation to parent via WhatsApp + SMS + Email
+    // Sends application-received confirmation with next steps + document checklist
+    const confirmBody = `Dear ${newApp.parentName},
+
+Thank you for submitting the admission application for ${newApp.name} to LearnX International School.
+
+Application ID: ${newApp.id}
+Grade Applied: ${newApp.grade}
+Date: ${newApp.date}
+
+WHAT HAPPENS NEXT:
+1. Document Verification — Please upload the following documents to the Parent Portal within 48 hours:
+   • Birth Certificate (mandatory)
+   • Aadhaar Card of student (mandatory)
+   • Previous School Transfer Certificate (if applicable)
+   • 2 Passport-size photos
+   • Parent's ID proof (Aadhaar/PAN)
+   • Address proof
+
+2. Document Review — Our team will verify your documents within 2 working days.
+
+3. Interview Scheduling — Once documents are verified, you'll receive an interview slot booking link.
+
+4. Admission Decision — Final decision within 7 working days of interview.
+
+You can track your application status on the LearnX Parent Portal or contact us at +91 99001 44444.
+
+— LearnX Admissions Office`
+
+    preview({
+      recipients: [
+        { id: newApp.id, name: newApp.parentName, contact: newApp.parentPhone, channel: 'WHATSAPP', recipientType: 'PARENT' },
+        { id: newApp.id, name: newApp.parentName, contact: newApp.parentPhone, channel: 'SMS', recipientType: 'PARENT' },
+        ...(newApp.parentEmail ? [{ id: newApp.id, name: newApp.parentName, contact: newApp.parentEmail, channel: 'EMAIL' as const, recipientType: 'PARENT' as const }] : []),
+      ],
+      subject: `Application Received — ${newApp.name} (${newApp.id})`,
+      body: confirmBody,
+      audience: 'MINIMUM',
+      source: 'admissions-confirmation',
+    })
+
+    // AUTOMATION 2: Start nurturing email sequence (Day 1 welcome)
+    // The full 5-step nurturing drip (Day 1/3/5/7/10/14) would be handled by a daily cron
+    setTimeout(() => {
+      const nurturingBody = `Welcome to the LearnX family! 🎓
+
+Dear ${newApp.parentName},
+
+We're delighted that you've chosen LearnX International School for ${newApp.name}'s education.
+
+Here's what makes LearnX different:
+• AI-powered personalized learning for every student
+• Real-time safety monitoring with AI cameras
+• Instant parent communication via WhatsApp
+• Online fee payment & digital report cards
+• 50+ extracurricular activities
+
+Got questions? Reply to this message or call us at +91 99001 44444.
+
+— LearnX International School`
+      preview({
+        recipients: newApp.parentEmail
+          ? [{ id: newApp.id, name: newApp.parentName, contact: newApp.parentEmail, channel: 'EMAIL', recipientType: 'PARENT' }]
+          : [{ id: newApp.id, name: newApp.parentName, contact: newApp.parentPhone, channel: 'WHATSAPP', recipientType: 'PARENT' }],
+        subject: `Welcome to LearnX! — ${newApp.name}'s admission journey`,
+        body: nurturingBody,
+        audience: 'MINIMUM',
+        source: 'admissions-nurture-day1',
+      })
+    }, 2000)
   }
 
   const openSchedule = (app: Applicant) => {

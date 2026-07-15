@@ -1,0 +1,282 @@
+    30→    30→// ============================================================
+    31→    31→// HRMS MODULE
+    32→    32→// ============================================================
+    33→    33→
+    34→    34→const HRMS_CARDS = [
+    35→    35→  { id: 'payroll', emoji: '💰', title: 'Payroll Management', desc: 'Run monthly payroll & generate slips', stat: '₹42.8L', statLabel: 'Feb payroll', color: '#1E3A8A' },
+    36→    36→  { id: 'leave', emoji: '🏖️', title: 'Leave Management', desc: 'Apply, approve & track staff leaves', stat: '12', statLabel: 'Pending approvals', color: '#22C55E' },
+    37→    37→  { id: 'attendance', emoji: '✅', title: 'Staff Attendance', desc: 'Biometric attendance & shifts', stat: '94.2%', statLabel: 'Attendance rate', color: '#F59E0B' },
+    38→    38→  { id: 'recruit', emoji: '🎯', title: 'Recruitment', desc: 'Job postings, applications, interviews', stat: '7', statLabel: 'Open positions', color: '#7C3AED' },
+    39→    39→  { id: 'performance', emoji: '📈', title: 'Performance Review', desc: 'KPI tracking & appraisals', stat: 'Q4', statLabel: 'In progress', color: '#E11D48' },
+    40→    40→  { id: 'documents', emoji: '📄', title: 'Staff Documents', desc: 'Contracts, certificates, IDs', stat: '186', statLabel: 'Active staff', color: '#0D9488' },
+    41→    41→]
+    42→    42→
+    43→    43→const STAFF_DIRECTORY = [
+    44→    44→  { id: 'STF-001', name: 'Dr. Priya Sharma', role: 'Principal', dept: 'Administration', phone: '+91 99001 44444', email: 'priya.sharma@learnx.edu', salary: '₹1,20,000', joined: '15 Jun 2018', status: 'Active', avatarColor: '#1E3A8A', initials: 'PS' },
+    45→    45→  { id: 'STF-002', name: 'Mrs. Anita Verma', role: 'Senior Teacher', dept: 'Pre-Primary', phone: '+91 99001 11111', email: 'anita.verma@learnx.edu', salary: '₹52,000', joined: '08 Jul 2015', status: 'Active', avatarColor: '#22C55E', initials: 'AV' },
+    46→    46→  { id: 'STF-003', name: 'Mr. Rajesh Kumar', role: 'TGT Mathematics', dept: 'Mathematics', phone: '+91 99001 22222', email: 'rajesh.kumar@learnx.edu', salary: '₹48,000', joined: '12 Apr 2017', status: 'Active', avatarColor: '#0D9488', initials: 'RK' },
+    47→    47→  { id: 'STF-004', name: 'Mrs. Meena Iyer', role: 'TGT Science', dept: 'Science', phone: '+91 99001 33333', email: 'meena.iyer@learnx.edu', salary: '₹46,000', joined: '20 Aug 2019', status: 'Active', avatarColor: '#F59E0B', initials: 'MI' },
+    48→    48→  { id: 'STF-005', name: 'Dr. Vikram Rao', role: 'PGT Physics', dept: 'Physics', phone: '+91 99001 77777', email: 'vikram.rao@learnx.edu', salary: '₹68,000', joined: '01 Jul 2016', status: 'Active', avatarColor: '#7C3AED', initials: 'VR' },
+    49→    49→  { id: 'STF-006', name: 'Mr. Sunil Joshi', role: 'Office Admin', dept: 'Administration', phone: '+91 99001 55555', email: 'sunil.joshi@learnx.edu', salary: '₹38,000', joined: '03 Jan 2020', status: 'On Leave', avatarColor: '#6B7280', initials: 'SJ' },
+    50→    50→  { id: 'STF-007', name: 'Mrs. Deepa Menon', role: 'TGT Hindi', dept: 'Hindi', phone: '+91 99001 66666', email: 'deepa.menon@learnx.edu', salary: '₹44,000', joined: '15 Jul 2018', status: 'Active', avatarColor: '#E11D48', initials: 'DM' },
+    51→    51→  { id: 'STF-008', name: 'Mr. Arun Nair', role: 'PET', dept: 'Physical Education', phone: '+91 99001 88888', email: 'arun.nair@learnx.edu', salary: '₹40,000', joined: '10 Jun 2021', status: 'Active', avatarColor: '#06B6D4', initials: 'AN' },
+    52→    52→]
+    53→    53→
+    54→    54→export function HRMSModuleEnhanced() {
+    55→    55→  const { preview } = useNotificationPreview()
+    56→    56→  const [search, setSearch] = useState('')
+    57→    57→  const [selectedStaff, setSelectedStaff] = useState<typeof STAFF_DIRECTORY[0] | null>(null)
+    58→    58→
+    59→    59→  const filtered = STAFF_DIRECTORY.filter((s) => s.name.toLowerCase().includes(search.toLowerCase()) || s.dept.toLowerCase().includes(search.toLowerCase()))
+    60→    60→
+    61→    61→  return (
+    62→    62→    <div className="p-4 lg:p-8 space-y-6 animate-page-enter max-w-[1600px] mx-auto">
+    63→    63→      <SectionHeader emoji="👔" title="HRMS & Staff Management" subtitle="Complete HR suite for school staff" accent={SHARED_ACCENT} onNew={() => toast.success('New staff form opened')} newLabel="Add Staff" onRefresh={() => toast.success('✅ HR data refreshed')} aiActions={[{ label: 'payrolls processed', count: 247 }, { label: 'leaves auto-approved', count: 18 }]} />
+    64→    64→
+    65→    65→      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+    66→    66→        {HRMS_CARDS.map((c, i) => (
+    67→    67→          <motion.div key={c.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
+    68→    68→            <Card className="p-4 rounded-2xl hover:shadow-lg transition-shadow cursor-pointer" onClick={() => toast.success(`Opening ${c.title}…`)}>
+    69→    69→              <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl mb-2" style={{ background: c.color + '15' }}>{c.emoji}</div>
+    70→    70→              <div className="text-sm font-semibold text-slate-900">{c.stat}</div>
+    71→    71→              <div className="text-[10px] text-slate-500 uppercase">{c.statLabel}</div>
+    72→    72→              <div className="text-[11px] font-medium text-slate-900 mt-2">{c.title}</div>
+    73→    73→            </Card>
+    74→    74→          </motion.div>
+    75→    75→        ))}
+    76→    76→      </div>
+    77→    77→
+    78→    78→      <Card className="rounded-2xl overflow-hidden">
+    79→    79→        <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
+    80→    80→          <div><h3 className="text-sm font-semibold text-slate-900">Staff Directory</h3><p className="text-[11px] text-slate-500">{STAFF_DIRECTORY.length} staff members</p></div>
+    81→    81→          <div className="relative">
+    82→    82→            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+    83→    83→            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search staff…" className="pl-9 h-9 text-xs rounded-lg w-56" />
+    84→    84→          </div>
+    85→    85→        </div>
+    86→    86→        <div className="overflow-x-auto">
+    87→    87→          <table className="w-full text-xs">
+    88→    88→            <thead><tr className="border-b border-slate-200 bg-slate-50/50">
+    89→    89→              <th className="text-left px-4 py-3 font-semibold text-slate-600">Staff</th>
+    90→    90→              <th className="text-left px-4 py-3 font-semibold text-slate-600">Department</th>
+    91→    91→              <th className="text-left px-4 py-3 font-semibold text-slate-600">Joined</th>
+    92→    92→              <th className="text-left px-4 py-3 font-semibold text-slate-600">Salary</th>
+    93→    93→              <th className="text-left px-4 py-3 font-semibold text-slate-600">Status</th>
+    94→    94→              <th className="text-left px-4 py-3 font-semibold text-slate-600">Action</th>
+    95→    95→            </tr></thead>
+    96→    96→            <tbody>
+    97→    97→              {filtered.map((s) => (
+    98→    98→                <tr key={s.id} className="border-b border-slate-100 hover:bg-slate-50">
+    99→    99→                  <td className="px-4 py-3">
+   100→   100→                    <div className="flex items-center gap-2">
+   101→   101→                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[10px] font-semibold" style={{ background: s.avatarColor }}>{s.initials}</div>
+   102→   102→                      <div><div className="font-medium text-slate-900">{s.name}</div><div className="text-[10px] text-slate-500">{s.role}</div></div>
+   103→   103→                    </div>
+   104→   104→                  </td>
+   105→   105→                  <td className="px-4 py-3 text-slate-700">{s.dept}</td>
+   106→   106→                  <td className="px-4 py-3 text-slate-700">{s.joined}</td>
+   107→   107→                  <td className="px-4 py-3 text-slate-700">{s.salary}</td>
+   108→   108→                  <td className="px-4 py-3"><Badge variant="outline" className={`text-[10px] ${s.status === 'Active' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>{s.status}</Badge></td>
+   109→   109→                  <td className="px-4 py-3"><Button size="sm" variant="outline" className="h-7 text-[11px] rounded-lg" onClick={() => setSelectedStaff(s)}><Eye className="w-3 h-3 mr-1" /> View</Button></td>
+   110→   110→                </tr>
+   111→   111→              ))}
+   112→   112→            </tbody>
+   113→   113→          </table>
+   114→   114→        </div>
+   115→   115→      </Card>
+   116→   116→
+   117→   117→      <AnimatePresence>
+   118→   118→        {selectedStaff && (
+   119→   119→          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-stretch justify-end bg-slate-900/50 backdrop-blur-sm" onClick={() => setSelectedStaff(null)}>
+   120→   120→            <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', damping: 30, stiffness: 300 }} onClick={(e) => e.stopPropagation()} className="bg-white w-full max-w-md h-full overflow-y-auto shadow-2xl">
+   121→   121→              <div className="sticky top-0 px-6 py-4 border-b border-slate-200 bg-white z-10 flex items-center justify-between">
+   122→   122→                <div className="flex items-center gap-3">
+   123→   123→                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold" style={{ background: selectedStaff.avatarColor }}>{selectedStaff.initials}</div>
+   124→   124→                  <div><h3 className="text-sm font-semibold text-slate-900">{selectedStaff.name}</h3><p className="text-[11px] text-slate-500">{selectedStaff.role} · {selectedStaff.id}</p></div>
+   125→   125→                </div>
+   126→   126→                <button onClick={() => setSelectedStaff(null)} className="p-1.5 rounded-lg hover:bg-slate-100"><X className="w-5 h-5 text-slate-500" /></button>
+   127→   127→              </div>
+   128→   128→              <div className="p-6 space-y-4">
+   129→   129→                <div className="grid grid-cols-2 gap-2">
+   130→   130→                  <div className="p-3 rounded-lg bg-slate-50"><div className="text-[10px] text-slate-500 uppercase">Department</div><div className="text-xs font-medium text-slate-900 mt-0.5">{selectedStaff.dept}</div></div>
+   131→   131→                  <div className="p-3 rounded-lg bg-slate-50"><div className="text-[10px] text-slate-500 uppercase">Joined</div><div className="text-xs font-medium text-slate-900 mt-0.5">{selectedStaff.joined}</div></div>
+   132→   132→                  <div className="p-3 rounded-lg bg-slate-50"><div className="text-[10px] text-slate-500 uppercase">Phone</div><div className="text-xs font-medium text-slate-900 mt-0.5">{selectedStaff.phone}</div></div>
+   133→   133→                  <div className="p-3 rounded-lg bg-slate-50"><div className="text-[10px] text-slate-500 uppercase">Email</div><div className="text-xs font-medium text-slate-900 mt-0.5 truncate">{selectedStaff.email}</div></div>
+   134→   134→                  <div className="p-3 rounded-lg bg-slate-50"><div className="text-[10px] text-slate-500 uppercase">Monthly Salary</div><div className="text-xs font-medium text-slate-900 mt-0.5">{selectedStaff.salary}</div></div>
+   135→   135→                  <div className="p-3 rounded-lg bg-slate-50"><div className="text-[10px] text-slate-500 uppercase">Status</div><div className="text-xs font-medium text-slate-900 mt-0.5">{selectedStaff.status}</div></div>
+   136→   136→                </div>
+   137→   137→                <div><h4 className="text-xs font-semibold text-slate-900 uppercase tracking-wider mb-2">Documents</h4>{['Employment Contract', 'ID Proof (Aadhaar)', 'PAN Card', 'Qualification Certificates', 'Police Verification'].map((d) => (
+   138→   138→                  <div key={d} className="p-2 rounded-lg border border-slate-200 flex items-center justify-between mb-1">
+   139→   139→                    <div className="flex items-center gap-2"><FileText className="w-3.5 h-3.5 text-slate-400" /><span className="text-[11px] text-slate-700">{d}</span></div>
+   140→   140→                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+   141→   141→                  </div>
+   142→   142→                ))}</div>
+   143→   143→                <Button className="w-full h-9 text-xs rounded-lg text-white" style={{ background: SHARED_ACCENT }} onClick={() => { preview({ recipients: [{ id: selectedStaff.id, name: selectedStaff.name, contact: selectedStaff.phone, channel: 'WHATSAPP', recipientType: 'STAFF' }], body: `Dear ${selectedStaff.name}, your HR record has been updated. Please review on the LearnX portal. — LearnX HR`, source: 'hrms_staff_notify' }); toast.success(`📤 Notification sent to ${selectedStaff.name}`) }}>
+   144→   144→                  <Send className="w-3.5 h-3.5 mr-1.5" /> Notify Staff
+   145→   145→                </Button>
+   146→   146→              </div>
+   147→   147→            </motion.div>
+   148→   148→          </motion.div>
+   149→   149→        )}
+   150→   150→      </AnimatePresence>
+   151→   151→    </div>
+   152→   152→  )
+   153→   153→}
+   154→   154→
+   155→   155→// ============================================================
+   156→   156→// CONCERNS MODULE
+   157→   157→// ============================================================
+   158→   158→
+   159→   159→interface Concern {
+   160→   160→  id: string
+   161→   161→  student: string
+   162→   162→  grade: string
+   163→   163→  type: 'academic' | 'behavioral' | 'social' | 'emotional' | 'health'
+   164→   164→  severity: 'low' | 'medium' | 'high'
+   165→   165→  description: string
+   166→   166→  reportedBy: string
+   167→   167→  date: string
+   168→   168→  classTeacher: string
+   169→   169→  teacherPhone: string
+   170→   170→  parentName: string
+   171→   171→  parentPhone: string
+   172→   172→  status: 'open' | 'in-progress' | 'resolved'
+   173→   173→  avatarColor: string
+   174→   174→  initials: string
+   175→   175→}
+   176→   176→
+   177→   177→const CONCERNS: Concern[] = [
+   178→   178→  { id: 'CN-001', student: 'Aarav Sharma', grade: '7-A', type: 'academic', severity: 'medium', description: 'Sudden drop in Mathematics scores. Was scoring 85+ last term, now scoring 60s.', reportedBy: 'Mr. Rajesh Kumar', date: '14 Feb 2026', classTeacher: 'Mrs. Anita Verma', teacherPhone: '+91 99001 11111', parentName: 'Suresh Sharma', parentPhone: '+91 98765 43210', status: 'open', avatarColor: '#1E3A8A', initials: 'AS' },
+   179→   179→  { id: 'CN-002', student: 'Diya Patel', grade: '5-B', type: 'behavioral', severity: 'high', description: 'Aggressive behavior with classmates. Two incidents reported this week.', reportedBy: 'Mrs. Meena Iyer', date: '15 Feb 2026', classTeacher: 'Mrs. Kavita Joshi', teacherPhone: '+91 99001 22222', parentName: 'Nilesh Patel', parentPhone: '+91 98200 12345', status: 'in-progress', avatarColor: '#F59E0B', initials: 'DP' },
+   180→   180→  { id: 'CN-003', student: 'Vivaan Gupta', grade: '8-A', type: 'emotional', severity: 'medium', description: 'Appears withdrawn in class. Not participating in group activities.', reportedBy: 'Dr. Priya Sharma', date: '13 Feb 2026', classTeacher: 'Mrs. Deepa Menon', teacherPhone: '+91 99001 66666', parentName: 'Rajesh Gupta', parentPhone: '+91 99876 54321', status: 'open', avatarColor: '#22C55E', initials: 'VG' },
+   181→   181→  { id: 'CN-004', student: 'Ananya Reddy', grade: '6-C', type: 'social', severity: 'low', description: 'Difficulty making friends. Often sits alone during lunch.', reportedBy: 'Mrs. Deepa Menon', date: '12 Feb 2026', classTeacher: 'Mr. Arun Nair', teacherPhone: '+91 99001 88888', parentName: 'Krishna Reddy', parentPhone: '+91 98111 22222', status: 'in-progress', avatarColor: '#E11D48', initials: 'AR' },
+   182→   182→  { id: 'CN-005', student: 'Reyansh Kumar', grade: '3-A', type: 'health', severity: 'high', description: 'Frequent complaints of stomach pain. Possible food allergy.', reportedBy: 'Mrs. Anita Verma', date: '15 Feb 2026', classTeacher: 'Mrs. Anita Verma', teacherPhone: '+91 99001 11111', parentName: 'Amit Kumar', parentPhone: '+91 97000 88888', status: 'open', avatarColor: '#0D9488', initials: 'RK' },
+   183→   183→]
+   184→   184→
+   185→   185→const CONCERN_TYPE_CONFIG: Record<string, { color: string; bg: string; icon: any }> = {
+   186→   186→  academic: { color: '#1E3A8A', bg: 'bg-blue-50 text-blue-700', icon: BookOpen },
+   187→   187→  behavioral: { color: '#EF4444', bg: 'bg-rose-50 text-rose-700', icon: AlertCircle },
+   188→   188→  social: { color: '#7C3AED', bg: 'bg-violet-50 text-violet-700', icon: Users },
+   189→   189→  emotional: { color: '#F59E0B', bg: 'bg-amber-50 text-amber-700', icon: Heart },
+   190→   190→  health: { color: '#22C55E', bg: 'bg-emerald-50 text-emerald-700', icon: Activity },
+   191→   191→}
+   192→   192→
+   193→   193→const SEVERITY_CONFIG: Record<string, { color: string; bg: string }> = {
+   194→   194→  low: { color: '#22C55E', bg: 'bg-emerald-50 text-emerald-700' },
+   195→   195→  medium: { color: '#F59E0B', bg: 'bg-amber-50 text-amber-700' },
+   196→   196→  high: { color: '#EF4444', bg: 'bg-rose-50 text-rose-700' },
+   197→   197→}
+   198→   198→
+   199→   199→export function ConcernsModule() {
+   200→   200→  const { preview } = useNotificationPreview()
+   201→   201→  const [selected, setSelected] = useState<Concern | null>(null)
+   202→   202→
+   203→   203→  return (
+   204→   204→    <div className="p-4 lg:p-8 space-y-6 animate-page-enter max-w-[1600px] mx-auto">
+   205→   205→      <SectionHeader emoji="⚠️" title="Student Concerns" subtitle="Track & address student well-being concerns" accent="#E11D48" onNew={() => toast.success('New concern form opened')} newLabel="Log Concern" onRefresh={() => toast.success('✅ Refreshed')} aiActions={[{ label: 'concerns auto-flagged', count: 8 }, { label: 'interventions suggested', count: 12 }]} />
+   206→   206→
+   207→   207→      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+   208→   208→        {[{ label: 'Open Concerns', value: CONCERNS.filter((c) => c.status === 'open').length, icon: AlertCircle, color: '#EF4444' }, { label: 'In Progress', value: CONCERNS.filter((c) => c.status === 'in-progress').length, icon: Activity, color: '#F59E0B' }, { label: 'High Severity', value: CONCERNS.filter((c) => c.severity === 'high').length, icon: AlertCircle, color: '#E11D48' }, { label: 'Resolved', value: CONCERNS.filter((c) => c.status === 'resolved').length, icon: CheckCircle2, color: '#22C55E' }].map((s, i) => (
+   209→   209→          <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
+   210→   210→            <Card className="p-5 rounded-2xl"><div className="flex items-start justify-between mb-3"><div className="w-10 h-10 rounded-xl flex items-center justify-center text-white" style={{ background: s.color }}><s.icon className="w-5 h-5" /></div></div><div className="text-2xl font-semibold text-slate-900">{s.value}</div><div className="text-xs text-slate-500 mt-0.5">{s.label}</div></Card>
+   211→   211→          </motion.div>
+   212→   212→        ))}
+   213→   213→      </div>
+   214→   214→
+   215→   215→      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+   216→   216→        {CONCERNS.map((c, i) => {
+   217→   217→          const cfg = CONCERN_TYPE_CONFIG[c.type]
+   218→   218→          const sev = SEVERITY_CONFIG[c.severity]
+   219→   219→          return (
+   220→   220→            <motion.div key={c.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
+   221→   221→              <Card className="p-5 rounded-2xl hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setSelected(c)}>
+   222→   222→                <div className="flex items-start justify-between mb-3">
+   223→   223→                  <div className="flex items-center gap-3">
+   224→   224→                    <div className="w-11 h-11 rounded-full flex items-center justify-center text-white font-semibold" style={{ background: c.avatarColor }}>{c.initials}</div>
+   225→   225→                    <div>
+   226→   226→                      <div className="text-sm font-semibold text-slate-900">{c.student}</div>
+   227→   227→                      <div className="text-[11px] text-slate-500">Grade {c.grade} · {c.id}</div>
+   228→   228→                    </div>
+   229→   229→                  </div>
+   230→   230→                  <div className="flex flex-col gap-1 items-end">
+   231→   231→                    <Badge variant="outline" className={`text-[10px] capitalize ${cfg.bg}`}><cfg.icon className="w-3 h-3 mr-1" /> {c.type}</Badge>
+   232→   232→                    <Badge variant="outline" className={`text-[10px] capitalize ${sev.bg}`}>{c.severity}</Badge>
+   233→   233→                  </div>
+   234→   234→                </div>
+   235→   235→                <p className="text-[11px] text-slate-600 leading-relaxed mb-3">{c.description}</p>
+   236→   236→                <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+   237→   237→                  <div className="text-[11px] text-slate-500">By {c.reportedBy} · {c.date}</div>
+   238→   238→                  <div className="flex items-center gap-1">
+   239→   239→                    <Badge variant="outline" className={`text-[10px] capitalize ${c.status === 'open' ? 'bg-rose-50 text-rose-700' : c.status === 'in-progress' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}>{c.status.replace('-', ' ')}</Badge>
+   240→   240→                    <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+   241→   241→                  </div>
+   242→   242→                </div>
+   243→   243→              </Card>
+   244→   244→            </motion.div>
+   245→   245→          )
+   246→   246→        })}
+   247→   247→      </div>
+   248→   248→
+   249→   249→      <AnimatePresence>
+   250→   250→        {selected && (
+   251→   251→          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm" onClick={() => setSelected(null)}>
+   252→   252→            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} onClick={(e) => e.stopPropagation()} className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+   253→   253→              <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+   254→   254→                <div className="flex items-center gap-3">
+   255→   255→                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold" style={{ background: selected.avatarColor }}>{selected.initials}</div>
+   256→   256→                  <div><h3 className="text-sm font-semibold text-slate-900">{selected.student}</h3><p className="text-[11px] text-slate-500">Grade {selected.grade} · {selected.id}</p></div>
+   257→   257→                </div>
+   258→   258→                <button onClick={() => setSelected(null)} className="p-1.5 rounded-lg hover:bg-slate-100"><X className="w-5 h-5 text-slate-500" /></button>
+   259→   259→              </div>
+   260→   260→              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+   261→   261→                <div className="p-3 rounded-lg bg-slate-50 border border-slate-200">
+   262→   262→                  <div className="text-[10px] text-slate-500 uppercase mb-1">Concern Description</div>
+   263→   263→                  <div className="text-xs text-slate-700">{selected.description}</div>
+   264→   264→                </div>
+   265→   265→                <div className="grid grid-cols-2 gap-3">
+   266→   266→                  <div className="p-3 rounded-lg bg-slate-50"><div className="text-[10px] text-slate-500 uppercase">Class Teacher</div><div className="text-xs font-medium text-slate-900 mt-0.5">{selected.classTeacher}</div><div className="text-[10px] text-slate-500">{selected.teacherPhone}</div></div>
+   267→   267→                  <div className="p-3 rounded-lg bg-slate-50"><div className="text-[10px] text-slate-500 uppercase">Parent</div><div className="text-xs font-medium text-slate-900 mt-0.5">{selected.parentName}</div><div className="text-[10px] text-slate-500">{selected.parentPhone}</div></div>
+   268→   268→                </div>
+   269→   269→                <div>
+   270→   270→                  <h4 className="text-xs font-semibold text-slate-900 uppercase tracking-wider mb-2 flex items-center gap-1.5"><Brain className="w-3.5 h-3.5 text-blue-700" /> AI Recommended Actions</h4>
+   271→   271→                  <div className="space-y-2">
+   272→   272→                    {[
+   273→   273→                      { action: 'Schedule 1-on-1 counseling session with student', priority: 'High' },
+   274→   274→                      { action: 'Inform class teacher for in-class observation', priority: 'High' },
+   275→   275→                      { action: 'Parent-teacher meeting within 48 hours', priority: 'Medium' },
+   276→   276→                      { action: 'Refer to school counselor if needed', priority: 'Medium' },
+   277→   277→                      { action: 'Weekly progress check for 4 weeks', priority: 'Low' },
+   278→   278→                    ].map((r, i) => (
+   279→   279→                      <div key={i} className="p-2.5 rounded-lg border border-slate-200 flex items-center justify-between">
+   280→   280→                        <div className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-slate-400" /><span className="text-[11px] text-slate-700">{r.action}</span></div>
+   281→   281→                        <Badge variant="outline" className={`text-[9px] ${r.priority === 'High' ? 'bg-rose-50 text-rose-700' : r.priority === 'Medium' ? 'bg-amber-50 text-amber-700' : 'bg-slate-50 text-slate-600'}`}>{r.priority}</Badge>
+   282→   282→                      </div>
+   283→   283→                    ))}
+   284→   284→                  </div>
+   285→   285→                </div>
+   286→   286→              </div>
+   287→   287→              <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between gap-2 flex-wrap">
+   288→   288→                <Button size="sm" variant="outline" className="h-9 text-xs rounded-lg" onClick={() => { preview({ recipients: [{ id: selected.id, name: selected.classTeacher, contact: selected.teacherPhone, channel: 'WHATSAPP', recipientType: 'STAFF' }], body: `Dear ${selected.classTeacher},\n\nConcern ID: ${selected.id}\nStudent: ${selected.student} (Grade ${selected.grade})\nType: ${selected.type} (Severity: ${selected.severity})\n\nDescription: ${selected.description}\n\nPlease observe and connect with the student. Report back within 48 hours.\n\n— LearnX Concerns Cell`, source: 'concerns_alert_teacher' }); toast.success(`📤 Teacher alerted`) }}><Bell className="w-3.5 h-3.5 mr-1" /> Alert Teacher</Button>
+   289→   289→                <Button size="sm" variant="outline" className="h-9 text-xs rounded-lg" onClick={() => { preview({ recipients: [{ id: selected.id, name: selected.parentName, contact: selected.parentPhone, channel: 'WHATSAPP', recipientType: 'PARENT' }], body: `Dear ${selected.parentName},\n\nWe wanted to personally reassure you that we are aware of and attending to a concern regarding ${selected.student}. Our team is committed to supporting your child's well-being.\n\nWe would like to schedule a brief meeting at your convenience.\n\n— LearnX School`, source: 'concerns_reassure_parent' }); toast.success(`📤 Reassure message sent`) }}><Heart className="w-3.5 h-3.5 mr-1" /> Reassure Parent</Button>
+   290→   290→                <Button size="sm" className="h-9 text-xs rounded-lg text-white" style={{ background: '#22C55E' }} onClick={() => { toast.success('✅ Concern marked resolved'); setSelected(null) }}><CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Resolve</Button>
+   291→   291→              </div>
+   292→   292→            </motion.div>
+   293→   293→          </motion.div>
+   294→   294→        )}
+   295→   295→      </AnimatePresence>
+   296→   296→    </div>
+   297→   297→  )
+   298→   298→}
+   299→   299→
+   300→   300→// ============================================================
+   301→   301→// SIS MODULE
+   302→   302→// ============================================================
+   303→   303→
+   304→   304→const SIS_STUDENTS = [
+   305→   305→  { id: 'STU-001', name: 'Aarav Sharma', grade: '7-A', roll: '01', parent: 'Suresh Sharma', phone: '+91 98765 43210', email: 'aarav@learnx.edu', attendance: '94%', avgMarks: '87%', status: 'Active', fees: 'Paid', avatarColor: '#1E3A8A', initials: 'AS' },
+   306→   306→  { id: 'STU-002', name: 'Diya Patel', grade: '5-B', roll: '02', parent: 'Nilesh Patel', phone: '+91 98200 12345', email: 'diya@learnx.edu', attendance: '89%', avgMarks: '82%', status: 'Active', fees: 'Partial', avatarColor: '#F59E0B', initials: 'DP' },
+   307→   307→  { id: 'STU-003', name: 'Vivaan Gupta', grade: '8-A', roll: '03', parent: 'Rajesh Gupta', phone: '+91 99876 54321', email: 'vivaan@learnx.edu', attendance: '96%', avgMarks: '91%', status: 'Active', fees: 'Paid', avatarColor: '#22C55E', initials: 'VG' },
+   308→   308→  { id: 'STU-004', name: 'Ananya Reddy', grade: '6-C', roll: '04', parent: 'Krishna Reddy', phone: '+91 98111 22222', email: 'ananya@learnx.edu', attendance: '78%', avgMarks: '74%', status: 'At-Risk', fees: 'Pending', avatarColor: '#E11D48', initials: 'AR' },
+   309→   309→  { id: 'STU-005', name: 'Reyansh Kumar', grade: '3-A', roll: '05', parent: 'Amit Kumar', phone: '+91 97000 88888', email: 'reyansh@learnx.edu', attendance: '92%', avgMarks: '85%', status: 'Active', fees: 'Paid', avatarColor: '#0D9488', initials: 'RK' },
+
+[showing lines 30-309 of 1277; use offset=310 with limit to continue reading]

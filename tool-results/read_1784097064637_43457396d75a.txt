@@ -1,0 +1,727 @@
+     1→'use client'
+     2→
+     3→import { useState } from 'react'
+     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→import {
+     6→  X, CheckCircle2, Clock, Phone, Mail, MessageSquare, Search, Filter,
+     7→  Download, Zap, Sparkles, Brain, Send, Wallet, TrendingUp, AlertTriangle,
+     8→  Bot, Bell, CreditCard, DollarSign, Receipt, Plus, ChevronRight, RefreshCw,
+     9→  Users, Calendar, FileText, Eye, MessageCircle, AlertCircle, Printer
+    10→} from 'lucide-react'
+    11→import { Card } from '@/components/ui/card'
+    12→import { Button } from '@/components/ui/button'
+    13→import { Input } from '@/components/ui/input'
+    14→import { Label } from '@/components/ui/label'
+    15→import { Badge } from '@/components/ui/badge'
+    16→import {
+    17→  Select, SelectContent, SelectItem, SelectTrigger, SelectValue
+    18→} from '@/components/ui/select'
+    19→import { SectionHeader } from './SectionHeader'
+    20→import { useAppStore } from '@/lib/store'
+    21→import { toast } from 'sonner'
+    22→import {
+    23→  AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid,
+    24→  BarChart, Bar, PieChart, Pie, Cell
+    25→} from 'recharts'
+    26→
+    27→interface FeeRecord {
+    28→  id: string
+    29→  student: string
+    30→  grade: string
+    31→  feeType: string
+    32→  amount: number
+    33→  paid: number
+    34→  balance: number
+    35→  dueDate: string
+    36→  status: 'paid' | 'partial' | 'pending' | 'overdue'
+    37→  paymentMethod?: string
+    38→  paidOn?: string // ISO date string — when the payment was made
+    39→  invoiceNo?: string // generated invoice number (e.g. INV-2026-001)
+    40→  transactionId?: string // bank/UPI transaction reference
+    41→  parentPhone: string
+    42→  parentName: string
+    43→  parentEmail?: string
+    44→  notified?: boolean
+    45→  avatarColor: string
+    46→  initials: string
+    47→}
+    48→
+    49→const FEE_RECORDS: FeeRecord[] = [
+    50→  { id: 'FEE-001', student: 'Aarav Sharma', grade: '7-A', feeType: 'Tuition Q4', amount: 12500, paid: 12500, balance: 0, dueDate: '15 Feb 2026', status: 'paid', paymentMethod: 'UPI', paidOn: '2026-02-10T14:32:00', invoiceNo: 'INV-2026-001', transactionId: 'UPI-9823475621', parentPhone: '+91 98765 43210', parentName: 'Suresh Sharma', parentEmail: 'suresh.singh@email.com', notified: true, avatarColor: '#22C55E', initials: 'AS' },
+    51→  { id: 'FEE-002', student: 'Diya Patel', grade: '5-B', feeType: 'Tuition Q4', amount: 11800, paid: 5900, balance: 5900, dueDate: '15 Feb 2026', status: 'partial', paymentMethod: 'Card', paidOn: '2026-02-08T11:15:00', invoiceNo: 'INV-2026-002', transactionId: 'CARD-452178932', parentPhone: '+91 98200 12345', parentName: 'Nilesh Patel', parentEmail: 'nilesh.patel@email.com', notified: false, avatarColor: '#F59E0B', initials: 'DP' },
+    52→  { id: 'FEE-003', student: 'Vivaan Gupta', grade: '8-A', feeType: 'Tuition Q4', amount: 14200, paid: 0, balance: 14200, dueDate: '10 Feb 2026', status: 'overdue', parentPhone: '+91 99876 54321', parentName: 'Rajesh Gupta', parentEmail: 'rajesh.gupta@email.com', notified: false, avatarColor: '#EF4444', initials: 'VG' },
+    53→  { id: 'FEE-004', student: 'Ananya Reddy', grade: '6-C', feeType: 'Transport', amount: 3000, paid: 3000, balance: 0, dueDate: '15 Feb 2026', status: 'paid', paymentMethod: 'Cash', paidOn: '2026-02-12T09:45:00', invoiceNo: 'INV-2026-003', transactionId: 'CASH-REC-7821', parentPhone: '+91 98111 22222', parentName: 'Krishna Reddy', parentEmail: 'krishna.reddy@email.com', notified: true, avatarColor: '#22C55E', initials: 'AR' },
+    54→  { id: 'FEE-005', student: 'Reyansh Kumar', grade: '3-A', feeType: 'Tuition Q4', amount: 10500, paid: 0, balance: 10500, dueDate: '20 Feb 2026', status: 'pending', parentPhone: '+91 97000 88888', parentName: 'Amit Kumar', parentEmail: 'amit.kumar@email.com', notified: false, avatarColor: '#F59E0B', initials: 'RK' },
+    55→  { id: 'FEE-006', student: 'Sara Khan', grade: '9-B', feeType: 'Lab Fee', amount: 2000, paid: 2000, balance: 0, dueDate: '15 Feb 2026', status: 'paid', paymentMethod: 'Net Banking', paidOn: '2026-02-11T16:20:00', invoiceNo: 'INV-2026-004', transactionId: 'NEFT-HDFC0004521', parentPhone: '+91 98888 77777', parentName: 'Imran Khan', parentEmail: 'imran.khan@email.com', notified: true, avatarColor: '#22C55E', initials: 'SK' },
+    56→  { id: 'FEE-007', student: 'Arjun Nair', grade: '10-A', feeType: 'Exam Fee', amount: 1500, paid: 0, balance: 1500, dueDate: '08 Feb 2026', status: 'overdue', parentPhone: '+91 97000 11111', parentName: 'Vikram Nair', parentEmail: 'vikram.nair@email.com', notified: false, avatarColor: '#EF4444', initials: 'AN' },
+    57→  { id: 'FEE-008', student: 'Myra Sharma', grade: '2-B', feeType: 'Tuition Q4', amount: 9800, paid: 9800, balance: 0, dueDate: '15 Feb 2026', status: 'paid', paymentMethod: 'UPI', paidOn: '2026-02-09T13:10:00', invoiceNo: 'INV-2026-005', transactionId: 'UPI-7234561980', parentPhone: '+91 98222 33344', parentName: 'Rohit Sharma', parentEmail: 'rohit.sharma@email.com', notified: true, avatarColor: '#22C55E', initials: 'MS' },
+    58→]
+    59→
+    60→export function FeesModule() {
+    61→  const [records, setRecords] = useState<FeeRecord[]>(FEE_RECORDS)
+    62→  const [search, setSearch] = useState('')
+    63→  const [filter, setFilter] = useState<'all' | 'paid' | 'partial' | 'pending' | 'overdue'>('all')
+    64→  const [showCollect, setShowCollect] = useState(false)
+    65→  const [showDefaulterAlert, setShowDefaulterAlert] = useState(false)
+    66→  const [invoiceRecord, setInvoiceRecord] = useState<FeeRecord | null>(null)
+    67→
+    68→  const filtered = records.filter((r) => {
+    69→    const ms = r.student.toLowerCase().includes(search.toLowerCase()) || r.id.toLowerCase().includes(search.toLowerCase())
+    70→    const mf = filter === 'all' || r.status === filter
+    71→    return ms && mf
+    72→  })
+    73→
+    74→  const stats = {
+    75→    collected: records.reduce((sum, r) => sum + r.paid, 0),
+    76→    pending: records.reduce((sum, r) => sum + r.balance, 0),
+    77→    defaulters: records.filter((r) => r.status === 'overdue').length,
+    78→    paidCount: records.filter((r) => r.status === 'paid').length,
+    79→  }
+    80→
+    81→  const handleSendDefaulterAlerts = (channel: 'sms' | 'whatsapp' | 'email' | 'all') => {
+    82→    const defaulters = records.filter((r) => r.status === 'overdue' || r.status === 'pending')
+    83→    setRecords((rs) => rs.map((r) => r.status === 'overdue' || r.status === 'pending' ? { ...r, notified: true } : r))
+    84→    toast.success(`✅ ${defaulters.length} fee reminder notifications sent via ${channel.toUpperCase()} to parents.`)
+    85→    setShowDefaulterAlert(false)
+    86→  }
+    87→
+    88→  const handleRecordPayment = (payment: { studentId: string; amount: number; method: string }) => {
+    89→    const now = new Date()
+    90→    const invoiceNo = `INV-2026-${String(Math.floor(Math.random() * 9000) + 1000)}`
+    91→    const transactionId = `${payment.method.toUpperCase().replace(/\s/g, '')}-${Math.floor(Math.random() * 9000000000) + 1000000000}`
+    92→
+    93→    setRecords((rs) => rs.map((r) => {
+    94→      if (r.id === payment.studentId) {
+    95→        const newPaid = r.paid + payment.amount
+    96→        const newBalance = r.amount - newPaid
+    97→        return {
+    98→          ...r,
+    99→          paid: newPaid,
+   100→          balance: newBalance,
+   101→          status: newBalance <= 0 ? 'paid' : 'partial',
+   102→          paymentMethod: payment.method,
+   103→          paidOn: now.toISOString(),
+   104→          invoiceNo: r.invoiceNo || invoiceNo, // keep existing if already has one (partial payment)
+   105→          transactionId: r.transactionId || transactionId,
+   106→          notified: true,
+   107→        }
+   108→      }
+   109→      return r
+   110→    }))
+   111→    toast.success(`✅ Payment of ₹${payment.amount.toLocaleString('en-IN')} recorded via ${payment.method}`, {
+   112→      description: `Invoice ${invoiceNo} generated · Receipt sent to parent via WhatsApp, SMS & Email · Paid on ${now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`,
+   113→      duration: 5000,
+   114→    })
+   115→    setShowCollect(false)
+   116→  }
+   117→
+   118→  return (
+   119→    <div className="p-4 lg:p-8 space-y-6 animate-page-enter max-w-[1600px] mx-auto">
+   120→      <SectionHeader
+   121→        emoji="💰"
+   122→        title="Online Fee & Finance Tracking"
+   123→        subtitle="Powered by LearnX Intelligence · Auto-detect payments + instant receipts + defaulter alerts"
+   124→        accent="#22C55E"
+   125→        onNew={() => setShowCollect(true)}
+   126→        newLabel="Collect Fee"
+   127→        aiActions={[
+   128→          { label: 'payments auto-detected', count: 47 },
+   129→          { label: 'receipts sent', count: 47 },
+   130→          { label: 'defaulter alerts queued', count: 12 },
+   131→        ]}
+   132→      />
+   133→
+   134→      {/* AI Automation */}
+   135→      <Card className="p-5 elevated-card rounded-2xl bg-gradient-to-br from-emerald-50/50 to-blue-50/30 border-emerald-100">
+   136→        <div className="flex items-start gap-4">
+   137→          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-700 flex items-center justify-center text-white flex-shrink-0">
+   138→            <Bot className="w-5 h-5" />
+   139→          </div>
+   140→          <div className="flex-1">
+   141→            <div className="flex items-center gap-2 mb-3">
+   142→              <h3 className="text-sm font-semibold text-slate-900">AI Fee Automation Engine</h3>
+   143→              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-semibold border border-emerald-200">
+   144→                <span className="dot-pulse" /> Live
+   145→              </span>
+   146→            </div>
+   147→            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-3">
+   148→              <div className="p-2.5 rounded-lg bg-white border border-slate-200">
+   149→                <div className="flex items-center gap-1.5 mb-1">
+   150→                  <Wallet className="w-3 h-3 text-emerald-600" />
+   151→                  <span className="text-[10px] font-semibold text-slate-600 uppercase">Collected</span>
+   152→                </div>
+   153→                <div className="text-sm font-bold text-slate-900">₹{(stats.collected / 1000).toFixed(1)}K</div>
+   154→              </div>
+   155→              <div className="p-2.5 rounded-lg bg-white border border-slate-200">
+   156→                <div className="flex items-center gap-1.5 mb-1">
+   157→                  <AlertTriangle className="w-3 h-3 text-amber-500" />
+   158→                  <span className="text-[10px] font-semibold text-slate-600 uppercase">Pending</span>
+   159→                </div>
+   160→                <div className="text-sm font-bold text-slate-900">₹{(stats.pending / 1000).toFixed(1)}K</div>
+   161→              </div>
+   162→              <div className="p-2.5 rounded-lg bg-white border border-slate-200">
+   163→                <div className="flex items-center gap-1.5 mb-1">
+   164→                  <Bell className="w-3 h-3 text-rose-500" />
+   165→                  <span className="text-[10px] font-semibold text-slate-600 uppercase">Defaulters</span>
+   166→                </div>
+   167→                <div className="text-sm font-bold text-slate-900">{stats.defaulters}</div>
+   168→              </div>
+   169→              <div className="p-2.5 rounded-lg bg-white border border-slate-200">
+   170→                <div className="flex items-center gap-1.5 mb-1">
+   171→                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+   172→                  <span className="text-[10px] font-semibold text-slate-600 uppercase">Auto-Receipts</span>
+   173→                </div>
+   174→                <div className="text-sm font-bold text-slate-900">47 today</div>
+   175→              </div>
+   176→            </div>
+   177→            <p className="text-[11px] text-slate-500 leading-relaxed">
+   178→              AI auto-detects payments (UPI/Card/Net Banking/Cash) in real-time, generates GST receipts, and instantly sends them to parents via WhatsApp + SMS + Email. Predicts defaulters 14 days before due date and sends automated reminders. One-click bulk alerts to all defaulter parents.
+   179→            </p>
+   180→          </div>
+   181→        </div>
+   182→      </Card>
+   183→
+   184→      {/* One-click defaulter alert banner */}
+   185→      {stats.defaulters > 0 && (
+   186→        <Card className="p-4 rounded-2xl bg-rose-50 border-rose-200">
+   187→          <div className="flex items-start gap-3">
+   188→            <div className="w-9 h-9 rounded-xl bg-rose-500 flex items-center justify-center text-white flex-shrink-0">
+   189→              <Bell className="w-4 h-4" />
+   190→            </div>
+   191→            <div className="flex-1">
+   192→              <div className="flex items-center gap-2 mb-1">
+   193→                <h4 className="text-sm font-semibold text-slate-900">{stats.defaulters} Fee Defaulters Detected</h4>
+   194→                <span className="px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-700 text-[9px] font-semibold border border-rose-200">AI Flagged</span>
+   195→              </div>
+   196→              <p className="text-[11px] text-slate-600 mb-3">
+   197→                AI has identified {stats.defaulters} students with overdue fees (total ₹{records.filter(r => r.status === 'overdue').reduce((s, r) => s + r.balance, 0).toLocaleString('en-IN')}). Send automated reminders to all parents with one click.
+   198→              </p>
+   199→              <div className="flex gap-2 flex-wrap">
+   200→                <Button size="sm" onClick={() => handleSendDefaulterAlerts('whatsapp')} className="h-8 text-xs rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white gap-1">
+   201→                  <MessageSquare className="w-3 h-3" /> Send All via WhatsApp
+   202→                </Button>
+   203→                <Button size="sm" onClick={() => handleSendDefaulterAlerts('sms')} className="h-8 text-xs rounded-lg bg-blue-800 hover:bg-blue-900 text-white gap-1">
+   204→                  <Phone className="w-3 h-3" /> Send All via SMS
+   205→                </Button>
+   206→                <Button size="sm" onClick={() => handleSendDefaulterAlerts('email')} className="h-8 text-xs rounded-lg bg-orange-500 hover:bg-orange-600 text-white gap-1">
+   207→                  <Mail className="w-3 h-3" /> Send All via Email
+   208→                </Button>
+   209→                <Button size="sm" onClick={() => handleSendDefaulterAlerts('all')} className="h-8 text-xs rounded-lg bg-rose-600 hover:bg-rose-700 text-white gap-1">
+   210→                  <Zap className="w-3 h-3" /> Send via ALL Channels (One-Click)
+   211→                </Button>
+   212→              </div>
+   213→            </div>
+   214→          </div>
+   215→        </Card>
+   216→      )}
+   217→
+   218→      {/* Payment method distribution chart */}
+   219→      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+   220→        <Card className="lg:col-span-2 p-6 elevated-card rounded-2xl">
+   221→          <h3 className="text-base font-semibold text-slate-900 mb-4">Fee Collection Trend</h3>
+   222→          <ResponsiveContainer width="100%" height={200}>
+   223→            <AreaChart data={[
+   224→              { day: 'Mon', value: 2.4 }, { day: 'Tue', value: 3.1 }, { day: 'Wed', value: 4.2 },
+   225→              { day: 'Thu', value: 3.8 }, { day: 'Fri', value: 4.8 }, { day: 'Sat', value: 5.2 }, { day: 'Today', value: 4.82 },
+   226→            ]} margin={{ top: 5, right: 5, bottom: 5, left: -25 }}>
+   227→              <defs>
+   228→                <linearGradient id="feeGrad" x1="0" y1="0" x2="0" y2="1">
+   229→                  <stop offset="0%" stopColor="#22C55E" stopOpacity={0.3} />
+   230→                  <stop offset="100%" stopColor="#22C55E" stopOpacity={0} />
+   231→                </linearGradient>
+   232→              </defs>
+   233→              <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
+   234→              <XAxis dataKey="day" stroke="#94A3B8" fontSize={11} tickLine={false} axisLine={false} />
+   235→              <YAxis stroke="#94A3B8" fontSize={11} tickLine={false} axisLine={false} />
+   236→              <Tooltip contentStyle={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', fontSize: '12px' }} />
+   237→              <Area type="monotone" dataKey="value" stroke="#22C55E" strokeWidth={2.5} fill="url(#feeGrad)" dot={{ r: 3, fill: '#22C55E' }} />
+   238→            </AreaChart>
+   239→          </ResponsiveContainer>
+   240→        </Card>
+   241→        <Card className="p-6 elevated-card rounded-2xl">
+   242→          <h3 className="text-base font-semibold text-slate-900 mb-4">Payment Methods</h3>
+   243→          <ResponsiveContainer width="100%" height={180}>
+   244→            <PieChart>
+   245→              <Pie data={[
+   246→                { name: 'UPI', value: 58, color: '#22C55E' },
+   247→                { name: 'Card', value: 18, color: '#1E3A8A' },
+   248→                { name: 'Net Banking', value: 12, color: '#0D9488' },
+   249→                { name: 'Cash', value: 8, color: '#F59E0B' },
+   250→                { name: 'Cheque', value: 4, color: '#94A3B8' },
+   251→              ]} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={3} dataKey="value">
+   252→                {[
+   253→                  { name: 'UPI', value: 58, color: '#22C55E' },
+   254→                  { name: 'Card', value: 18, color: '#1E3A8A' },
+   255→                  { name: 'Net Banking', value: 12, color: '#0D9488' },
+   256→                  { name: 'Cash', value: 8, color: '#F59E0B' },
+   257→                  { name: 'Cheque', value: 4, color: '#94A3B8' },
+   258→                ].map((entry, i) => <Cell key={i} fill={entry.color} />)}
+   259→              </Pie>
+   260→              <Tooltip contentStyle={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', fontSize: '12px' }} />
+   261→            </PieChart>
+   262→          </ResponsiveContainer>
+   263→          <div className="space-y-1.5 mt-2">
+   264→            {[
+   265→              { name: 'UPI', value: 58, color: '#22C55E' },
+   266→              { name: 'Card', value: 18, color: '#1E3A8A' },
+   267→              { name: 'Net Banking', value: 12, color: '#0D9488' },
+   268→              { name: 'Cash', value: 8, color: '#F59E0B' },
+   269→              { name: 'Cheque', value: 4, color: '#94A3B8' },
+   270→            ].map((m) => (
+   271→              <div key={m.name} className="flex items-center justify-between text-xs">
+   272→                <div className="flex items-center gap-2">
+   273→                  <span className="w-2 h-2 rounded-full" style={{ background: m.color }} />
+   274→                  <span className="text-slate-600">{m.name}</span>
+   275→                </div>
+   276→                <span className="font-semibold text-slate-900">{m.value}%</span>
+   277→              </div>
+   278→            ))}
+   279→          </div>
+   280→        </Card>
+   281→      </div>
+   282→
+   283→      {/* Fee records table */}
+   284→      <Card className="p-6 elevated-card rounded-2xl">
+   285→        <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+   286→          <div>
+   287→            <h3 className="text-base font-semibold text-slate-900">Fee Records</h3>
+   288→            <p className="text-xs text-slate-500 mt-0.5">{filtered.length} records · Real-time payment tracking</p>
+   289→          </div>
+   290→          <div className="flex items-center gap-2 flex-wrap">
+   291→            <div className="relative">
+   292→              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+   293→              <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search..." className="pl-9 h-9 w-40 rounded-lg text-xs" />
+   294→            </div>
+   295→            <div className="flex gap-1 p-1 rounded-lg bg-slate-100">
+   296→              {(['all', 'paid', 'partial', 'pending', 'overdue'] as const).map((f) => (
+   297→                <button key={f} onClick={() => setFilter(f)} className={`px-2.5 py-1 rounded-md text-[10px] font-medium capitalize ${filter === f ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>
+   298→                  {f}
+   299→                </button>
+   300→              ))}
+   301→            </div>
+   302→          </div>
+   303→        </div>
+   304→        <div className="overflow-x-auto">
+   305→          <table className="w-full premium-table">
+   306→            <thead>
+   307→              <tr>
+   308→                <th>Student</th>
+   309→                <th>Grade</th>
+   310→                <th>Fee Type</th>
+   311→                <th>Amount</th>
+   312→                <th>Paid</th>
+   313→                <th>Balance</th>
+   314→                <th>Paid On</th>
+   315→                <th>Invoice</th>
+   316→                <th>Status</th>
+   317→                <th>Actions</th>
+   318→              </tr>
+   319→            </thead>
+   320→            <tbody>
+   321→              {filtered.map((r) => (
+   322→                <tr key={r.id}>
+   323→                  <td>
+   324→                    <div className="flex items-center gap-2">
+   325→                      <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold" style={{ background: r.avatarColor }}>
+   326→                        {r.initials}
+   327→                      </div>
+   328→                      <div>
+   329→                        <div className="font-medium text-slate-900">{r.student}</div>
+   330→                        <div className="text-[10px] text-slate-400">{r.parentName} · {r.parentPhone}</div>
+   331→                      </div>
+   332→                    </div>
+   333→                  </td>
+   334→                  <td>{r.grade}</td>
+   335→                  <td>{r.feeType}</td>
+   336→                  <td className="font-semibold">₹{r.amount.toLocaleString('en-IN')}</td>
+   337→                  <td className="text-emerald-600 font-semibold">₹{r.paid.toLocaleString('en-IN')}</td>
+   338→                  <td className={r.balance > 0 ? 'text-rose-600 font-semibold' : 'text-slate-400'}>₹{r.balance.toLocaleString('en-IN')}</td>
+   339→                  <td className="text-[11px] text-slate-600">
+   340→                    {r.paidOn ? (
+   341→                      <div>
+   342→                        <div>{new Date(r.paidOn).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+   343→                        <div className="text-[9px] text-slate-400">{new Date(r.paidOn).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</div>
+   344→                        {r.paymentMethod && <div className="text-[9px] text-blue-600 font-medium">{r.paymentMethod}</div>}
+   345→                      </div>
+   346→                    ) : (
+   347→                      <span className="text-slate-300">—</span>
+   348→                    )}
+   349→                  </td>
+   350→                  <td className="text-[10px]">
+   351→                    {r.invoiceNo ? (
+   352→                      <button
+   353→                        onClick={() => setInvoiceRecord(r)}
+   354→                        className="text-blue-700 hover:text-blue-900 hover:underline font-mono font-semibold flex items-center gap-1"
+   355→                        title="View invoice"
+   356→                      >
+   357→                        <Receipt className="w-3 h-3" />
+   358→                        {r.invoiceNo}
+   359→                      </button>
+   360→                    ) : (
+   361→                      <span className="text-slate-300">—</span>
+   362→                    )}
+   363→                  </td>
+   364→                  <td>
+   365→                    <span className={`status-chip ${
+   366→                      r.status === 'paid' ? 'status-success' : r.status === 'partial' ? 'status-warning' : r.status === 'overdue' ? 'status-danger' : 'status-info'
+   367→                    }`}>{r.status}</span>
+   368→                  </td>
+   369→                  <td>
+   370→                    <div className="flex items-center gap-1">
+   371→                      {r.balance > 0 && (
+   372→                        <button
+   373→                          onClick={() => setShowCollect(true)}
+   374→                          className="p-1.5 rounded-md hover:bg-emerald-50 text-emerald-600"
+   375→                          title="Collect payment"
+   376→                        >
+   377→                          <Wallet className="w-3.5 h-3.5" />
+   378→                        </button>
+   379→                      )}
+   380→                      {r.status !== 'paid' && !r.notified && (
+   381→                        <button
+   382→                          onClick={() => {
+   383→                            setRecords((rs) => rs.map((rr) => rr.id === r.id ? { ...rr, notified: true } : rr))
+   384→                            toast.success(`Reminder sent to ${r.parentName} via WhatsApp & SMS`)
+   385→                          }}
+   386→                          className="p-1.5 rounded-md hover:bg-blue-50 text-blue-700"
+   387→                          title="Send reminder"
+   388→                        >
+   389→                          <Send className="w-3.5 h-3.5" />
+   390→                        </button>
+   391→                      )}
+   392→                      <button className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500" title="View receipt">
+   393→                        <Receipt className="w-3.5 h-3.5" />
+   394→                      </button>
+   395→                    </div>
+   396→                  </td>
+   397→                </tr>
+   398→              ))}
+   399→            </tbody>
+   400→          </table>
+   401→        </div>
+   402→      </Card>
+   403→
+   404→      <AnimatePresence>
+   405→        {showCollect && (
+   406→          <CollectPaymentModal onClose={() => setShowCollect(false)} onSubmit={handleRecordPayment} records={records} />
+   407→        )}
+   408→      </AnimatePresence>
+   409→
+   410→      <AnimatePresence>
+   411→        {invoiceRecord && (
+   412→          <InvoiceModal record={invoiceRecord} onClose={() => setInvoiceRecord(null)} />
+   413→        )}
+   414→      </AnimatePresence>
+   415→    </div>
+   416→  )
+   417→}
+   418→
+   419→// ============ Collect Payment Modal ============
+   420→function CollectPaymentModal({ onClose, onSubmit, records }: {
+   421→  onClose: () => void
+   422→  onSubmit: (payment: { studentId: string; amount: number; method: string }) => void
+   423→  records: FeeRecord[]
+   424→}) {
+   425→  const [studentId, setStudentId] = useState(records[0]?.id || '')
+   426→  const [amount, setAmount] = useState('')
+   427→  const [method, setMethod] = useState('UPI')
+   428→  const selectedRecord = records.find((r) => r.id === studentId)
+   429→
+   430→  return (
+   431→    <motion.div
+   432→      initial={{ opacity: 0 }}
+   433→      animate={{ opacity: 1 }}
+   434→      exit={{ opacity: 0 }}
+   435→      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm"
+   436→      onClick={onClose}
+   437→    >
+   438→      <motion.div
+   439→        initial={{ scale: 0.95, opacity: 0 }}
+   440→        animate={{ scale: 1, opacity: 1 }}
+   441→        exit={{ scale: 0.95, opacity: 0 }}
+   442→        onClick={(e) => e.stopPropagation()}
+   443→        className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden"
+   444→        style={{ borderTop: '4px solid #22C55E' }}
+   445→      >
+   446→        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+   447→          <h3 className="text-base font-semibold text-slate-900">Collect Fee Payment</h3>
+   448→          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100">
+   449→            <X className="w-5 h-5 text-slate-500" />
+   450→          </button>
+   451→        </div>
+   452→        <div className="p-6 space-y-4">
+   453→          <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100 flex items-start gap-2">
+   454→            <Sparkles className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0 mt-0.5" />
+   455→            <p className="text-[11px] text-slate-700">
+   456→              <span className="font-semibold">Auto-Receipt:</span> Once payment is recorded, AI will instantly generate a GST receipt and send it to the parent via WhatsApp, SMS & Email.
+   457→            </p>
+   458→          </div>
+   459→          <div>
+   460→            <Label className="text-xs font-semibold text-slate-700 mb-1.5 block">Student</Label>
+   461→            <Select value={studentId} onValueChange={setStudentId}>
+   462→              <SelectTrigger className="h-10 rounded-lg"><SelectValue /></SelectTrigger>
+   463→              <SelectContent>
+   464→                {records.map((r) => (
+   465→                  <SelectItem key={r.id} value={r.id}>{r.student} ({r.grade}) — Balance: ₹{r.balance.toLocaleString('en-IN')}</SelectItem>
+   466→                ))}
+   467→              </SelectContent>
+   468→            </Select>
+   469→          </div>
+   470→          {selectedRecord && (
+   471→            <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 text-xs space-y-1">
+   472→              <div className="flex justify-between"><span className="text-slate-500">Fee Type:</span><span className="font-semibold">{selectedRecord.feeType}</span></div>
+   473→              <div className="flex justify-between"><span className="text-slate-500">Total Amount:</span><span className="font-semibold">₹{selectedRecord.amount.toLocaleString('en-IN')}</span></div>
+   474→              <div className="flex justify-between"><span className="text-slate-500">Balance Due:</span><span className="font-semibold text-rose-600">₹{selectedRecord.balance.toLocaleString('en-IN')}</span></div>
+   475→              <div className="flex justify-between"><span className="text-slate-500">Parent:</span><span className="font-semibold">{selectedRecord.parentName}</span></div>
+   476→            </div>
+   477→          )}
+   478→          <div>
+   479→            <Label className="text-xs font-semibold text-slate-700 mb-1.5 block">Amount Received (₹)</Label>
+   480→            <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="e.g. 12500" className="h-10 rounded-lg" />
+   481→          </div>
+   482→          <div>
+   483→            <Label className="text-xs font-semibold text-slate-700 mb-1.5 block">Payment Method</Label>
+   484→            <div className="grid grid-cols-5 gap-2">
+   485→              {[
+   486→                { id: 'UPI', emoji: '📱' }, { id: 'Card', emoji: '💳' },
+   487→                { id: 'Net Banking', emoji: '🏦' }, { id: 'Cash', emoji: '💵' },
+   488→                { id: 'Cheque', emoji: '📑' },
+   489→              ].map((m) => (
+   490→                <button
+   491→                  key={m.id}
+   492→                  onClick={() => setMethod(m.id)}
+   493→                  className={`p-2 rounded-xl border text-center transition-all ${method === m.id ? 'border-emerald-600 bg-emerald-50' : 'border-slate-200 hover:border-slate-300'}`}
+   494→                >
+   495→                  <div className="text-lg mb-0.5">{m.emoji}</div>
+   496→                  <div className={`text-[9px] font-semibold ${method === m.id ? 'text-emerald-700' : 'text-slate-600'}`}>{m.id}</div>
+   497→                </button>
+   498→              ))}
+   499→            </div>
+   500→          </div>
+   501→        </div>
+   502→        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-2">
+   503→          <Button variant="outline" onClick={onClose} className="h-9 rounded-lg">Cancel</Button>
+   504→          <Button
+   505→            onClick={() => onSubmit({ studentId, amount: parseInt(amount) || 0, method })}
+   506→            disabled={!amount}
+   507→            className="h-9 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5"
+   508→          >
+   509→            <CheckCircle2 className="w-3.5 h-3.5" /> Record & Send Receipt
+   510→          </Button>
+   511→        </div>
+   512→      </motion.div>
+   513→    </motion.div>
+   514→  )
+   515→}
+   516→
+   517→// ============ Invoice Modal — complete fee invoice with all details ============
+   518→function InvoiceModal({ record, onClose }: { record: FeeRecord; onClose: () => void }) {
+   519→  const handlePrint = () => {
+   520→    window.print()
+   521→  }
+   522→
+   523→  const handleSendEmail = () => {
+   524→    // In production, this would call /api/communications to send the invoice via email
+   525→    toast.success(`📧 Invoice ${record.invoiceNo} sent to ${record.parentEmail || record.parentName}`, {
+   526→      description: `Email dispatched to ${record.parentEmail || 'parent'} · WhatsApp + SMS also queued`,
+   527→      duration: 4000,
+   528→    })
+   529→  }
+   530→
+   531→  const handleDownload = () => {
+   532→    // Generate a printable invoice as a data URL
+   533→    const invoiceHtml = `
+   534→      <html><head><title>Invoice ${record.invoiceNo}</title>
+   535→      <style>
+   536→        body { font-family: Arial; padding: 40px; max-width: 700px; margin: auto; }
+   537→        .header { text-align: center; border-bottom: 2px solid #1E3A8A; padding-bottom: 20px; }
+   538→        .invoice-no { font-size: 24px; font-weight: bold; color: #1E3A8A; }
+   539→        .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
+   540→        .total { font-size: 18px; font-weight: bold; color: #22C55E; }
+   541→      </style></head><body>
+   542→      <div class="header">
+   543→        <h1>LearnX International School</h1>
+   544→        <p>Fee Payment Invoice</p>
+   545→        <div class="invoice-no">${record.invoiceNo}</div>
+   546→      </div>
+   547→      <div class="row"><span>Student:</span><span>${record.student}</span></div>
+   548→      <div class="row"><span>Grade:</span><span>${record.grade}</span></div>
+   549→      <div class="row"><span>Fee Type:</span><span>${record.feeType}</span></div>
+   550→      <div class="row"><span>Total Amount:</span><span>₹${record.amount.toLocaleString('en-IN')}</span></div>
+   551→      <div class="row"><span>Amount Paid:</span><span>₹${record.paid.toLocaleString('en-IN')}</span></div>
+   552→      <div class="row"><span>Balance:</span><span>₹${record.balance.toLocaleString('en-IN')}</span></div>
+   553→      <div class="row"><span>Payment Method:</span><span>${record.paymentMethod || '—'}</span></div>
+   554→      <div class="row"><span>Paid On:</span><span>${record.paidOn ? new Date(record.paidOn).toLocaleString('en-IN') : '—'}</span></div>
+   555→      <div class="row"><span>Transaction ID:</span><span>${record.transactionId || '—'}</span></div>
+   556→      <div class="row"><span>Parent/Guardian:</span><span>${record.parentName}</span></div>
+   557→      <div class="row"><span>Parent Phone:</span><span>${record.parentPhone}</span></div>
+   558→      <div class="row total"><span>Status:</span><span>${record.status.toUpperCase()}</span></div>
+   559→      <p style="text-align:center; margin-top:40px; color:#666; font-size:12px;">
+   560→        This is a computer-generated invoice from LearnX International School Safety & Finance System.
+   561→      </p>
+   562→      </body></html>
+   563→    `
+   564→    const blob = new Blob([invoiceHtml], { type: 'text/html' })
+   565→    const url = URL.createObjectURL(blob)
+   566→    const a = window.document.createElement('a')
+   567→    a.href = url
+   568→    a.download = `${record.invoiceNo}.html`
+   569→    a.click()
+   570→    URL.revokeObjectURL(url)
+   571→    toast.success(`Invoice ${record.invoiceNo} downloaded`)
+   572→  }
+   573→
+   574→  return (
+   575→    <motion.div
+   576→      initial={{ opacity: 0 }}
+   577→      animate={{ opacity: 1 }}
+   578→      exit={{ opacity: 0 }}
+   579→      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm"
+   580→      onClick={onClose}
+   581→    >
+   582→      <motion.div
+   583→        initial={{ scale: 0.95, opacity: 0 }}
+   584→        animate={{ scale: 1, opacity: 1 }}
+   585→        exit={{ scale: 0.95, opacity: 0 }}
+   586→        onClick={(e) => e.stopPropagation()}
+   587→        className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+   588→        style={{ borderTop: '4px solid #22C55E' }}
+   589→      >
+   590→        {/* Header */}
+   591→        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-emerald-50 to-teal-50">
+   592→          <div className="flex items-center gap-2">
+   593→            <div className="w-9 h-9 rounded-xl bg-emerald-600 flex items-center justify-center text-white">
+   594→              <Receipt className="w-4 h-4" />
+   595→            </div>
+   596→            <div>
+   597→              <h3 className="text-base font-semibold text-slate-900">Fee Payment Invoice</h3>
+   598→              <p className="text-[11px] text-slate-500 font-mono">{record.invoiceNo}</p>
+   599→            </div>
+   600→          </div>
+   601→          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/60">
+   602→            <X className="w-5 h-5 text-slate-500" />
+   603→          </button>
+   604→        </div>
+   605→
+   606→        {/* Body — invoice content */}
+   607→        <div className="flex-1 overflow-y-auto custom-scroll p-6 space-y-4">
+   608→          {/* School header */}
+   609→          <div className="text-center pb-4 border-b-2 border-emerald-200">
+   610→            <h2 className="text-lg font-bold text-slate-900">LearnX International School</h2>
+   611→            <p className="text-[11px] text-slate-500">Official Fee Payment Receipt</p>
+   612→          </div>
+   613→
+   614→          {/* Student + payment details */}
+   615→          <div className="grid grid-cols-2 gap-3">
+   616→            <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+   617→              <div className="text-[10px] text-slate-500 uppercase mb-1">Student</div>
+   618→              <div className="text-sm font-semibold text-slate-900">{record.student}</div>
+   619→              <div className="text-[11px] text-slate-600">Grade {record.grade}</div>
+   620→            </div>
+   621→            <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+   622→              <div className="text-[10px] text-slate-500 uppercase mb-1">Parent / Guardian</div>
+   623→              <div className="text-sm font-semibold text-slate-900">{record.parentName}</div>
+   624→              <div className="text-[11px] text-slate-600">{record.parentPhone}</div>
+   625→              {record.parentEmail && <div className="text-[10px] text-blue-600">{record.parentEmail}</div>}
+   626→            </div>
+   627→          </div>
+   628→
+   629→          {/* Fee breakdown */}
+   630→          <div className="p-4 rounded-xl border border-slate-200">
+   631→            <div className="text-[10px] font-semibold text-slate-500 uppercase mb-2">Fee Breakdown</div>
+   632→            <div className="space-y-1.5">
+   633→              <div className="flex justify-between text-xs">
+   634→                <span className="text-slate-600">Fee Type</span>
+   635→                <span className="font-medium text-slate-900">{record.feeType}</span>
+   636→              </div>
+   637→              <div className="flex justify-between text-xs">
+   638→                <span className="text-slate-600">Total Amount</span>
+   639→                <span className="font-semibold text-slate-900">₹{record.amount.toLocaleString('en-IN')}</span>
+   640→              </div>
+   641→              <div className="flex justify-between text-xs">
+   642→                <span className="text-slate-600">Amount Paid</span>
+   643→                <span className="font-semibold text-emerald-600">₹{record.paid.toLocaleString('en-IN')}</span>
+   644→              </div>
+   645→              <div className="flex justify-between text-xs">
+   646→                <span className="text-slate-600">Balance Due</span>
+   647→                <span className={record.balance > 0 ? 'font-semibold text-rose-600' : 'font-semibold text-emerald-600'}>
+   648→                  ₹{record.balance.toLocaleString('en-IN')}
+   649→                </span>
+   650→              </div>
+   651→            </div>
+   652→          </div>
+   653→
+   654→          {/* Payment details */}
+   655→          {record.paidOn && (
+   656→            <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/50">
+   657→              <div className="text-[10px] font-semibold text-emerald-700 uppercase mb-2">Payment Details</div>
+   658→              <div className="grid grid-cols-2 gap-2 text-xs">
+   659→                <div>
+   660→                  <div className="text-[10px] text-slate-500">Paid On</div>
+   661→                  <div className="font-semibold text-slate-900">
+   662→                    {new Date(record.paidOn).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+   663→                  </div>
+   664→                  <div className="text-[10px] text-slate-500">
+   665→                    {new Date(record.paidOn).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+   666→                  </div>
+   667→                </div>
+   668→                <div>
+   669→                  <div className="text-[10px] text-slate-500">Payment Method</div>
+   670→                  <div className="font-semibold text-slate-900">{record.paymentMethod || '—'}</div>
+   671→                </div>
+   672→                <div>
+   673→                  <div className="text-[10px] text-slate-500">Transaction ID</div>
+   674→                  <div className="font-mono font-semibold text-slate-900 text-[10px]">{record.transactionId || '—'}</div>
+   675→                </div>
+   676→                <div>
+   677→                  <div className="text-[10px] text-slate-500">Status</div>
+   678→                  <span className={`inline-block px-2 py-0.5 rounded text-[9px] font-bold ${
+   679→                    record.status === 'paid' ? 'bg-emerald-100 text-emerald-700' :
+   680→                    record.status === 'partial' ? 'bg-amber-100 text-amber-700' :
+   681→                    'bg-slate-100 text-slate-600'
+   682→                  }`}>
+   683→                    {record.status.toUpperCase()}
+   684→                  </span>
+   685→                </div>
+   686→              </div>
+   687→            </div>
+   688→          )}
+   689→
+   690→          {/* Status banner */}
+   691→          <div className={`p-3 rounded-xl border flex items-center gap-2 ${
+   692→            record.status === 'paid' ? 'border-emerald-200 bg-emerald-50' :
+   693→            record.status === 'partial' ? 'border-amber-200 bg-amber-50' :
+   694→            'border-rose-200 bg-rose-50'
+   695→          }`}>
+   696→            {record.status === 'paid' ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> : <AlertCircle className="w-4 h-4 text-amber-600" />}
+   697→            <div className="text-xs">
+   698→              {record.status === 'paid' && <span className="font-semibold text-emerald-900">Payment complete — fee fully paid.</span>}
+   699→              {record.status === 'partial' && <span className="font-semibold text-amber-900">Partial payment — ₹{record.balance.toLocaleString('en-IN')} balance due.</span>}
+   700→              {record.status === 'pending' && <span className="font-semibold text-rose-900">Payment pending — ₹{record.balance.toLocaleString('en-IN')} due by {record.dueDate}.</span>}
+   701→              {record.status === 'overdue' && <span className="font-semibold text-rose-900">Payment overdue — ₹{record.balance.toLocaleString('en-IN')} was due {record.dueDate}.</span>}
+   702→            </div>
+   703→          </div>
+   704→        </div>
+   705→
+   706→        {/* Footer — actions */}
+   707→        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between gap-2">
+   708→          <div className="text-[10px] text-slate-500">
+   709→            Generated by LearnX Finance System · {new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
+   710→          </div>
+   711→          <div className="flex gap-2">
+   712→            <Button size="sm" variant="outline" className="h-8 text-xs rounded-lg gap-1.5" onClick={handleDownload}>
+   713→              <Download className="w-3.5 h-3.5" /> Download
+   714→            </Button>
+   715→            <Button size="sm" variant="outline" className="h-8 text-xs rounded-lg gap-1.5" onClick={handleSendEmail}>
+   716→              <Send className="w-3.5 h-3.5" /> Email to Parent
+   717→            </Button>
+   718→            <Button size="sm" className="h-8 text-xs rounded-lg text-white gap-1.5 bg-emerald-600 hover:bg-emerald-700" onClick={handlePrint}>
+   719→              <Printer className="w-3.5 h-3.5" /> Print
+   720→            </Button>
+   721→          </div>
+   722→        </div>
+   723→      </motion.div>
+   724→    </motion.div>
+   725→  )
+   726→}
+   727→
