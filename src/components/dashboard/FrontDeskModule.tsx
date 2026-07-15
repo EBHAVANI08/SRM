@@ -443,7 +443,8 @@ function VisitorCheckInModal({ onClose, onComplete }: {
         return
       }
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
+        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+        audio: false,
       })
       streamRef.current = stream
       if (videoRef.current) {
@@ -451,17 +452,32 @@ function VisitorCheckInModal({ onClose, onComplete }: {
         // Ensure autoplay works
         videoRef.current.setAttribute('playsinline', 'true')
         videoRef.current.muted = true
-        await videoRef.current.play().catch(() => {})
+        // CRITICAL: wait for loadedmetadata before calling play() —
+        // without this, the video element stays black on many browsers
+        videoRef.current.onloadedmetadata = async () => {
+          try {
+            await videoRef.current?.play()
+            setCameraActive(true)
+            toast.success('Camera started. Position face within the frame.')
+          } catch (playErr) {
+            console.error('Video play failed:', playErr)
+            toast.error('Camera started but video preview failed. Try the "Skip & Continue" option.')
+            setPhotoCaptured('avatar')
+          }
+        }
+      } else {
+        setCameraActive(true)
+        toast.success('Camera started. Position face within the frame.')
       }
-      setCameraActive(true)
-      toast.success('Camera started. Position face within the frame.')
     } catch (err: any) {
       const errMsg = err?.name === 'NotAllowedError'
-        ? 'Camera permission denied. Please allow camera access in your browser settings.'
+        ? 'Camera permission denied. Please allow camera access in your browser settings (click the camera icon in the address bar).'
         : err?.name === 'NotFoundError'
         ? 'No camera found on this device. Using simulation mode.'
-        : 'Camera unavailable. Using simulation mode.'
-      toast.error(errMsg)
+        : err?.name === 'NotReadableError'
+        ? 'Camera is in use by another application. Close it and try again.'
+        : `Camera unavailable: ${err?.message || 'unknown error'}. Using simulation mode.`
+      toast.error(errMsg, { duration: 6000 })
       // Fallback: simulate with avatar (still lets user continue the flow)
       setPhotoCaptured('avatar')
     }
@@ -1194,6 +1210,80 @@ function PreBookModal({ onClose, onComplete }: {
     notifyVia: 'whatsapp',
   })
   const [submitting, setSubmitting] = useState(false)
+  const [cameraActive, setCameraActive] = useState(false)
+  const [photoCaptured, setPhotoCaptured] = useState<string | null>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const streamRef = useRef<MediaStream | null>(null)
+
+  const startCamera = async () => {
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        toast.warning('Camera not available. Using avatar mode.')
+        setPhotoCaptured('avatar')
+        return
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+        audio: false,
+      })
+      streamRef.current = stream
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream
+        videoRef.current.setAttribute('playsinline', 'true')
+        videoRef.current.muted = true
+        videoRef.current.onloadedmetadata = async () => {
+          try {
+            await videoRef.current?.play()
+            setCameraActive(true)
+            toast.success('Camera started — click "Capture Photo" when ready.')
+          } catch {
+            toast.error('Video preview failed. Using avatar mode.')
+            setPhotoCaptured('avatar')
+          }
+        }
+      }
+    } catch (err: any) {
+      const errMsg = err?.name === 'NotAllowedError'
+        ? 'Camera permission denied. Allow camera access in your browser.'
+        : err?.name === 'NotReadableError'
+        ? 'Camera is in use by another app. Close it and retry.'
+        : `Camera unavailable: ${err?.message || 'unknown'}`
+      toast.error(errMsg, { duration: 6000 })
+      setPhotoCaptured('avatar')
+    }
+  }
+
+  const capturePhoto = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current
+      const canvas = canvasRef.current
+      canvas.width = video.videoWidth || 320
+      canvas.height = video.videoHeight || 240
+      const ctx = canvas.getContext('2d')
+      if (ctx) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+        setPhotoCaptured(canvas.toDataURL('image/png'))
+      }
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop())
+      streamRef.current = null
+    }
+    setCameraActive(false)
+  }
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop())
+      streamRef.current = null
+    }
+    setCameraActive(false)
+  }
+
+  useEffect(() => {
+    return () => stopCamera()
+  }, [])
 
   const handleSubmit = () => {
     if (!form.name || !form.phone || !form.date || !form.time) {
@@ -1212,6 +1302,7 @@ function PreBookModal({ onClose, onComplete }: {
         host: form.host,
         checkInTime: `${form.date} ${form.time}`,
         status: 'scheduled',
+        photo: photoCaptured || undefined,
         passSent: form.notifyVia as any,
         avatarColor: AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)],
         initials,
@@ -1257,6 +1348,63 @@ function PreBookModal({ onClose, onComplete }: {
             <p className="text-[11px] text-slate-700">
               <span className="font-semibold">AI Auto-Confirm:</span> Once booked, the system will automatically send a confirmation with QR gate pass to the visitor via their preferred channel, and sync the appointment to the host's calendar.
             </p>
+          </div>
+
+          {/* Visitor Photo Capture */}
+          <div>
+            <Label className="text-xs font-semibold text-slate-700 mb-1.5 block">Visitor Photo</Label>
+            <div className="relative aspect-video bg-slate-900 rounded-xl overflow-hidden border-2 border-slate-200">
+              {!cameraActive && !photoCaptured && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-white/60">
+                  <Camera className="w-10 h-10 mb-2" />
+                  <p className="text-xs mb-2">Camera is off</p>
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={startCamera} className="h-8 text-xs bg-blue-600 hover:bg-blue-700">
+                      <Camera className="w-3 h-3 mr-1" /> Start Camera
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setPhotoCaptured('avatar')} className="h-8 text-xs border-white/20 text-white hover:bg-white/10">
+                      Skip
+                    </Button>
+                  </div>
+                </div>
+              )}
+              {cameraActive && (
+                <>
+                  <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="w-32 h-40 border-2 border-emerald-400 rounded-2xl" />
+                  </div>
+                  <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/50">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                    <span className="text-[9px] text-white font-mono">REC</span>
+                  </div>
+                </>
+              )}
+              {photoCaptured && photoCaptured !== 'avatar' && (
+                <img src={photoCaptured} alt="Captured" className="w-full h-full object-cover" />
+              )}
+              {photoCaptured === 'avatar' && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-20 h-20 rounded-full bg-slate-700 flex items-center justify-center text-3xl">👤</div>
+                </div>
+              )}
+              <canvas ref={canvasRef} className="hidden" />
+            </div>
+            {cameraActive && (
+              <div className="flex gap-2 mt-2">
+                <Button size="sm" onClick={capturePhoto} className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700">
+                  <Camera className="w-3 h-3 mr-1" /> Capture Photo
+                </Button>
+                <Button size="sm" variant="outline" onClick={stopCamera} className="h-8 text-xs">Cancel</Button>
+              </div>
+            )}
+            {photoCaptured && !cameraActive && (
+              <div className="flex gap-2 mt-2">
+                <Button size="sm" variant="outline" onClick={() => { setPhotoCaptured(null); startCamera() }} className="h-8 text-xs">
+                  <RefreshCw className="w-3 h-3 mr-1" /> Retake
+                </Button>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">

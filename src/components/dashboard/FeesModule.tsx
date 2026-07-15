@@ -6,7 +6,7 @@ import {
   X, CheckCircle2, Clock, Phone, Mail, MessageSquare, Search, Filter,
   Download, Zap, Sparkles, Brain, Send, Wallet, TrendingUp, AlertTriangle,
   Bot, Bell, CreditCard, DollarSign, Receipt, Plus, ChevronRight, RefreshCw,
-  Users, Calendar, FileText, Eye, MessageCircle
+  Users, Calendar, FileText, Eye, MessageCircle, AlertCircle, Printer
 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -35,22 +35,26 @@ interface FeeRecord {
   dueDate: string
   status: 'paid' | 'partial' | 'pending' | 'overdue'
   paymentMethod?: string
+  paidOn?: string // ISO date string — when the payment was made
+  invoiceNo?: string // generated invoice number (e.g. INV-2026-001)
+  transactionId?: string // bank/UPI transaction reference
   parentPhone: string
   parentName: string
+  parentEmail?: string
   notified?: boolean
   avatarColor: string
   initials: string
 }
 
 const FEE_RECORDS: FeeRecord[] = [
-  { id: 'FEE-001', student: 'Aarav Sharma', grade: '7-A', feeType: 'Tuition Q4', amount: 12500, paid: 12500, balance: 0, dueDate: '15 Feb 2026', status: 'paid', paymentMethod: 'UPI', parentPhone: '+91 98765 43210', parentName: 'Suresh Sharma', notified: true, avatarColor: '#22C55E', initials: 'AS' },
-  { id: 'FEE-002', student: 'Diya Patel', grade: '5-B', feeType: 'Tuition Q4', amount: 11800, paid: 5900, balance: 5900, dueDate: '15 Feb 2026', status: 'partial', paymentMethod: 'Card', parentPhone: '+91 98200 12345', parentName: 'Nilesh Patel', notified: false, avatarColor: '#F59E0B', initials: 'DP' },
-  { id: 'FEE-003', student: 'Vivaan Gupta', grade: '8-A', feeType: 'Tuition Q4', amount: 14200, paid: 0, balance: 14200, dueDate: '10 Feb 2026', status: 'overdue', parentPhone: '+91 99876 54321', parentName: 'Rajesh Gupta', notified: false, avatarColor: '#EF4444', initials: 'VG' },
-  { id: 'FEE-004', student: 'Ananya Reddy', grade: '6-C', feeType: 'Transport', amount: 3000, paid: 3000, balance: 0, dueDate: '15 Feb 2026', status: 'paid', paymentMethod: 'Cash', parentPhone: '+91 98111 22222', parentName: 'Krishna Reddy', notified: true, avatarColor: '#22C55E', initials: 'AR' },
-  { id: 'FEE-005', student: 'Reyansh Kumar', grade: '3-A', feeType: 'Tuition Q4', amount: 10500, paid: 0, balance: 10500, dueDate: '20 Feb 2026', status: 'pending', parentPhone: '+91 97000 88888', parentName: 'Amit Kumar', notified: false, avatarColor: '#F59E0B', initials: 'RK' },
-  { id: 'FEE-006', student: 'Sara Khan', grade: '9-B', feeType: 'Lab Fee', amount: 2000, paid: 2000, balance: 0, dueDate: '15 Feb 2026', status: 'paid', paymentMethod: 'Net Banking', parentPhone: '+91 98888 77777', parentName: 'Imran Khan', notified: true, avatarColor: '#22C55E', initials: 'SK' },
-  { id: 'FEE-007', student: 'Arjun Nair', grade: '10-A', feeType: 'Exam Fee', amount: 1500, paid: 0, balance: 1500, dueDate: '08 Feb 2026', status: 'overdue', parentPhone: '+91 97000 11111', parentName: 'Vikram Nair', notified: false, avatarColor: '#EF4444', initials: 'AN' },
-  { id: 'FEE-008', student: 'Myra Sharma', grade: '2-B', feeType: 'Tuition Q4', amount: 9800, paid: 9800, balance: 0, dueDate: '15 Feb 2026', status: 'paid', paymentMethod: 'UPI', parentPhone: '+91 98222 33344', parentName: 'Rohit Sharma', notified: true, avatarColor: '#22C55E', initials: 'MS' },
+  { id: 'FEE-001', student: 'Aarav Sharma', grade: '7-A', feeType: 'Tuition Q4', amount: 12500, paid: 12500, balance: 0, dueDate: '15 Feb 2026', status: 'paid', paymentMethod: 'UPI', paidOn: '2026-02-10T14:32:00', invoiceNo: 'INV-2026-001', transactionId: 'UPI-9823475621', parentPhone: '+91 98765 43210', parentName: 'Suresh Sharma', parentEmail: 'suresh.singh@email.com', notified: true, avatarColor: '#22C55E', initials: 'AS' },
+  { id: 'FEE-002', student: 'Diya Patel', grade: '5-B', feeType: 'Tuition Q4', amount: 11800, paid: 5900, balance: 5900, dueDate: '15 Feb 2026', status: 'partial', paymentMethod: 'Card', paidOn: '2026-02-08T11:15:00', invoiceNo: 'INV-2026-002', transactionId: 'CARD-452178932', parentPhone: '+91 98200 12345', parentName: 'Nilesh Patel', parentEmail: 'nilesh.patel@email.com', notified: false, avatarColor: '#F59E0B', initials: 'DP' },
+  { id: 'FEE-003', student: 'Vivaan Gupta', grade: '8-A', feeType: 'Tuition Q4', amount: 14200, paid: 0, balance: 14200, dueDate: '10 Feb 2026', status: 'overdue', parentPhone: '+91 99876 54321', parentName: 'Rajesh Gupta', parentEmail: 'rajesh.gupta@email.com', notified: false, avatarColor: '#EF4444', initials: 'VG' },
+  { id: 'FEE-004', student: 'Ananya Reddy', grade: '6-C', feeType: 'Transport', amount: 3000, paid: 3000, balance: 0, dueDate: '15 Feb 2026', status: 'paid', paymentMethod: 'Cash', paidOn: '2026-02-12T09:45:00', invoiceNo: 'INV-2026-003', transactionId: 'CASH-REC-7821', parentPhone: '+91 98111 22222', parentName: 'Krishna Reddy', parentEmail: 'krishna.reddy@email.com', notified: true, avatarColor: '#22C55E', initials: 'AR' },
+  { id: 'FEE-005', student: 'Reyansh Kumar', grade: '3-A', feeType: 'Tuition Q4', amount: 10500, paid: 0, balance: 10500, dueDate: '20 Feb 2026', status: 'pending', parentPhone: '+91 97000 88888', parentName: 'Amit Kumar', parentEmail: 'amit.kumar@email.com', notified: false, avatarColor: '#F59E0B', initials: 'RK' },
+  { id: 'FEE-006', student: 'Sara Khan', grade: '9-B', feeType: 'Lab Fee', amount: 2000, paid: 2000, balance: 0, dueDate: '15 Feb 2026', status: 'paid', paymentMethod: 'Net Banking', paidOn: '2026-02-11T16:20:00', invoiceNo: 'INV-2026-004', transactionId: 'NEFT-HDFC0004521', parentPhone: '+91 98888 77777', parentName: 'Imran Khan', parentEmail: 'imran.khan@email.com', notified: true, avatarColor: '#22C55E', initials: 'SK' },
+  { id: 'FEE-007', student: 'Arjun Nair', grade: '10-A', feeType: 'Exam Fee', amount: 1500, paid: 0, balance: 1500, dueDate: '08 Feb 2026', status: 'overdue', parentPhone: '+91 97000 11111', parentName: 'Vikram Nair', parentEmail: 'vikram.nair@email.com', notified: false, avatarColor: '#EF4444', initials: 'AN' },
+  { id: 'FEE-008', student: 'Myra Sharma', grade: '2-B', feeType: 'Tuition Q4', amount: 9800, paid: 9800, balance: 0, dueDate: '15 Feb 2026', status: 'paid', paymentMethod: 'UPI', paidOn: '2026-02-09T13:10:00', invoiceNo: 'INV-2026-005', transactionId: 'UPI-7234561980', parentPhone: '+91 98222 33344', parentName: 'Rohit Sharma', parentEmail: 'rohit.sharma@email.com', notified: true, avatarColor: '#22C55E', initials: 'MS' },
 ]
 
 export function FeesModule() {
@@ -59,6 +63,7 @@ export function FeesModule() {
   const [filter, setFilter] = useState<'all' | 'paid' | 'partial' | 'pending' | 'overdue'>('all')
   const [showCollect, setShowCollect] = useState(false)
   const [showDefaulterAlert, setShowDefaulterAlert] = useState(false)
+  const [invoiceRecord, setInvoiceRecord] = useState<FeeRecord | null>(null)
 
   const filtered = records.filter((r) => {
     const ms = r.student.toLowerCase().includes(search.toLowerCase()) || r.id.toLowerCase().includes(search.toLowerCase())
@@ -81,6 +86,10 @@ export function FeesModule() {
   }
 
   const handleRecordPayment = (payment: { studentId: string; amount: number; method: string }) => {
+    const now = new Date()
+    const invoiceNo = `INV-2026-${String(Math.floor(Math.random() * 9000) + 1000)}`
+    const transactionId = `${payment.method.toUpperCase().replace(/\s/g, '')}-${Math.floor(Math.random() * 9000000000) + 1000000000}`
+
     setRecords((rs) => rs.map((r) => {
       if (r.id === payment.studentId) {
         const newPaid = r.paid + payment.amount
@@ -91,12 +100,18 @@ export function FeesModule() {
           balance: newBalance,
           status: newBalance <= 0 ? 'paid' : 'partial',
           paymentMethod: payment.method,
+          paidOn: now.toISOString(),
+          invoiceNo: r.invoiceNo || invoiceNo, // keep existing if already has one (partial payment)
+          transactionId: r.transactionId || transactionId,
           notified: true,
         }
       }
       return r
     }))
-    toast.success(`✅ Payment of ₹${payment.amount.toLocaleString('en-IN')} recorded via ${payment.method}. Receipt sent to parent via WhatsApp, SMS & Email.`)
+    toast.success(`✅ Payment of ₹${payment.amount.toLocaleString('en-IN')} recorded via ${payment.method}`, {
+      description: `Invoice ${invoiceNo} generated · Receipt sent to parent via WhatsApp, SMS & Email · Paid on ${now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`,
+      duration: 5000,
+    })
     setShowCollect(false)
   }
 
@@ -296,7 +311,8 @@ export function FeesModule() {
                 <th>Amount</th>
                 <th>Paid</th>
                 <th>Balance</th>
-                <th>Due Date</th>
+                <th>Paid On</th>
+                <th>Invoice</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
@@ -320,7 +336,31 @@ export function FeesModule() {
                   <td className="font-semibold">₹{r.amount.toLocaleString('en-IN')}</td>
                   <td className="text-emerald-600 font-semibold">₹{r.paid.toLocaleString('en-IN')}</td>
                   <td className={r.balance > 0 ? 'text-rose-600 font-semibold' : 'text-slate-400'}>₹{r.balance.toLocaleString('en-IN')}</td>
-                  <td className="text-[11px]">{r.dueDate}</td>
+                  <td className="text-[11px] text-slate-600">
+                    {r.paidOn ? (
+                      <div>
+                        <div>{new Date(r.paidOn).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+                        <div className="text-[9px] text-slate-400">{new Date(r.paidOn).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</div>
+                        {r.paymentMethod && <div className="text-[9px] text-blue-600 font-medium">{r.paymentMethod}</div>}
+                      </div>
+                    ) : (
+                      <span className="text-slate-300">—</span>
+                    )}
+                  </td>
+                  <td className="text-[10px]">
+                    {r.invoiceNo ? (
+                      <button
+                        onClick={() => setInvoiceRecord(r)}
+                        className="text-blue-700 hover:text-blue-900 hover:underline font-mono font-semibold flex items-center gap-1"
+                        title="View invoice"
+                      >
+                        <Receipt className="w-3 h-3" />
+                        {r.invoiceNo}
+                      </button>
+                    ) : (
+                      <span className="text-slate-300">—</span>
+                    )}
+                  </td>
                   <td>
                     <span className={`status-chip ${
                       r.status === 'paid' ? 'status-success' : r.status === 'partial' ? 'status-warning' : r.status === 'overdue' ? 'status-danger' : 'status-info'
@@ -364,6 +404,12 @@ export function FeesModule() {
       <AnimatePresence>
         {showCollect && (
           <CollectPaymentModal onClose={() => setShowCollect(false)} onSubmit={handleRecordPayment} records={records} />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {invoiceRecord && (
+          <InvoiceModal record={invoiceRecord} onClose={() => setInvoiceRecord(null)} />
         )}
       </AnimatePresence>
     </div>
@@ -462,6 +508,217 @@ function CollectPaymentModal({ onClose, onSubmit, records }: {
           >
             <CheckCircle2 className="w-3.5 h-3.5" /> Record & Send Receipt
           </Button>
+        </div>
+      </motion.div>
+    </motion.div>
+  )
+}
+
+// ============ Invoice Modal — complete fee invoice with all details ============
+function InvoiceModal({ record, onClose }: { record: FeeRecord; onClose: () => void }) {
+  const handlePrint = () => {
+    window.print()
+  }
+
+  const handleSendEmail = () => {
+    // In production, this would call /api/communications to send the invoice via email
+    toast.success(`📧 Invoice ${record.invoiceNo} sent to ${record.parentEmail || record.parentName}`, {
+      description: `Email dispatched to ${record.parentEmail || 'parent'} · WhatsApp + SMS also queued`,
+      duration: 4000,
+    })
+  }
+
+  const handleDownload = () => {
+    // Generate a printable invoice as a data URL
+    const invoiceHtml = `
+      <html><head><title>Invoice ${record.invoiceNo}</title>
+      <style>
+        body { font-family: Arial; padding: 40px; max-width: 700px; margin: auto; }
+        .header { text-align: center; border-bottom: 2px solid #1E3A8A; padding-bottom: 20px; }
+        .invoice-no { font-size: 24px; font-weight: bold; color: #1E3A8A; }
+        .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
+        .total { font-size: 18px; font-weight: bold; color: #22C55E; }
+      </style></head><body>
+      <div class="header">
+        <h1>LearnX International School</h1>
+        <p>Fee Payment Invoice</p>
+        <div class="invoice-no">${record.invoiceNo}</div>
+      </div>
+      <div class="row"><span>Student:</span><span>${record.student}</span></div>
+      <div class="row"><span>Grade:</span><span>${record.grade}</span></div>
+      <div class="row"><span>Fee Type:</span><span>${record.feeType}</span></div>
+      <div class="row"><span>Total Amount:</span><span>₹${record.amount.toLocaleString('en-IN')}</span></div>
+      <div class="row"><span>Amount Paid:</span><span>₹${record.paid.toLocaleString('en-IN')}</span></div>
+      <div class="row"><span>Balance:</span><span>₹${record.balance.toLocaleString('en-IN')}</span></div>
+      <div class="row"><span>Payment Method:</span><span>${record.paymentMethod || '—'}</span></div>
+      <div class="row"><span>Paid On:</span><span>${record.paidOn ? new Date(record.paidOn).toLocaleString('en-IN') : '—'}</span></div>
+      <div class="row"><span>Transaction ID:</span><span>${record.transactionId || '—'}</span></div>
+      <div class="row"><span>Parent/Guardian:</span><span>${record.parentName}</span></div>
+      <div class="row"><span>Parent Phone:</span><span>${record.parentPhone}</span></div>
+      <div class="row total"><span>Status:</span><span>${record.status.toUpperCase()}</span></div>
+      <p style="text-align:center; margin-top:40px; color:#666; font-size:12px;">
+        This is a computer-generated invoice from LearnX International School Safety & Finance System.
+      </p>
+      </body></html>
+    `
+    const blob = new Blob([invoiceHtml], { type: 'text/html' })
+    const url = URL.createObjectURL(blob)
+    const a = window.document.createElement('a')
+    a.href = url
+    a.download = `${record.invoiceNo}.html`
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.success(`Invoice ${record.invoiceNo} downloaded`)
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.95, opacity: 0 }}
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+        style={{ borderTop: '4px solid #22C55E' }}
+      >
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-emerald-50 to-teal-50">
+          <div className="flex items-center gap-2">
+            <div className="w-9 h-9 rounded-xl bg-emerald-600 flex items-center justify-center text-white">
+              <Receipt className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-base font-semibold text-slate-900">Fee Payment Invoice</h3>
+              <p className="text-[11px] text-slate-500 font-mono">{record.invoiceNo}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/60">
+            <X className="w-5 h-5 text-slate-500" />
+          </button>
+        </div>
+
+        {/* Body — invoice content */}
+        <div className="flex-1 overflow-y-auto custom-scroll p-6 space-y-4">
+          {/* School header */}
+          <div className="text-center pb-4 border-b-2 border-emerald-200">
+            <h2 className="text-lg font-bold text-slate-900">LearnX International School</h2>
+            <p className="text-[11px] text-slate-500">Official Fee Payment Receipt</p>
+          </div>
+
+          {/* Student + payment details */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+              <div className="text-[10px] text-slate-500 uppercase mb-1">Student</div>
+              <div className="text-sm font-semibold text-slate-900">{record.student}</div>
+              <div className="text-[11px] text-slate-600">Grade {record.grade}</div>
+            </div>
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+              <div className="text-[10px] text-slate-500 uppercase mb-1">Parent / Guardian</div>
+              <div className="text-sm font-semibold text-slate-900">{record.parentName}</div>
+              <div className="text-[11px] text-slate-600">{record.parentPhone}</div>
+              {record.parentEmail && <div className="text-[10px] text-blue-600">{record.parentEmail}</div>}
+            </div>
+          </div>
+
+          {/* Fee breakdown */}
+          <div className="p-4 rounded-xl border border-slate-200">
+            <div className="text-[10px] font-semibold text-slate-500 uppercase mb-2">Fee Breakdown</div>
+            <div className="space-y-1.5">
+              <div className="flex justify-between text-xs">
+                <span className="text-slate-600">Fee Type</span>
+                <span className="font-medium text-slate-900">{record.feeType}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-slate-600">Total Amount</span>
+                <span className="font-semibold text-slate-900">₹{record.amount.toLocaleString('en-IN')}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-slate-600">Amount Paid</span>
+                <span className="font-semibold text-emerald-600">₹{record.paid.toLocaleString('en-IN')}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-slate-600">Balance Due</span>
+                <span className={record.balance > 0 ? 'font-semibold text-rose-600' : 'font-semibold text-emerald-600'}>
+                  ₹{record.balance.toLocaleString('en-IN')}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Payment details */}
+          {record.paidOn && (
+            <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/50">
+              <div className="text-[10px] font-semibold text-emerald-700 uppercase mb-2">Payment Details</div>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <div className="text-[10px] text-slate-500">Paid On</div>
+                  <div className="font-semibold text-slate-900">
+                    {new Date(record.paidOn).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                  </div>
+                  <div className="text-[10px] text-slate-500">
+                    {new Date(record.paidOn).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-slate-500">Payment Method</div>
+                  <div className="font-semibold text-slate-900">{record.paymentMethod || '—'}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-slate-500">Transaction ID</div>
+                  <div className="font-mono font-semibold text-slate-900 text-[10px]">{record.transactionId || '—'}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-slate-500">Status</div>
+                  <span className={`inline-block px-2 py-0.5 rounded text-[9px] font-bold ${
+                    record.status === 'paid' ? 'bg-emerald-100 text-emerald-700' :
+                    record.status === 'partial' ? 'bg-amber-100 text-amber-700' :
+                    'bg-slate-100 text-slate-600'
+                  }`}>
+                    {record.status.toUpperCase()}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Status banner */}
+          <div className={`p-3 rounded-xl border flex items-center gap-2 ${
+            record.status === 'paid' ? 'border-emerald-200 bg-emerald-50' :
+            record.status === 'partial' ? 'border-amber-200 bg-amber-50' :
+            'border-rose-200 bg-rose-50'
+          }`}>
+            {record.status === 'paid' ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> : <AlertCircle className="w-4 h-4 text-amber-600" />}
+            <div className="text-xs">
+              {record.status === 'paid' && <span className="font-semibold text-emerald-900">Payment complete — fee fully paid.</span>}
+              {record.status === 'partial' && <span className="font-semibold text-amber-900">Partial payment — ₹{record.balance.toLocaleString('en-IN')} balance due.</span>}
+              {record.status === 'pending' && <span className="font-semibold text-rose-900">Payment pending — ₹{record.balance.toLocaleString('en-IN')} due by {record.dueDate}.</span>}
+              {record.status === 'overdue' && <span className="font-semibold text-rose-900">Payment overdue — ₹{record.balance.toLocaleString('en-IN')} was due {record.dueDate}.</span>}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer — actions */}
+        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between gap-2">
+          <div className="text-[10px] text-slate-500">
+            Generated by LearnX Finance System · {new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" className="h-8 text-xs rounded-lg gap-1.5" onClick={handleDownload}>
+              <Download className="w-3.5 h-3.5" /> Download
+            </Button>
+            <Button size="sm" variant="outline" className="h-8 text-xs rounded-lg gap-1.5" onClick={handleSendEmail}>
+              <Send className="w-3.5 h-3.5" /> Email to Parent
+            </Button>
+            <Button size="sm" className="h-8 text-xs rounded-lg text-white gap-1.5 bg-emerald-600 hover:bg-emerald-700" onClick={handlePrint}>
+              <Printer className="w-3.5 h-3.5" /> Print
+            </Button>
+          </div>
         </div>
       </motion.div>
     </motion.div>

@@ -41,8 +41,21 @@ export function NotificationPreviewModal({ open, config, onClose, onSent }: { op
     const allResults: any[] = []
     for (const r of config.recipients) {
       try {
-        const res = await apiPost('/api/omnichannel/send', { recipientType: r.recipientType || 'PARENT', recipientId: r.id, channel: r.channel, subject: config.subject, body: editBody || renderMessage(config, r), templateName: config.templateName, audience: config.audience || 'MINIMUM', metadata: { ...config.templateData, source: config.source || 'preview_layer', recipientName: r.name } })
-        if (res.data?.success) allResults.push({ recipientId: r.id, recipientName: r.name, channel: r.channel, success: true, logId: res.data.log?.id, status: res.data.log?.status || 'SENT' })
+        const res = await apiPost('/api/omnichannel/send', {
+          recipientType: r.recipientType || 'PARENT',
+          recipientId: r.id,
+          channel: r.channel,
+          contact: r.contact, // pass the phone/email directly so the API doesn't need to look it up
+          subject: config.subject,
+          body: editBody || renderMessage(config, r),
+          templateName: config.templateName,
+          audience: config.audience || 'MINIMUM',
+          metadata: { ...config.templateData, source: config.source || 'preview_layer', recipientName: r.name, contact: r.contact },
+        })
+        if (res.data?.success) {
+          const result = res.data.results?.[0] || {}
+          allResults.push({ recipientId: r.id, recipientName: r.name, channel: r.channel, success: true, logId: result.commId, status: result.status || 'SENT' })
+        }
         else allResults.push({ recipientId: r.id, recipientName: r.name, channel: r.channel, success: false, error: res.error || 'Failed' })
       } catch (e: any) { allResults.push({ recipientId: r.id, recipientName: r.name, channel: r.channel, success: false, error: e?.message }) }
     }
