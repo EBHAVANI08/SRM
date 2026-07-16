@@ -328,7 +328,7 @@ export const MODULES: ModuleConfig[] = [
     color: 'from-sky-500 to-sky-700',
     accent: '#0EA5E9',
     aiPowered: true,
-    availableTo: ['SUPER_ADMIN', 'ADMIN', 'TEACHER', 'IT_TEAM', 'RECEPTION'],
+    availableTo: ['SUPER_ADMIN', 'SCHOOL_HEAD', 'ADMIN', 'TEACHER', 'IT_TEAM', 'RECEPTION'],
     features: ['AI OCR', 'Auto-Categorize', 'Version Control', 'E-Signatures', 'Compliance Tracker', 'Bulk Upload', 'Smart Search'],
     stats: [
       { label: 'Documents Stored', value: '184K', trend: '+2.4K' },

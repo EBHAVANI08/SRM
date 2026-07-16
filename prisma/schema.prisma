@@ -594,19 +594,35 @@ model CanteenOrder {
 
 // ============ LIBRARY / DOCUMENTS ============
 model Document {
-  id          String   @id @default(cuid())
-  title       String
-  type        String   // TC, BIRTH_CERT, MARKSHEET, BONAFIDE, ID_CARD, OTHER
-  studentId   String?
-  student     Student? @relation(fields: [studentId], references: [id])
-  staffId     String?
-  staff       Staff?   @relation("StaffDocuments", fields: [staffId], references: [id])
-  fileUrl     String
-  fileFormat  String
-  fileSize    Int?
-  uploadedBy  String?
-  isVerified  Boolean  @default(false)
-  createdAt   DateTime @default(now())
+  id              String   @id @default(cuid())
+  schoolId        String   @default("school_default")
+  title           String
+  type            String   // TC, BIRTH_CERT, MARKSHEET, BONAFIDE, ID_CARD, AADHAAR, PAN, PHOTO, MEDICAL, OTHER
+  studentId       String?
+  student         Student? @relation(fields: [studentId], references: [id])
+  staffId         String?
+  staff           Staff?   @relation("StaffDocuments", fields: [staffId], references: [id])
+  fileUrl         String
+  fileFormat      String
+  fileSize        Int?
+  originalFileName String?
+  mimeType        String?
+  uploadedBy      String?
+  uploadedByName  String?
+  uploadedAt      DateTime @default(now())
+  isVerified      Boolean  @default(false)
+  // Approval workflow
+  status          String   @default("PENDING") // PENDING, APPROVED, REJECTED, RESUBMIT
+  approvedBy      String?
+  approvedByName  String?
+  approvedAt      DateTime?
+  rejectionReason String?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([schoolId, status])
+  @@index([studentId, type])
 }
 
 // ============ EVENTS & ACTIVITIES ============
