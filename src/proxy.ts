@@ -16,7 +16,7 @@ const secretKey = new TextEncoder().encode(JWT_SECRET)
 // Routes that don't require auth
 const PUBLIC_ROUTES = ['/api/auth/login', '/api/auth/signup', '/api/health']
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl
 
   // Only protect API routes
