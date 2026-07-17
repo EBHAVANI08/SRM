@@ -1830,3 +1830,30 @@ model NotificationAck {
   @@index([recipientId, acknowledgedAt])
   @@index([category, acknowledgedAt])
 }
+
+// ============ FEE STRUCTURE (admin-defined fee plans per grade) ============
+model FeeStructure {
+  id              String   @id @default(cuid())
+  schoolId        String   @default("school_default")
+  name            String
+  academicYear    String   @default("2026-27")
+  grade           String
+  baseFee         Float
+  installmentCount Int     @default(1)
+  installmentFrequency String @default("MONTHLY")
+  perInstallment  Float    @default(0)
+  totalFee        Float    @default(0)
+  totalPerInstallment Float @default(0)
+  addOns          String   @default("[]")
+  status          String   @default("DRAFT")
+  publishedAt     DateTime?
+  publishedBy     String?
+  createdBy       String
+  createdByName   String
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([schoolId, grade, academicYear])
+  @@index([schoolId, status])
+}
