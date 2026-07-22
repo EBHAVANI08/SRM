@@ -171,7 +171,7 @@ function generateTimetable(grade: string, section: string, teachers: Teacher[]):
 }
 
 // ============ Main Component ============
-type Tab = 'timetable' | 'calendar' | 'workload' | 'teachers' | 'upload' | 'substitution'
+type Tab = 'timetable' | 'calendar' | 'monthCalendar' | 'workload' | 'teachers' | 'upload' | 'substitution'
 
 export function AICalendarModule() {
   const [tab, setTab] = useState<Tab>('timetable')
@@ -218,23 +218,18 @@ export function AICalendarModule() {
 
   return (
     <div className="space-y-5">
-      {/* Hero Header */}
-      <div className="rounded-2xl bg-gradient-to-br from-neutral-800 to-neutral-900 p-6 text-white">
+      {/* Hero Header — white background matching page */}
+      <Card className="p-5 rounded-2xl border-slate-200 bg-white">
         <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-bold flex items-center gap-2">
-              <Calendar className="w-5 h-5" />
-              AI Academic Calendar & Timetable
-            </h2>
-            <p className="text-sm text-white/70 mt-1">
-              Generate timetables for 50-100 teachers · AI auto-allotment · weekly/monthly views · teacher workload · bulk upload
-            </p>
-          </div>
-          <Badge className="bg-white/10 text-white border-0">
+          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-blue-700" />
+            AI Academic Calendar & Timetable
+          </h2>
+          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
             <Sparkles className="w-3 h-3 mr-1" /> AI Engine
           </Badge>
         </div>
-      </div>
+      </Card>
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -261,10 +256,11 @@ export function AICalendarModule() {
         })}
       </div>
 
-      {/* Tab Bar */}
-      <div className="flex gap-1 p-1 rounded-xl bg-slate-100 w-fit overflow-x-auto">
+      {/* Tab Bar — bigger buttons */}
+      <div className="flex gap-1.5 p-1.5 rounded-xl bg-slate-100 w-fit overflow-x-auto">
         {[
           { id: 'timetable' as Tab, label: 'Timetable', icon: Calendar },
+          { id: 'monthCalendar' as Tab, label: 'Month Calendar', icon: Calendar },
           { id: 'calendar' as Tab, label: 'Calendar View', icon: Clock },
           { id: 'workload' as Tab, label: 'Teacher Workload', icon: TrendingUp },
           { id: 'teachers' as Tab, label: 'Teacher Directory', icon: Users },
@@ -276,9 +272,9 @@ export function AICalendarModule() {
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`px-4 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5 whitespace-nowrap ${tab === t.id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}
+              className={`px-5 py-2.5 rounded-lg text-sm font-medium flex items-center gap-2 whitespace-nowrap transition-all ${tab === t.id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
             >
-              <Icon className="w-3.5 h-3.5" /> {t.label}
+              <Icon className="w-4 h-4" /> {t.label}
             </button>
           )
         })}
@@ -295,6 +291,17 @@ export function AICalendarModule() {
           generating={generating}
           onGenerate={handleGenerate}
           onEditPeriod={(p) => setEditingPeriod(p)}
+        />
+      )}
+
+      {tab === 'monthCalendar' && (
+        <MonthCalendarTab
+          onGenerate={handleGenerate}
+          timetable={timetable}
+          selectedGrade={selectedGrade}
+          selectedSection={selectedSection}
+          onGradeChange={setSelectedGrade}
+          onSectionChange={setSelectedSection}
         />
       )}
 
@@ -1252,6 +1259,225 @@ function SubstitutionTab() {
           <p className="text-xs text-slate-500 mt-1">Click "Sync & Detect" to check attendance + leave portal for absent teachers.</p>
         </Card>
       )}
+    </div>
+  )
+}
+
+// ============ Month Calendar Tab — date picker with holidays + grade/section dashboard ============
+
+const PUBLIC_HOLIDAYS_2026: { date: string; name: string; type: string }[] = [
+  { date: '2026-01-26', name: 'Republic Day', type: 'NATIONAL' },
+  { date: '2026-03-17', name: 'Holi', type: 'FESTIVAL' },
+  { date: '2026-04-10', name: 'Good Friday', type: 'RELIGIOUS' },
+  { date: '2026-04-14', name: 'Ambedkar Jayanti', type: 'NATIONAL' },
+  { date: '2026-05-01', name: 'Labour Day', type: 'NATIONAL' },
+  { date: '2026-08-15', name: 'Independence Day', type: 'NATIONAL' },
+  { date: '2026-08-25', name: 'Janmashtami', type: 'RELIGIOUS' },
+  { date: '2026-10-02', name: 'Gandhi Jayanti', type: 'NATIONAL' },
+  { date: '2026-10-21', name: 'Dussehra', type: 'FESTIVAL' },
+  { date: '2026-11-01', name: 'Diwali', type: 'FESTIVAL' },
+  { date: '2026-12-25', name: 'Christmas', type: 'RELIGIOUS' },
+]
+
+function MonthCalendarTab({ onGenerate, timetable, selectedGrade, selectedSection, onGradeChange, onSectionChange }: {
+  onGenerate: () => void
+  timetable: Timetable | null
+  selectedGrade: string
+  selectedSection: string
+  onGradeChange: (v: string) => void
+  onSectionChange: (v: string) => void
+}) {
+  const [currentMonth, setCurrentMonth] = useState(new Date(2026, 0, 1)) // Jan 2026
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  const [showGradeDashboard, setShowGradeDashboard] = useState(false)
+
+  const monthName = currentMonth.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
+  const year = currentMonth.getFullYear()
+  const month = currentMonth.getMonth()
+  const firstDay = new Date(year, month, 1).getDay() // 0=Sun
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+
+  const isHoliday = (day: number) => {
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+    return PUBLIC_HOLIDAYS_2026.find(h => h.date === dateStr)
+  }
+
+  const isWeekend = (day: number) => {
+    const dayOfWeek = new Date(year, month, day).getDay()
+    return dayOfWeek === 0 || dayOfWeek === 6
+  }
+
+  const handleDateClick = (day: number) => {
+    const date = new Date(year, month, day)
+    setSelectedDate(date)
+    setShowGradeDashboard(true)
+  }
+
+  const handlePrevMonth = () => setCurrentMonth(new Date(year, month - 1, 1))
+  const handleNextMonth = () => setCurrentMonth(new Date(year, month + 1, 1))
+
+  return (
+    <div className="space-y-4">
+      {/* Calendar header */}
+      <Card className="p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" className="h-8 w-8 p-0 rounded-lg" onClick={handlePrevMonth}>
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <h3 className="text-base font-semibold text-slate-900 min-w-[140px] text-center">{monthName}</h3>
+            <Button size="sm" variant="outline" className="h-8 w-8 p-0 rounded-lg" onClick={handleNextMonth}>
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
+          <div className="flex items-center gap-3 text-[10px]">
+            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-rose-400" /> Holiday</span>
+            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-slate-200" /> Weekend</span>
+            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-blue-400" /> School Day</span>
+          </div>
+        </div>
+
+        {/* Calendar grid */}
+        <div className="grid grid-cols-7 gap-1">
+          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+            <div key={d} className="text-center text-[10px] font-semibold text-slate-400 py-1.5">{d}</div>
+          ))}
+          {Array.from({ length: firstDay }).map((_, i) => (
+            <div key={`empty-${i}`} />
+          ))}
+          {Array.from({ length: daysInMonth }).map((_, i) => {
+            const day = i + 1
+            const holiday = isHoliday(day)
+            const weekend = isWeekend(day)
+            const isSelected = selectedDate?.getDate() === day && selectedDate?.getMonth() === month
+            return (
+              <button
+                key={day}
+                onClick={() => handleDateClick(day)}
+                className={`min-h-[60px] rounded-lg border p-1.5 text-left transition-all hover:shadow-md ${
+                  isSelected ? 'border-blue-500 ring-2 ring-blue-200' : 'border-slate-200'
+                } ${
+                  holiday ? 'bg-rose-50 border-rose-200' :
+                  weekend ? 'bg-slate-50 border-slate-200' :
+                  'bg-white hover:bg-blue-50/50'
+                }`}
+              >
+                <div className={`text-xs font-bold ${holiday ? 'text-rose-600' : weekend ? 'text-slate-400' : 'text-slate-700'}`}>
+                  {day}
+                </div>
+                {holiday && (
+                  <div className="text-[8px] text-rose-500 mt-0.5 truncate" title={holiday.name}>
+                    {holiday.name}
+                  </div>
+                )}
+                {!holiday && !weekend && (
+                  <div className="text-[8px] text-blue-400 mt-0.5">School</div>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      </Card>
+
+      {/* Selected date dashboard */}
+      {selectedDate && showGradeDashboard && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+          <Card className="p-5 border-2 border-blue-200 bg-blue-50/30">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">
+                  📅 {selectedDate.toLocaleDateString('en-IN', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
+                </h3>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  {isHoliday(selectedDate.getDate()) ? `Public Holiday: ${isHoliday(selectedDate.getDate())?.name}` : 'Select a grade and section to view the timetable for this day'}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Select value={selectedGrade} onValueChange={onGradeChange}>
+                  <SelectTrigger className="h-8 text-xs rounded-lg w-28"><SelectValue /></SelectTrigger>
+                  <SelectContent>{GRADES.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent>
+                </Select>
+                <Select value={selectedSection} onValueChange={onSectionChange}>
+                  <SelectTrigger className="h-8 text-xs rounded-lg w-24"><SelectValue /></SelectTrigger>
+                  <SelectContent>{SECTIONS.map(s => <SelectItem key={s} value={s}>Sec {s}</SelectItem>)}</SelectContent>
+                </Select>
+                <Button size="sm" className="h-8 text-xs rounded-lg text-white" style={{ background: '#1E3A8A' }} onClick={onGenerate}>
+                  View Timetable
+                </Button>
+              </div>
+            </div>
+
+            {/* Grade/Section dashboard cards */}
+            {!isHoliday(selectedDate.getDate()) && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 mb-4">
+                {GRADES.map(grade => (
+                  <div key={grade} className="p-3 rounded-xl bg-white border border-slate-200 hover:border-blue-300 cursor-pointer transition-all"
+                    onClick={() => { onGradeChange(grade); onGenerate() }}>
+                    <div className="text-xs font-semibold text-slate-900">{grade}</div>
+                    <div className="flex gap-1 mt-1">
+                      {SECTIONS.map(s => (
+                        <span key={s} className="text-[9px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-medium">Sec {s}</span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Timetable for selected date */}
+            {timetable && !isHoliday(selectedDate.getDate()) && (
+              <div className="mt-3">
+                <div className="text-xs font-semibold text-slate-700 mb-2">
+                  {timetable.grade}-{timetable.section} · Timetable for {selectedDate.toLocaleDateString('en-IN', { weekday: 'long' })}
+                </div>
+                <div className="space-y-1.5">
+                  {timetable.days.find(d => d.day.toLowerCase() === selectedDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase())?.periods
+                    .filter(p => !p.isBreak)
+                    .map(p => {
+                      const subject = SUBJECTS.find(s => s.name === p.subject)
+                      return (
+                        <div key={p.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-white border border-slate-200">
+                          <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0" style={{ background: subject?.color || '#6B7280' }}>
+                            P{p.periodNo}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs font-semibold text-slate-900">{p.subject}</div>
+                            <div className="text-[10px] text-slate-500">{p.teacherName} · 📖 {p.topic}</div>
+                          </div>
+                          <div className="text-[10px] text-slate-400 font-mono">{p.time}</div>
+                        </div>
+                      )
+                    }) || (
+                    <div className="text-xs text-slate-400 text-center py-4">
+                      No classes scheduled for this day (weekend or holiday)
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </Card>
+        </motion.div>
+      )}
+
+      {/* Upcoming holidays list */}
+      <Card className="p-4">
+        <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 text-rose-500" /> Public Holidays — Academic Year 2026
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+          {PUBLIC_HOLIDAYS_2026.map((h, i) => (
+            <div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-rose-50/50 border border-rose-100">
+              <div className="w-8 h-8 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center text-xs font-bold">
+                {new Date(h.date).getDate()}
+              </div>
+              <div>
+                <div className="text-xs font-medium text-slate-900">{h.name}</div>
+                <div className="text-[10px] text-slate-500">{new Date(h.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
     </div>
   )
 }
