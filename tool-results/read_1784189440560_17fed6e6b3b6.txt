@@ -1,0 +1,502 @@
+    94→  return (
+    95→    <div className="p-4 lg:p-8 space-y-6 animate-page-enter max-w-[1600px] mx-auto">
+    96→      <SectionHeader emoji="👔" title="HRMS & Staff Management" subtitle="Complete HR suite for school staff" accent={SHARED_ACCENT} onNew={() => toast.success('New staff form opened')} newLabel="Add Staff" onRefresh={() => toast.success('✅ HR data refreshed')} aiActions={[{ label: 'payrolls processed', count: 247 }, { label: 'leaves auto-approved', count: 18 }]} />
+    97→
+    98→      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+    99→        {HRMS_CARDS.map((c, i) => (
+   100→          <motion.div key={c.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
+   101→            <Card
+   102→              className="p-4 rounded-2xl hover:shadow-lg transition-shadow cursor-pointer"
+   103→              onClick={() => {
+   104→                if (c.id === 'payroll') handleRunPayroll()
+   105→                else if (c.id === 'leave') setShowLeaveQueue(true)
+   106→                else toast.success(`Opening ${c.title}…`)
+   107→              }}
+   108→            >
+   109→              <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl mb-2" style={{ background: c.color + '15' }}>{c.emoji}</div>
+   110→              <div className="text-sm font-semibold text-slate-900">{c.stat}</div>
+   111→              <div className="text-[10px] text-slate-500 uppercase">{c.statLabel}</div>
+   112→              <div className="text-[11px] font-medium text-slate-900 mt-2">{c.title}</div>
+   113→            </Card>
+   114→          </motion.div>
+   115→        ))}
+   116→      </div>
+   117→
+   118→      {/* Leave Approval Queue — real automation */}
+   119→      {showLeaveQueue && (
+   120→        <LeaveApprovalQueue
+   121→          preview={preview}
+   122→          onClose={() => setShowLeaveQueue(false)}
+   123→          onApproved={() => { fetchLeaveRequests(); toast.success('Leave approved') }}
+   124→        />
+   125→      )}
+   126→
+   127→      <Card className="rounded-2xl overflow-hidden">
+   128→        <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
+   129→          <div><h3 className="text-sm font-semibold text-slate-900">Staff Directory</h3><p className="text-[11px] text-slate-500">{STAFF_DIRECTORY.length} staff members</p></div>
+   130→          <div className="relative">
+   131→            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+   132→            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search staff…" className="pl-9 h-9 text-xs rounded-lg w-56" />
+   133→          </div>
+   134→        </div>
+   135→        <div className="overflow-x-auto">
+   136→          <table className="w-full text-xs">
+   137→            <thead><tr className="border-b border-slate-200 bg-slate-50/50">
+   138→              <th className="text-left px-4 py-3 font-semibold text-slate-600">Staff</th>
+   139→              <th className="text-left px-4 py-3 font-semibold text-slate-600">Department</th>
+   140→              <th className="text-left px-4 py-3 font-semibold text-slate-600">Joined</th>
+   141→              <th className="text-left px-4 py-3 font-semibold text-slate-600">Salary</th>
+   142→              <th className="text-left px-4 py-3 font-semibold text-slate-600">Status</th>
+   143→              <th className="text-left px-4 py-3 font-semibold text-slate-600">Action</th>
+   144→            </tr></thead>
+   145→            <tbody>
+   146→              {filtered.map((s) => (
+   147→                <tr key={s.id} className="border-b border-slate-100 hover:bg-slate-50">
+   148→                  <td className="px-4 py-3">
+   149→                    <div className="flex items-center gap-2">
+   150→                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[10px] font-semibold" style={{ background: s.avatarColor }}>{s.initials}</div>
+   151→                      <div><div className="font-medium text-slate-900">{s.name}</div><div className="text-[10px] text-slate-500">{s.role}</div></div>
+   152→                    </div>
+   153→                  </td>
+   154→                  <td className="px-4 py-3 text-slate-700">{s.dept}</td>
+   155→                  <td className="px-4 py-3 text-slate-700">{s.joined}</td>
+   156→                  <td className="px-4 py-3 text-slate-700">{s.salary}</td>
+   157→                  <td className="px-4 py-3"><Badge variant="outline" className={`text-[10px] ${s.status === 'Active' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>{s.status}</Badge></td>
+   158→                  <td className="px-4 py-3"><Button size="sm" variant="outline" className="h-7 text-[11px] rounded-lg" onClick={() => setSelectedStaff(s)}><Eye className="w-3 h-3 mr-1" /> View</Button></td>
+   159→                </tr>
+   160→              ))}
+   161→            </tbody>
+   162→          </table>
+   163→        </div>
+   164→      </Card>
+   165→
+   166→      <AnimatePresence>
+   167→        {selectedStaff && (
+   168→          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-stretch justify-end bg-slate-900/50 backdrop-blur-sm" onClick={() => setSelectedStaff(null)}>
+   169→            <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', damping: 30, stiffness: 300 }} onClick={(e) => e.stopPropagation()} className="bg-white w-full max-w-md h-full overflow-y-auto shadow-2xl">
+   170→              <div className="sticky top-0 px-6 py-4 border-b border-slate-200 bg-white z-10 flex items-center justify-between">
+   171→                <div className="flex items-center gap-3">
+   172→                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold" style={{ background: selectedStaff.avatarColor }}>{selectedStaff.initials}</div>
+   173→                  <div><h3 className="text-sm font-semibold text-slate-900">{selectedStaff.name}</h3><p className="text-[11px] text-slate-500">{selectedStaff.role} · {selectedStaff.id}</p></div>
+   174→                </div>
+   175→                <button onClick={() => setSelectedStaff(null)} className="p-1.5 rounded-lg hover:bg-slate-100"><X className="w-5 h-5 text-slate-500" /></button>
+   176→              </div>
+   177→              <div className="p-6 space-y-4">
+   178→                <div className="grid grid-cols-2 gap-2">
+   179→                  <div className="p-3 rounded-lg bg-slate-50"><div className="text-[10px] text-slate-500 uppercase">Department</div><div className="text-xs font-medium text-slate-900 mt-0.5">{selectedStaff.dept}</div></div>
+   180→                  <div className="p-3 rounded-lg bg-slate-50"><div className="text-[10px] text-slate-500 uppercase">Joined</div><div className="text-xs font-medium text-slate-900 mt-0.5">{selectedStaff.joined}</div></div>
+   181→                  <div className="p-3 rounded-lg bg-slate-50"><div className="text-[10px] text-slate-500 uppercase">Phone</div><div className="text-xs font-medium text-slate-900 mt-0.5">{selectedStaff.phone}</div></div>
+   182→                  <div className="p-3 rounded-lg bg-slate-50"><div className="text-[10px] text-slate-500 uppercase">Email</div><div className="text-xs font-medium text-slate-900 mt-0.5 truncate">{selectedStaff.email}</div></div>
+   183→                  <div className="p-3 rounded-lg bg-slate-50"><div className="text-[10px] text-slate-500 uppercase">Monthly Salary</div><div className="text-xs font-medium text-slate-900 mt-0.5">{selectedStaff.salary}</div></div>
+   184→                  <div className="p-3 rounded-lg bg-slate-50"><div className="text-[10px] text-slate-500 uppercase">Status</div><div className="text-xs font-medium text-slate-900 mt-0.5">{selectedStaff.status}</div></div>
+   185→                </div>
+   186→                <div><h4 className="text-xs font-semibold text-slate-900 uppercase tracking-wider mb-2">Documents</h4>{['Employment Contract', 'ID Proof (Aadhaar)', 'PAN Card', 'Qualification Certificates', 'Police Verification'].map((d) => (
+   187→                  <div key={d} className="p-2 rounded-lg border border-slate-200 flex items-center justify-between mb-1">
+   188→                    <div className="flex items-center gap-2"><FileText className="w-3.5 h-3.5 text-slate-400" /><span className="text-[11px] text-slate-700">{d}</span></div>
+   189→                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+   190→                  </div>
+   191→                ))}</div>
+   192→                <Button className="w-full h-9 text-xs rounded-lg text-white" style={{ background: SHARED_ACCENT }} onClick={() => { preview({ recipients: [{ id: selectedStaff.id, name: selectedStaff.name, contact: selectedStaff.phone, channel: 'WHATSAPP', recipientType: 'STAFF' }], body: `Dear ${selectedStaff.name}, your HR record has been updated. Please review on the LearnX portal. — LearnX HR`, source: 'hrms_staff_notify' }); toast.success(`📤 Notification sent to ${selectedStaff.name}`) }}>
+   193→                  <Send className="w-3.5 h-3.5 mr-1.5" /> Notify Staff
+   194→                </Button>
+   195→              </div>
+   196→            </motion.div>
+   197→          </motion.div>
+   198→        )}
+   199→      </AnimatePresence>
+   200→    </div>
+   201→  )
+   202→}
+   203→
+   204→// ============================================================
+   205→// CONCERNS MODULE
+   206→// ============================================================
+   207→
+   208→interface Concern {
+   209→  id: string
+   210→  student: string
+   211→  grade: string
+   212→  type: 'academic' | 'behavioral' | 'social' | 'emotional' | 'health'
+   213→  severity: 'low' | 'medium' | 'high'
+   214→  description: string
+   215→  reportedBy: string
+   216→  date: string
+   217→  classTeacher: string
+   218→  teacherPhone: string
+   219→  parentName: string
+   220→  parentPhone: string
+   221→  status: 'open' | 'in-progress' | 'resolved'
+   222→  avatarColor: string
+   223→  initials: string
+   224→}
+   225→
+   226→const CONCERNS: Concern[] = [
+   227→  { id: 'CN-001', student: 'Aarav Sharma', grade: '7-A', type: 'academic', severity: 'medium', description: 'Sudden drop in Mathematics scores. Was scoring 85+ last term, now scoring 60s.', reportedBy: 'Mr. Rajesh Kumar', date: '14 Feb 2026', classTeacher: 'Mrs. Anita Verma', teacherPhone: '+91 99001 11111', parentName: 'Suresh Sharma', parentPhone: '+91 98765 43210', status: 'open', avatarColor: '#1E3A8A', initials: 'AS' },
+   228→  { id: 'CN-002', student: 'Diya Patel', grade: '5-B', type: 'behavioral', severity: 'high', description: 'Aggressive behavior with classmates. Two incidents reported this week.', reportedBy: 'Mrs. Meena Iyer', date: '15 Feb 2026', classTeacher: 'Mrs. Kavita Joshi', teacherPhone: '+91 99001 22222', parentName: 'Nilesh Patel', parentPhone: '+91 98200 12345', status: 'in-progress', avatarColor: '#F59E0B', initials: 'DP' },
+   229→  { id: 'CN-003', student: 'Vivaan Gupta', grade: '8-A', type: 'emotional', severity: 'medium', description: 'Appears withdrawn in class. Not participating in group activities.', reportedBy: 'Dr. Priya Sharma', date: '13 Feb 2026', classTeacher: 'Mrs. Deepa Menon', teacherPhone: '+91 99001 66666', parentName: 'Rajesh Gupta', parentPhone: '+91 99876 54321', status: 'open', avatarColor: '#22C55E', initials: 'VG' },
+   230→  { id: 'CN-004', student: 'Ananya Reddy', grade: '6-C', type: 'social', severity: 'low', description: 'Difficulty making friends. Often sits alone during lunch.', reportedBy: 'Mrs. Deepa Menon', date: '12 Feb 2026', classTeacher: 'Mr. Arun Nair', teacherPhone: '+91 99001 88888', parentName: 'Krishna Reddy', parentPhone: '+91 98111 22222', status: 'in-progress', avatarColor: '#E11D48', initials: 'AR' },
+   231→  { id: 'CN-005', student: 'Reyansh Kumar', grade: '3-A', type: 'health', severity: 'high', description: 'Frequent complaints of stomach pain. Possible food allergy.', reportedBy: 'Mrs. Anita Verma', date: '15 Feb 2026', classTeacher: 'Mrs. Anita Verma', teacherPhone: '+91 99001 11111', parentName: 'Amit Kumar', parentPhone: '+91 97000 88888', status: 'open', avatarColor: '#0D9488', initials: 'RK' },
+   232→]
+   233→
+   234→const CONCERN_TYPE_CONFIG: Record<string, { color: string; bg: string; icon: any }> = {
+   235→  academic: { color: '#1E3A8A', bg: 'bg-blue-50 text-blue-700', icon: BookOpen },
+   236→  behavioral: { color: '#EF4444', bg: 'bg-rose-50 text-rose-700', icon: AlertCircle },
+   237→  social: { color: '#7C3AED', bg: 'bg-violet-50 text-violet-700', icon: Users },
+   238→  emotional: { color: '#F59E0B', bg: 'bg-amber-50 text-amber-700', icon: Heart },
+   239→  health: { color: '#22C55E', bg: 'bg-emerald-50 text-emerald-700', icon: Activity },
+   240→}
+   241→
+   242→const SEVERITY_CONFIG: Record<string, { color: string; bg: string }> = {
+   243→  low: { color: '#22C55E', bg: 'bg-emerald-50 text-emerald-700' },
+   244→  medium: { color: '#F59E0B', bg: 'bg-amber-50 text-amber-700' },
+   245→  high: { color: '#EF4444', bg: 'bg-rose-50 text-rose-700' },
+   246→}
+   247→
+   248→export function ConcernsModule() {
+   249→  const { preview } = useNotificationPreview()
+   250→  const [selected, setSelected] = useState<Concern | null>(null)
+   251→
+   252→  return (
+   253→    <div className="p-4 lg:p-8 space-y-6 animate-page-enter max-w-[1600px] mx-auto">
+   254→      <SectionHeader emoji="⚠️" title="Student Concerns" subtitle="Track & address student well-being concerns" accent="#E11D48" onNew={() => toast.success('New concern form opened')} newLabel="Log Concern" onRefresh={() => toast.success('✅ Refreshed')} aiActions={[{ label: 'concerns auto-flagged', count: 8 }, { label: 'interventions suggested', count: 12 }]} />
+   255→
+   256→      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+   257→        {[{ label: 'Open Concerns', value: CONCERNS.filter((c) => c.status === 'open').length, icon: AlertCircle, color: '#EF4444' }, { label: 'In Progress', value: CONCERNS.filter((c) => c.status === 'in-progress').length, icon: Activity, color: '#F59E0B' }, { label: 'High Severity', value: CONCERNS.filter((c) => c.severity === 'high').length, icon: AlertCircle, color: '#E11D48' }, { label: 'Resolved', value: CONCERNS.filter((c) => c.status === 'resolved').length, icon: CheckCircle2, color: '#22C55E' }].map((s, i) => (
+   258→          <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
+   259→            <Card className="p-5 rounded-2xl"><div className="flex items-start justify-between mb-3"><div className="w-10 h-10 rounded-xl flex items-center justify-center text-white" style={{ background: s.color }}><s.icon className="w-5 h-5" /></div></div><div className="text-2xl font-semibold text-slate-900">{s.value}</div><div className="text-xs text-slate-500 mt-0.5">{s.label}</div></Card>
+   260→          </motion.div>
+   261→        ))}
+   262→      </div>
+   263→
+   264→      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+   265→        {CONCERNS.map((c, i) => {
+   266→          const cfg = CONCERN_TYPE_CONFIG[c.type]
+   267→          const sev = SEVERITY_CONFIG[c.severity]
+   268→          return (
+   269→            <motion.div key={c.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
+   270→              <Card className="p-5 rounded-2xl hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setSelected(c)}>
+   271→                <div className="flex items-start justify-between mb-3">
+   272→                  <div className="flex items-center gap-3">
+   273→                    <div className="w-11 h-11 rounded-full flex items-center justify-center text-white font-semibold" style={{ background: c.avatarColor }}>{c.initials}</div>
+   274→                    <div>
+   275→                      <div className="text-sm font-semibold text-slate-900">{c.student}</div>
+   276→                      <div className="text-[11px] text-slate-500">Grade {c.grade} · {c.id}</div>
+   277→                    </div>
+   278→                  </div>
+   279→                  <div className="flex flex-col gap-1 items-end">
+   280→                    <Badge variant="outline" className={`text-[10px] capitalize ${cfg.bg}`}><cfg.icon className="w-3 h-3 mr-1" /> {c.type}</Badge>
+   281→                    <Badge variant="outline" className={`text-[10px] capitalize ${sev.bg}`}>{c.severity}</Badge>
+   282→                  </div>
+   283→                </div>
+   284→                <p className="text-[11px] text-slate-600 leading-relaxed mb-3">{c.description}</p>
+   285→                <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+   286→                  <div className="text-[11px] text-slate-500">By {c.reportedBy} · {c.date}</div>
+   287→                  <div className="flex items-center gap-1">
+   288→                    <Badge variant="outline" className={`text-[10px] capitalize ${c.status === 'open' ? 'bg-rose-50 text-rose-700' : c.status === 'in-progress' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}>{c.status.replace('-', ' ')}</Badge>
+   289→                    <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+   290→                  </div>
+   291→                </div>
+   292→              </Card>
+   293→            </motion.div>
+   294→          )
+   295→        })}
+   296→      </div>
+   297→
+   298→      <AnimatePresence>
+   299→        {selected && (
+   300→          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm" onClick={() => setSelected(null)}>
+   301→            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} onClick={(e) => e.stopPropagation()} className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+   302→              <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+   303→                <div className="flex items-center gap-3">
+   304→                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold" style={{ background: selected.avatarColor }}>{selected.initials}</div>
+   305→                  <div><h3 className="text-sm font-semibold text-slate-900">{selected.student}</h3><p className="text-[11px] text-slate-500">Grade {selected.grade} · {selected.id}</p></div>
+   306→                </div>
+   307→                <button onClick={() => setSelected(null)} className="p-1.5 rounded-lg hover:bg-slate-100"><X className="w-5 h-5 text-slate-500" /></button>
+   308→              </div>
+   309→              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+   310→                <div className="p-3 rounded-lg bg-slate-50 border border-slate-200">
+   311→                  <div className="text-[10px] text-slate-500 uppercase mb-1">Concern Description</div>
+   312→                  <div className="text-xs text-slate-700">{selected.description}</div>
+   313→                </div>
+   314→                <div className="grid grid-cols-2 gap-3">
+   315→                  <div className="p-3 rounded-lg bg-slate-50"><div className="text-[10px] text-slate-500 uppercase">Class Teacher</div><div className="text-xs font-medium text-slate-900 mt-0.5">{selected.classTeacher}</div><div className="text-[10px] text-slate-500">{selected.teacherPhone}</div></div>
+   316→                  <div className="p-3 rounded-lg bg-slate-50"><div className="text-[10px] text-slate-500 uppercase">Parent</div><div className="text-xs font-medium text-slate-900 mt-0.5">{selected.parentName}</div><div className="text-[10px] text-slate-500">{selected.parentPhone}</div></div>
+   317→                </div>
+   318→                <div>
+   319→                  <h4 className="text-xs font-semibold text-slate-900 uppercase tracking-wider mb-2 flex items-center gap-1.5"><Brain className="w-3.5 h-3.5 text-blue-700" /> AI Recommended Actions</h4>
+   320→                  <div className="space-y-2">
+   321→                    {[
+   322→                      { action: 'Schedule 1-on-1 counseling session with student', priority: 'High' },
+   323→                      { action: 'Inform class teacher for in-class observation', priority: 'High' },
+   324→                      { action: 'Parent-teacher meeting within 48 hours', priority: 'Medium' },
+   325→                      { action: 'Refer to school counselor if needed', priority: 'Medium' },
+   326→                      { action: 'Weekly progress check for 4 weeks', priority: 'Low' },
+   327→                    ].map((r, i) => (
+   328→                      <div key={i} className="p-2.5 rounded-lg border border-slate-200 flex items-center justify-between">
+   329→                        <div className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-slate-400" /><span className="text-[11px] text-slate-700">{r.action}</span></div>
+   330→                        <Badge variant="outline" className={`text-[9px] ${r.priority === 'High' ? 'bg-rose-50 text-rose-700' : r.priority === 'Medium' ? 'bg-amber-50 text-amber-700' : 'bg-slate-50 text-slate-600'}`}>{r.priority}</Badge>
+   331→                      </div>
+   332→                    ))}
+   333→                  </div>
+   334→                </div>
+   335→              </div>
+   336→              <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between gap-2 flex-wrap">
+   337→                <Button size="sm" variant="outline" className="h-9 text-xs rounded-lg" onClick={() => { preview({ recipients: [{ id: selected.id, name: selected.classTeacher, contact: selected.teacherPhone, channel: 'WHATSAPP', recipientType: 'STAFF' }], body: `Dear ${selected.classTeacher},\n\nConcern ID: ${selected.id}\nStudent: ${selected.student} (Grade ${selected.grade})\nType: ${selected.type} (Severity: ${selected.severity})\n\nDescription: ${selected.description}\n\nPlease observe and connect with the student. Report back within 48 hours.\n\n— LearnX Concerns Cell`, source: 'concerns_alert_teacher' }); toast.success(`📤 Teacher alerted`) }}><Bell className="w-3.5 h-3.5 mr-1" /> Alert Teacher</Button>
+   338→                <Button size="sm" variant="outline" className="h-9 text-xs rounded-lg" onClick={() => { preview({ recipients: [{ id: selected.id, name: selected.parentName, contact: selected.parentPhone, channel: 'WHATSAPP', recipientType: 'PARENT' }], body: `Dear ${selected.parentName},\n\nWe wanted to personally reassure you that we are aware of and attending to a concern regarding ${selected.student}. Our team is committed to supporting your child's well-being.\n\nWe would like to schedule a brief meeting at your convenience.\n\n— LearnX School`, source: 'concerns_reassure_parent' }); toast.success(`📤 Reassure message sent`) }}><Heart className="w-3.5 h-3.5 mr-1" /> Reassure Parent</Button>
+   339→                <Button size="sm" className="h-9 text-xs rounded-lg text-white" style={{ background: '#22C55E' }} onClick={() => { toast.success('✅ Concern marked resolved'); setSelected(null) }}><CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Resolve</Button>
+   340→              </div>
+   341→            </motion.div>
+   342→          </motion.div>
+   343→        )}
+   344→      </AnimatePresence>
+   345→    </div>
+   346→  )
+   347→}
+   348→
+   349→// ============================================================
+   350→// SIS MODULE
+   351→// ============================================================
+   352→
+   353→const SIS_STUDENTS = [
+   354→  { id: 'STU-001', name: 'Aarav Sharma', grade: '7-A', roll: '01', parent: 'Suresh Sharma', phone: '+91 98765 43210', email: 'aarav@learnx.edu', attendance: '94%', avgMarks: '87%', status: 'Active', fees: 'Paid', avatarColor: '#1E3A8A', initials: 'AS' },
+   355→  { id: 'STU-002', name: 'Diya Patel', grade: '5-B', roll: '02', parent: 'Nilesh Patel', phone: '+91 98200 12345', email: 'diya@learnx.edu', attendance: '89%', avgMarks: '82%', status: 'Active', fees: 'Partial', avatarColor: '#F59E0B', initials: 'DP' },
+   356→  { id: 'STU-003', name: 'Vivaan Gupta', grade: '8-A', roll: '03', parent: 'Rajesh Gupta', phone: '+91 99876 54321', email: 'vivaan@learnx.edu', attendance: '96%', avgMarks: '91%', status: 'Active', fees: 'Paid', avatarColor: '#22C55E', initials: 'VG' },
+   357→  { id: 'STU-004', name: 'Ananya Reddy', grade: '6-C', roll: '04', parent: 'Krishna Reddy', phone: '+91 98111 22222', email: 'ananya@learnx.edu', attendance: '78%', avgMarks: '74%', status: 'At-Risk', fees: 'Pending', avatarColor: '#E11D48', initials: 'AR' },
+   358→  { id: 'STU-005', name: 'Reyansh Kumar', grade: '3-A', roll: '05', parent: 'Amit Kumar', phone: '+91 97000 88888', email: 'reyansh@learnx.edu', attendance: '92%', avgMarks: '85%', status: 'Active', fees: 'Paid', avatarColor: '#0D9488', initials: 'RK' },
+   359→  { id: 'STU-006', name: 'Sara Khan', grade: '9-B', roll: '06', parent: 'Imran Khan', phone: '+91 98888 77777', email: 'sara@learnx.edu', attendance: '88%', avgMarks: '79%', status: 'Active', fees: 'Paid', avatarColor: '#7C3AED', initials: 'SK' },
+   360→  { id: 'STU-007', name: 'Arjun Nair', grade: '10-A', roll: '07', parent: 'Vikram Nair', phone: '+91 97000 11111', email: 'arjun@learnx.edu', attendance: '95%', avgMarks: '88%', status: 'Active', fees: 'Paid', avatarColor: '#F97316', initials: 'AN' },
+   361→  { id: 'STU-008', name: 'Myra Singh', grade: '2-B', roll: '08', parent: 'Rohit Singh', phone: '+91 98222 33344', email: 'myra@learnx.edu', attendance: '91%', avgMarks: '83%', status: 'Active', fees: 'Paid', avatarColor: '#6366F1', initials: 'MS' },
+   362→]
+   363→
+   364→// In-memory mapping from short SIS ids to the rich STUDENTS records in school-data.ts.
+   365→// When the user clicks a SIS row, we look up the full Student object (with all linked
+   366→// attendance / fee / exam / health / behavior / transport / hostel / activities /
+   367→// documents / reportCard / ptm records) so the biodata modal shows everything the
+   368→// admin or teacher needs from a single screen.
+   369→const SIS_TO_FULL_STUDENT_ID: Record<string, string> = {
+   370→  'STU-001': 'STU-2026-0142', // Aarav Singh (sibling: Anaya Singh)
+   371→  'STU-002': 'STU-2026-0089', // Diya Patel
+   372→  'STU-003': 'STU-2026-0210', // Vivaan Gupta
+   373→  'STU-004': 'STU-2026-0188', // mapped to Anaya Singh for sibling demo
+   374→}
+   375→
+   376→// Grade → Class Teacher lookup for SIS (mirrors AdmissionsModuleEnhanced's GRADE_TEACHERS)
+   377→const GRADE_TEACHERS_LOOKUP: Record<string, { name: string; dept: string; phone: string; email: string }> = {
+   378→  'Grade 1': { name: 'Mrs. Anita Verma', dept: 'Primary', phone: '+91 99001 11111', email: 'anita.verma@learnx.edu' },
+   379→  'Grade 2': { name: 'Mr. Suresh Rao', dept: 'Primary', phone: '+91 99001 33333', email: 'suresh.rao@learnx.edu' },
+   380→  'Grade 3': { name: 'Mrs. Meena Iyer', dept: 'Primary', phone: '+91 99001 44444', email: 'meena.iyer@learnx.edu' },
+   381→  'Grade 4': { name: 'Mr. Ramesh Kumar', dept: 'Primary', phone: '+91 99001 55555', email: 'ramesh.kumar@learnx.edu' },
+   382→  'Grade 5': { name: 'Dr. Priya Sharma', dept: 'Middle', phone: '+91 99001 66666', email: 'priya.sharma@learnx.edu' },
+   383→  'Grade 6': { name: 'Dr. Priya Sharma', dept: 'Middle', phone: '+91 99001 66666', email: 'priya.sharma@learnx.edu' },
+   384→  'Grade 7': { name: 'Mr. Arun Nair', dept: 'Middle', phone: '+91 99001 77777', email: 'arun.nair@learnx.edu' },
+   385→  'Grade 8': { name: 'Mrs. Deepa Menon', dept: 'Middle', phone: '+91 99001 88888', email: 'deepa.menon@learnx.edu' },
+   386→  'Grade 9': { name: 'Dr. Vikram Rao', dept: 'Senior', phone: '+91 99001 99999', email: 'vikram.rao@learnx.edu' },
+   387→  'Grade 10': { name: 'Dr. Vikram Rao', dept: 'Senior', phone: '+91 99001 99999', email: 'vikram.rao@learnx.edu' },
+   388→}
+   389→
+   390→export function SISModule() {
+   391→  const { preview } = useNotificationPreview()
+   392→  const [search, setSearch] = useState('')
+   393→  const [gradeFilter, setGradeFilter] = useState('All')
+   394→  const [sectionFilter, setSectionFilter] = useState('All')
+   395→  const [selected, setSelected] = useState<typeof SIS_STUDENTS[0] | null>(null)
+   396→  const [messageText, setMessageText] = useState('')
+   397→
+   398→  const filtered = SIS_STUDENTS.filter((s) => {
+   399→    const ms = s.name.toLowerCase().includes(search.toLowerCase())
+   400→      || s.id.toLowerCase().includes(search.toLowerCase())
+   401→      || s.parent.toLowerCase().includes(search.toLowerCase())
+   402→      || s.phone.includes(search)
+   403→    const mg = gradeFilter === 'All' || s.grade === gradeFilter
+   404→    const msect = sectionFilter === 'All' || s.grade.split('-')[1] === sectionFilter
+   405→    return ms && mg && msect
+   406→  })
+   407→
+   408→  const allGrades = Array.from(new Set(SIS_STUDENTS.map((s) => s.grade))).sort()
+   409→  const allSections = Array.from(new Set(SIS_STUDENTS.map((s) => s.grade.split('-')[1]).filter(Boolean))).sort()
+   410→
+   411→  return (
+   412→    <div className="p-4 lg:p-8 space-y-6 animate-page-enter max-w-[1600px] mx-auto">
+   413→      <SectionHeader emoji="📊" title="Student Information System" subtitle="AI-enhanced cross-module student database — single source of truth" accent="#0D9488" onNew={() => toast.success('New student form opened')} newLabel="Add Student" onRefresh={() => toast.success('✅ Refreshed')} aiActions={[{ label: 'profiles enriched by AI', count: 847 }, { label: 'at-risk flags', count: 23 }, { label: 'siblings linked', count: 142 }]} />
+   414→
+   415→      <Card className="rounded-2xl overflow-hidden">
+   416→        <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
+   417→          <div><h3 className="text-sm font-semibold text-slate-900">Student Directory</h3><p className="text-[11px] text-slate-500">{filtered.length} of {SIS_STUDENTS.length} students</p></div>
+   418→          <div className="flex items-center gap-2 flex-wrap">
+   419→            <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" /><Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name, ID, parent, phone…" className="pl-9 h-9 text-xs rounded-lg w-56" /></div>
+   420→            <Select value={gradeFilter} onValueChange={setGradeFilter}>
+   421→              <SelectTrigger className="h-9 text-xs rounded-lg w-32"><SelectValue /></SelectTrigger>
+   422→              <SelectContent>
+   423→                <SelectItem value="All">All Grades</SelectItem>
+   424→                {allGrades.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+   425→              </SelectContent>
+   426→            </Select>
+   427→            <Select value={sectionFilter} onValueChange={setSectionFilter}>
+   428→              <SelectTrigger className="h-9 text-xs rounded-lg w-28"><SelectValue /></SelectTrigger>
+   429→              <SelectContent>
+   430→                <SelectItem value="All">All Sections</SelectItem>
+   431→                {allSections.map((s) => <SelectItem key={s} value={s}>Section {s}</SelectItem>)}
+   432→              </SelectContent>
+   433→            </Select>
+   434→            <Button size="sm" variant="outline" className="h-9 text-xs rounded-lg" onClick={() => toast.success('Exported to CSV')}><Download className="w-3.5 h-3.5 mr-1" /> Export</Button>
+   435→          </div>
+   436→        </div>
+   437→        <div className="overflow-x-auto">
+   438→          <table className="w-full text-xs">
+   439→            <thead><tr className="border-b border-slate-200 bg-slate-50/50">
+   440→              <th className="text-left px-4 py-3 font-semibold text-slate-600">Student</th>
+   441→              <th className="text-left px-4 py-3 font-semibold text-slate-600">ID</th>
+   442→              <th className="text-left px-4 py-3 font-semibold text-slate-600">Grade</th>
+   443→              <th className="text-left px-4 py-3 font-semibold text-slate-600">Parent</th>
+   444→              <th className="text-left px-4 py-3 font-semibold text-slate-600">Attendance</th>
+   445→              <th className="text-left px-4 py-3 font-semibold text-slate-600">Avg Marks</th>
+   446→              <th className="text-left px-4 py-3 font-semibold text-slate-600">Fees</th>
+   447→              <th className="text-left px-4 py-3 font-semibold text-slate-600">Status</th>
+   448→              <th className="text-left px-4 py-3 font-semibold text-slate-600">Action</th>
+   449→            </tr></thead>
+   450→            <tbody>
+   451→              {filtered.map((s) => (
+   452→                <tr key={s.id} className="border-b border-slate-100 hover:bg-slate-50 cursor-pointer" onClick={() => setSelected(s)}>
+   453→                  <td className="px-4 py-3"><div className="flex items-center gap-2"><div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[10px] font-semibold" style={{ background: s.avatarColor }}>{s.initials}</div><div><div className="font-medium text-slate-900">{s.name}</div><div className="text-[10px] text-slate-500">Roll #{s.roll}</div></div></div></td>
+   454→                  <td className="px-4 py-3 font-mono text-slate-500">{s.id}</td>
+   455→                  <td className="px-4 py-3 text-slate-700">{s.grade}</td>
+   456→                  <td className="px-4 py-3"><div className="text-slate-700">{s.parent}</div><div className="text-[10px] text-slate-500">{s.phone}</div></td>
+   457→                  <td className="px-4 py-3"><Badge variant="outline" className={`text-[10px] ${parseInt(s.attendance) >= 90 ? 'bg-emerald-50 text-emerald-700' : parseInt(s.attendance) >= 80 ? 'bg-amber-50 text-amber-700' : 'bg-rose-50 text-rose-700'}`}>{s.attendance}</Badge></td>
+   458→                  <td className="px-4 py-3 text-slate-700 font-medium">{s.avgMarks}</td>
+   459→                  <td className="px-4 py-3"><Badge variant="outline" className={`text-[10px] ${s.fees === 'Paid' ? 'bg-emerald-50 text-emerald-700' : s.fees === 'Partial' ? 'bg-amber-50 text-amber-700' : 'bg-rose-50 text-rose-700'}`}>{s.fees}</Badge></td>
+   460→                  <td className="px-4 py-3"><Badge variant="outline" className={`text-[10px] ${s.status === 'Active' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>{s.status}</Badge></td>
+   461→                  <td className="px-4 py-3"><Button size="sm" variant="outline" className="h-7 text-[11px] rounded-lg" onClick={(e) => { e.stopPropagation(); setSelected(s) }}><Eye className="w-3 h-3 mr-1" /> View Biodata</Button></td>
+   462→                </tr>
+   463→              ))}
+   464→            </tbody>
+   465→          </table>
+   466→        </div>
+   467→      </Card>
+   468→
+   469→      <AnimatePresence>
+   470→        {selected && (
+   471→          <SISBiodataModal
+   472→            row={selected}
+   473→            messageText={messageText}
+   474→            setMessageText={setMessageText}
+   475→            onClose={() => setSelected(null)}
+   476→            onMessageParent={(body, subject) => {
+   477→              preview({
+   478→                recipients: [{ id: selected.id, name: selected.parent, contact: selected.phone, channel: 'WHATSAPP', recipientType: 'PARENT' }],
+   479→                subject,
+   480→                body,
+   481→                audience: 'MINIMUM',
+   482→                source: 'sis-message-parent',
+   483→              })
+   484→              toast.success(`Message prepared for ${selected.parent}`)
+   485→            }}
+   486→            onInformTeacher={(teacherName, teacherPhone, body, subject) => {
+   487→              preview({
+   488→                recipients: [{ id: `teacher-${selected.grade}`, name: teacherName, contact: teacherPhone, channel: 'WHATSAPP', recipientType: 'STAFF' }],
+   489→                subject,
+   490→                body,
+   491→                audience: 'MINIMUM',
+   492→                source: 'sis-inform-teacher',
+   493→              })
+   494→              toast.success(`Message prepared for ${teacherName} (Class Teacher)`)
+   495→            }}
+   496→          />
+   497→        )}
+   498→      </AnimatePresence>
+   499→    </div>
+   500→  )
+   501→}
+   502→
+   503→/**
+   504→ * SIS Biodata Modal — shows the full student record from school-data.ts
+   505→ * (attendance, fees, exams, behavior, health, transport, hostel, activities,
+   506→ * documents, report cards, PTM meetings), auto-detects siblings via
+   507→ * guardianPhone match, surfaces an AI at-risk summary, and exposes
+   508→ * "Message Parent" + "Inform Class Teacher" actions.
+   509→ */
+   510→function SISBiodataModal({
+   511→  row,
+   512→  messageText,
+   513→  setMessageText,
+   514→  onClose,
+   515→  onMessageParent,
+   516→  onInformTeacher,
+   517→}: {
+   518→  row: typeof SIS_STUDENTS[0]
+   519→  messageText: string
+   520→  setMessageText: (s: string) => void
+   521→  onClose: () => void
+   522→  onMessageParent: (body: string, subject: string) => void
+   523→  onInformTeacher: (teacherName: string, teacherPhone: string, body: string, subject: string) => void
+   524→}) {
+   525→  // Resolve the full Student record (with linked records) from school-data.ts
+   526→  const fullId = SIS_TO_FULL_STUDENT_ID[row.id]
+   527→  const full = fullId ? STUDENTS.find((s) => s.id === fullId) : undefined
+   528→
+   529→  // Sibling detection — match by guardianPhone (excluding self)
+   530→  const siblings = full
+   531→    ? STUDENTS.filter((s) => s.id !== full.id && s.guardianPhone === full.guardianPhone)
+   532→    : []
+   533→
+   534→  // Resolve class teacher for the student's grade
+   535→  const gradeNum = row.grade.split('-')[0]
+   536→  const teacherKey = `Grade ${gradeNum}`
+   537→  const teacher = GRADE_TEACHERS_LOOKUP[teacherKey] || GRADE_TEACHERS_LOOKUP['Grade 1']
+   538→
+   539→  // AI at-risk summary (rule-based, deterministic, explainable)
+   540→  const attendancePct = full && full.attendance.length > 0
+   541→    ? Math.round(full.attendance.filter((a) => a.status === 'PRESENT').length / full.attendance.length * 100)
+   542→    : parseInt(row.attendance)
+   543→  const feesOverdue = full ? full.fees.some((f) => f.status === 'OVERDUE' || f.status === 'PENDING') : row.fees !== 'Paid'
+   544→  const negativeBehavior = full ? full.behaviorRecords.filter((b) => b.type === 'NEGATIVE').length : 0
+   545→  const positiveBehavior = full ? full.behaviorRecords.filter((b) => b.type === 'POSITIVE').length : 0
+   546→  const atRisk = attendancePct < 85 || feesOverdue || negativeBehavior > positiveBehavior + 2
+   547→
+   548→  const aiSummary = atRisk
+   549→    ? `⚠️ At-Risk: Attendance ${attendancePct}%, fees ${feesOverdue ? 'overdue' : 'ok'}, ${negativeBehavior} negative behavior incidents vs ${positiveBehavior} positive. Recommend counselor intervention within 7 days.`
+   550→    : `✅ Healthy: Attendance ${attendancePct}%, fees ${feesOverdue ? 'overdue' : 'current'}, ${positiveBehavior} positive behavior incidents. Continue current engagement.`
+   551→
+   552→  const handleSendParent = () => {
+   553→    const subject = `Message from LearnX SIS regarding ${row.name}`
+   554→    const body = messageText.trim()
+   555→      ? `Dear ${row.parent},\n\n${messageText}\n\n— LearnX SIS (regarding ${row.name}, Grade ${row.grade})`
+   556→      : `Dear ${row.parent},\n\nThis is a message from the LearnX Student Information System regarding ${row.name} (Grade ${row.grade}). Please find the latest profile snapshot below:\n\nAttendance: ${attendancePct}%\nFees: ${feesOverdue ? 'OVERDUE — please clear at the earliest' : 'Up to date'}\nBehavior: ${positiveBehavior} positive / ${negativeBehavior} negative incidents this term\n\n— LearnX SIS`
+   557→    onMessageParent(body, subject)
+   558→  }
+   559→
+   560→  const handleInformTeacher = () => {
+   561→    const subject = `SIS Note regarding ${row.name} (Grade ${row.grade})`
+   562→    const body = messageText.trim()
+   563→      ? `Dear ${teacher.name},\n\nNote from the LearnX SIS regarding ${row.name} (Grade ${row.grade}, Roll ${row.roll}):\n\n${messageText}\n\nStudent summary:\n- Attendance: ${attendancePct}%\n- Fees: ${feesOverdue ? 'Overdue' : 'Current'}\n- Behavior: ${positiveBehavior}+ / ${negativeBehavior}- this term\n- AI Risk: ${atRisk ? 'AT-RISK' : 'Healthy'}\n\nParent / Guardian: ${row.parent} (${row.phone})\n\n— LearnX SIS`
+   564→      : `Dear ${teacher.name},\n\nSharing an update regarding ${row.name} (Grade ${row.grade}, Roll ${row.roll}).\n\nStudent summary:\n- Attendance: ${attendancePct}%\n- Fees: ${feesOverdue ? 'Overdue' : 'Current'}\n- Behavior: ${positiveBehavior}+ / ${negativeBehavior}- this term\n- AI Risk: ${atRisk ? 'AT-RISK — please monitor' : 'Healthy'}\n\nParent / Guardian: ${row.parent} (${row.phone})\n\n— LearnX SIS`
+   565→    onInformTeacher(teacher.name, teacher.phone, body, subject)
+   566→  }
+   567→
+   568→  return (
+   569→    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm" onClick={onClose}>
+   570→      <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} onClick={(e) => e.stopPropagation()} className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[92vh] overflow-hidden flex flex-col" style={{ borderTop: '4px solid #0D9488' }}>
+   571→        {/* Header */}
+   572→        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between" style={{ background: '#0D9488' }}>
+   573→          <div className="flex items-center gap-3 text-white">
+   574→            <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center font-semibold text-lg">{row.initials}</div>
+   575→            <div>
+   576→              <h3 className="text-sm font-semibold">{row.name}</h3>
+   577→              <p className="text-[11px] opacity-90">{row.id} · Grade {row.grade} · Roll #{row.roll}</p>
+   578→            </div>
+   579→          </div>
+   580→          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/20 text-white"><X className="w-5 h-5" /></button>
+   581→        </div>
+   582→
+   583→        {/* Body — scrollable */}
+   584→        <div className="flex-1 overflow-y-auto custom-scroll p-6 space-y-5">
+   585→          {/* AI Summary banner */}
+   586→          <div className={`p-3 rounded-xl border flex items-start gap-2 ${atRisk ? 'border-rose-200 bg-rose-50' : 'border-emerald-200 bg-emerald-50'}`}>
+   587→            <Sparkles className={`w-4 h-4 flex-shrink-0 mt-0.5 ${atRisk ? 'text-rose-600' : 'text-emerald-600'}`} />
+   588→            <div>
+   589→              <div className="text-[10px] font-bold uppercase tracking-wide text-slate-700">AI Risk Assessment</div>
+   590→              <p className={`text-[11px] leading-relaxed mt-0.5 ${atRisk ? 'text-rose-800' : 'text-emerald-800'}`}>{aiSummary}</p>
+   591→            </div>
+   592→          </div>
+   593→
+
+[showing lines 94-593 of 1505; use offset=594 with limit to continue reading]

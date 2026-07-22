@@ -6,7 +6,8 @@ import {
   X, CheckCircle2, Clock, Phone, Mail, MessageSquare, Search, Filter,
   Download, Zap, Sparkles, Brain, Send, Wallet, TrendingUp, AlertTriangle,
   Bot, Bell, CreditCard, DollarSign, Receipt, Plus, ChevronRight, RefreshCw,
-  Users, Calendar, FileText, Eye, MessageCircle, AlertCircle, Printer
+  Users, Calendar, FileText, Eye, MessageCircle, AlertCircle, Printer,
+  Calculator
 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -17,6 +18,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '@/components/ui/select'
 import { SectionHeader } from './SectionHeader'
+import { FeeStructureBuilder } from './FeeStructureBuilder'
 import { useAppStore } from '@/lib/store'
 import { toast } from 'sonner'
 import {
@@ -64,6 +66,7 @@ export function FeesModule() {
   const [showCollect, setShowCollect] = useState(false)
   const [showDefaulterAlert, setShowDefaulterAlert] = useState(false)
   const [invoiceRecord, setInvoiceRecord] = useState<FeeRecord | null>(null)
+  const [mainTab, setMainTab] = useState<'tracking' | 'structure'>('tracking')
 
   const filtered = records.filter((r) => {
     const ms = r.student.toLowerCase().includes(search.toLowerCase()) || r.id.toLowerCase().includes(search.toLowerCase())
@@ -131,7 +134,22 @@ export function FeesModule() {
         ]}
       />
 
-      {/* AI Automation */}
+      {/* Main tab switch: Fee Tracking vs Fee Structure Builder */}
+      <div className="flex gap-1 p-1 rounded-xl bg-slate-100 w-fit">
+        <button onClick={() => setMainTab('tracking')} className={`px-4 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5 ${mainTab === 'tracking' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>
+          <Wallet className="w-3.5 h-3.5" /> Fee Tracking
+        </button>
+        <button onClick={() => setMainTab('structure')} className={`px-4 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5 ${mainTab === 'structure' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>
+          <FileText className="w-3.5 h-3.5" /> Fee Structure Builder
+        </button>
+      </div>
+
+      {/* Fee Structure Builder tab */}
+      {mainTab === 'structure' && <FeeStructureBuilder />}
+
+      {/* AI Automation (only on tracking tab) */}
+      {mainTab === 'tracking' && (
+      <>
       <Card className="p-5 elevated-card rounded-2xl bg-gradient-to-br from-emerald-50/50 to-blue-50/30 border-emerald-100">
         <div className="flex items-start gap-4">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-700 flex items-center justify-center text-white flex-shrink-0">
@@ -412,6 +430,8 @@ export function FeesModule() {
           <InvoiceModal record={invoiceRecord} onClose={() => setInvoiceRecord(null)} />
         )}
       </AnimatePresence>
+      </>
+      )}
     </div>
   )
 }
