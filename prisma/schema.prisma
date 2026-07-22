@@ -228,6 +228,7 @@ model Staff {
   leaveRequests   LeaveRequest[] @relation("StaffLeaves")
   attendance      StaffAttendance[]
   substitutions   Substitution[]  @relation("SubstituteTeacher")
+  substituteAssignments Substitution[] @relation("SubstituteAssignee")
   timetable       Timetable[]     @relation("TeacherTimetable")
   lessonPlans     LessonPlan[]
   examDuties      Exam[]          @relation("ExamInvigilator")
@@ -457,9 +458,11 @@ model Timetable {
 
 model Substitution {
   id              String   @id @default(cuid())
+  schoolId        String   @default("school_default")
   originalTeacherId String
   originalTeacher Staff    @relation("SubstituteTeacher", fields: [originalTeacherId], references: [id])
   substituteTeacherId String?
+  substituteTeacher Staff? @relation("SubstituteAssignee", fields: [substituteTeacherId], references: [id])
   classId         String
   date            DateTime
   period          Int
@@ -468,7 +471,15 @@ model Substitution {
   status          String   @default("PENDING") // PENDING, ASSIGNED, COMPLETED, CANCELLED
   assignedBy      String?
   assignedAt      DateTime?
+  // AI-generated lesson plan for the substitute
+  aiTopicContext  String?  // AI-generated context for the substitute
+  aiLessonDNA     String?  // AI-generated lesson plan (JSON)
+  aiMatchScore    Float?   // AI confidence score 0-1
+  detectionSource String?  // ATTENDANCE, LEAVE_PORTAL, MANUAL
   createdAt       DateTime @default(now())
+
+  @@index([schoolId, date, status])
+  @@index([originalTeacherId, date])
 }
 
 // ============ TRANSPORT ============

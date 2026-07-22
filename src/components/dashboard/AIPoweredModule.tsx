@@ -16,12 +16,13 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '@/components/ui/select'
 import { useAppStore } from '@/lib/store'
+import { AICalendarModule } from './AICalendarModule'
 
 export function AIPoweredModule({ moduleKey }: { moduleKey: string }) {
   if (moduleKey === 'ai-question-paper') return <QuestionPaperGenerator />
   if (moduleKey === 'ai-career') return <CareerCounselling />
   if (moduleKey === 'ai-mock') return <MockEngine />
-  if (moduleKey === 'ai-calendar') return <SubstitutionEngine />
+  if (moduleKey === 'ai-calendar') return <AICalendarModule />
   if (moduleKey === 'ai-academic') return <AcademicIntelligence />
   if (moduleKey === 'ai-behavior') return <BehaviorTracker />
 
