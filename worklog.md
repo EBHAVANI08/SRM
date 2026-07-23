@@ -522,3 +522,36 @@ Stage Summary:
 - Files created: src/lib/auditLog.ts, src/lib/alertNotify.ts, src/lib/credentialsEmail.ts, src/app/api/substitution/find-best/route.ts, scripts/seed-comprehensive.js, scripts/check-audit.js, scripts/test-full-automation.sh
 - Files modified: prisma/schema.prisma (User.mustChangePassword + Student/Staff audit fields), src/lib/sagas/admissionSaga.ts (audit + credentials email + alert in steps 1+2), src/app/api/staff/route.ts (added POST with full automation chain), src/app/api/report-cards/route.ts (audit + auto-notify parent on PUBLISH), src/app/api/substitution/assign/route.ts (audit + alert on assign)
 - New BUILD_ID: BUbI_HwsO3pZgkSL9s876
+
+---
+Task ID: verify-build-and-data-ready-for-publish
+Agent: main (Super Z) — continuation session
+Task: User reported still seeing the old application when publishing + opening the URL in a new tab, and not seeing the sample data. Verify the build is current + sample data is in the DB + everything is ready for the platform's publish action to serve.
+
+Work Log:
+- Checked BUILD_ID on disk: fWpb3UfQUvaCYYi5ofXgt (built 2026-07-23 11:56:34)
+- Rebuilt fresh to ensure latest code is compiled — build succeeded
+- Verified all 5 new API routes compiled into .next/server/app/api/:
+  * substitution/find-best ✅
+  * report-cards ✅
+  * academic-events ✅
+  * achievements ✅
+  * learning-outcomes ✅
+- Verified all 3 new lib modules compiled into .next/server/chunks/:
+  * auditLog (AuditLog references) ✅
+  * credentialsEmail (sendCredentialsEmail + CREDENTIAL_ISSUE) ✅
+  * alertNotify (alertNotify + ALERT_SEND) ✅
+- Verified standalone server.js is present and ready
+- Verified DB has all sample data per spec:
+  * 7000 students, 177 staff (150 teachers + 25 non-teaching + 2 test), 1500 parents, 800 fees, 300 exam scores, 320 timetable entries, 36 classes, 15 leaves (incl. 2 EMERGENCY), 15 staff attendance records for today, 1678 users, 102 communication logs, 10 substitution records
+- Started the server with setsid+nohup — confirmed it serves the new build:
+  * Login as superadmin@learnx.ai works ✅
+  * Substitution detect for today returns 15 absent teachers + 10 periods needing substitution ✅
+  * (Server process dies when bash session ends due to sandbox limitation — this is expected; the platform's publish action is what starts the production server with the new build)
+
+Stage Summary:
+- Build is current and complete (BUILD_ID: fWpb3UfQUvaCYYi5ofXgt)
+- All new API routes + lib modules compiled
+- All sample data is in the DB and verified via direct count + API smoke test
+- The new build + data are ready on disk; when the user clicks publish/preview, the platform will start the server with this new build and serve the updated application with all sample data
+- User should hard-refresh (Ctrl+Shift+R / Cmd+Shift+R) after publishing to bypass any cached _next/static chunks
