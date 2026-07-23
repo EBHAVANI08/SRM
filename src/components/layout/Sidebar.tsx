@@ -76,17 +76,17 @@ export function Sidebar() {
   return (
     <aside
       className={`sidebar-luxury relative h-screen flex flex-col transition-all duration-300 ease-out ${
-        collapsed ? 'w-[76px]' : 'w-[280px]'
+        collapsed ? 'w-[64px]' : 'w-[228px]'
       }`}
     >
       {/* Brand header — logo on top-left */}
-      <div className="relative z-10 px-5 py-5 border-b border-slate-200">
+      <div className="relative z-10 px-4 py-3 border-b border-slate-200">
         <div className="flex items-center justify-between">
           <div className={`flex items-center gap-2.5 ${collapsed ? 'justify-center' : ''}`}>
             <img
               src="/logo.png"
               alt="LearnX"
-              className={`transition-all ${collapsed ? 'w-12' : 'w-40'}`}
+              className={`transition-all ${collapsed ? 'w-10' : 'w-32'}`}
             />
           </div>
           {!collapsed && (
@@ -110,29 +110,29 @@ export function Sidebar() {
 
       {/* Search */}
       {!collapsed && (
-        <div className="relative z-10 px-3 pb-2">
+        <div className="relative z-10 px-2.5 pb-1.5 pt-1">
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search modules..."
-              className="w-full pl-8 pr-3 py-2 text-xs rounded-lg bg-slate-100 border border-transparent text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-slate-200 transition-all"
+              className="w-full pl-7 pr-2 py-1.5 text-[11px] rounded-md bg-slate-100 border border-transparent text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-slate-200 transition-all"
             />
           </div>
         </div>
       )}
 
       {/* Modules list */}
-      <div className="relative z-10 flex-1 overflow-y-auto custom-scroll px-3 pb-3 pt-1">
+      <div className="relative z-10 flex-1 overflow-y-auto custom-scroll px-2 pb-2 pt-0.5">
         {categories.map((cat) => {
           const catModules = filteredModules.filter((m) => m.category === cat)
           if (catModules.length === 0) return null
           return (
             <div key={cat} className="mb-4">
               {!collapsed && (
-                <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-2 mb-1.5">
+                <div className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider px-2 mb-1 mt-1">
                   {CATEGORY_LABELS[cat]}
                 </div>
               )}
@@ -149,7 +149,7 @@ export function Sidebar() {
                       }`}
                       title={collapsed ? m.title : undefined}
                     >
-                      <span className="text-base flex-shrink-0 leading-none">{m.emoji}</span>
+                      <span className="text-[13px] flex-shrink-0 leading-none">{m.emoji}</span>
                       {!collapsed && (
                         <>
                           <span className="flex-1 text-left truncate">{m.shortTitle}</span>
@@ -171,31 +171,31 @@ export function Sidebar() {
       </div>
 
       {/* User card — elegant */}
-      <div className="relative z-10 px-3 pt-3 border-t border-slate-200">
+      <div className="relative z-10 px-2.5 pt-2 border-t border-slate-200">
         <div
-          className={`flex items-center gap-2.5 p-2 rounded-xl bg-slate-50 border border-slate-200 ${
+          className={`flex items-center gap-2 p-1.5 rounded-lg bg-slate-50 border border-slate-200 ${
             collapsed ? 'justify-center' : ''
           }`}
         >
           <div
-            className={`relative w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center text-white font-semibold text-xs flex-shrink-0`}
+            className={`relative w-7 h-7 rounded-md bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center text-white font-semibold text-[10px] flex-shrink-0`}
           >
             {user.name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
-            <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white" />
+            <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-emerald-500 rounded-full border-2 border-white" />
           </div>
           {!collapsed && (
             <div className="flex-1 min-w-0">
-              <div className="text-xs font-semibold text-slate-900 truncate">{user.name}</div>
-              <div className="text-[10px] text-slate-500 truncate">{roleInfo.label}</div>
+              <div className="text-[11px] font-semibold text-slate-900 truncate">{user.name}</div>
+              <div className="text-[9px] text-slate-500 truncate">{roleInfo.label}</div>
             </div>
           )}
           {!collapsed && (
             <button
               onClick={logout}
-              className="p-1.5 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
+              className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
               title="Sign out"
             >
-              <LogOut className="w-3.5 h-3.5" />
+              <LogOut className="w-3 h-3" />
             </button>
           )}
         </div>
