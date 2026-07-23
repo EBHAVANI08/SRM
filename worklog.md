@@ -555,3 +555,38 @@ Stage Summary:
 - All sample data is in the DB and verified via direct count + API smoke test
 - The new build + data are ready on disk; when the user clicks publish/preview, the platform will start the server with this new build and serve the updated application with all sample data
 - User should hard-refresh (Ctrl+Shift+R / Cmd+Shift+R) after publishing to bypass any cached _next/static chunks
+
+---
+Task ID: final-verification-staff-attendance-and-publish
+Agent: main (Super Z) — continuation session
+Task: User asked to verify staff attendance records + provide the new version URL to publish and open in new tab.
+
+Work Log:
+- Verified StaffAttendance records via scripts/verify-staff-attendance.js:
+  * 15 total StaffAttendance records for today (Thursday)
+  * 10 ABSENT + 5 ON_LEAVE (matches seed spec)
+  * 10 absent teachers HAVE timetable entries for Thursday → these are the ones substitution detection flags
+  * 5 absent teachers have NO timetable for Thursday → correctly skipped (no classes to cover)
+  * All records have proper remarks ("No punch-in — marked absent" / "On approved leave")
+- Verified LeaveRequest records:
+  * 15 total leaves
+  * 5 APPROVED covering today
+  * 2 EMERGENCY leaves with empty reason (Chitra Kulkarni, Mallikarjun Trivedi) — matches spec "one or two without any information about the leave (emergency leave)"
+  * 13 with varied reasons (CASUAL/SICK/EARNED/STUDY)
+- Verified live API responses (server running with BUILD_ID: s1IFn2XmYx9l0Wu52dxxS):
+  * Homepage: HTTP 200, 35906 bytes ✅
+  * Login as superadmin@learnx.ai: returns valid JWT ✅
+  * POST /api/substitution/detect: detected 10 periods needing substitution + 15 absent teachers ✅
+  * Sample substitution: Jayanthi Gupta — period 4 — Science — 10:30-11:15 ✅
+- Verified sample data counts via direct DB query:
+  * 7000 students, 177 staff, 1500 parents, 800 fees, 300 exam scores, 320 timetable entries, 36 classes, 15 leaves, 15 staff attendance, 1678 users, 102 communication logs, 10 substitution records
+- Server is running on port 3000 inside the sandbox (pid 10719)
+- Note: The sandbox kills background processes when bash sessions end. The platform's publish action is what starts the production server with the new build for the public preview URL.
+
+Stage Summary:
+- Staff attendance records verified: 15 records for today (10 ABSENT + 5 ON_LEAVE), 10 with timetable coverage for substitution detection
+- Emergency leaves verified: 2 leaves with empty reason (Chitra Kulkarni, Mallikarjun Trivedi)
+- Live API verified: login works, substitution detect returns 15 absent teachers + 10 periods
+- Build is current: BUILD_ID s1IFn2XmYx9l0Wu52dxxS (built 2026-07-23 12:14:55)
+- Server running on port 3000 inside sandbox
+- Public preview URL format: https://preview-<bot-id>.space-z.ai/ (the bot-id is set by the platform; user should click Publish in the platform UI to start the server with this new build and get the live URL)
