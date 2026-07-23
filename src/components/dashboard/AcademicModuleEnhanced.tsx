@@ -18,6 +18,8 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { SectionHeader } from './SectionHeader'
 import { useNotificationPreview } from './NotificationPreviewModal'
+import { CurriculumBuilderPanel } from './CurriculumBuilderPanel'
+import { LessonPlannerPanel } from './LessonPlannerPanel'
 import { toast } from 'sonner'
 
 const ACADEMIC_CARDS = [
@@ -83,8 +85,22 @@ export function AcademicModuleEnhanced() {
   const { preview } = useNotificationPreview()
   const [selectedCard, setSelectedCard] = useState<{ title: string; desc: string } | null>(null)
   const [nurtureLead, setNurtureLead] = useState<Lead | null>(null)
+  // Inline view switcher: 'cards' shows the module grid, 'curriculum' / 'lesson-planner'
+  // render the dedicated panels in-page (preserving sidebar + topbar) with a Back button.
+  const [inlineView, setInlineView] = useState<'cards' | 'curriculum' | 'lesson-planner'>('cards')
 
   const openCard = (card: { title: string; desc: string }) => {
+    // Route known cards to their dedicated inline panels; others fall through to the generic launcher modal.
+    if (card.title === 'Curriculum') {
+      setInlineView('curriculum')
+      toast.info('Opening Curriculum Builder…')
+      return
+    }
+    if (card.title === 'Lesson Planner') {
+      setInlineView('lesson-planner')
+      toast.info('Opening Lesson Plan Generator…')
+      return
+    }
     setSelectedCard(card)
     toast.info(`Opening ${card.title}…`)
   }
@@ -107,6 +123,14 @@ export function AcademicModuleEnhanced() {
 
   return (
     <div className="p-4 lg:p-8 space-y-6 animate-page-enter max-w-[1600px] mx-auto">
+      {inlineView === 'curriculum' && (
+        <CurriculumBuilderPanel onBack={() => setInlineView('cards')} />
+      )}
+      {inlineView === 'lesson-planner' && (
+        <LessonPlannerPanel onBack={() => setInlineView('cards')} />
+      )}
+      {inlineView === 'cards' && (
+        <>
       <SectionHeader
         emoji="🎓"
         title="Academic & Admissions CRM"
@@ -242,6 +266,8 @@ export function AcademicModuleEnhanced() {
           </Card>
         </TabsContent>
       </Tabs>
+        </>
+      )}
 
       {/* Card detail modal */}
       <AnimatePresence>

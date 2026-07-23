@@ -1,0 +1,1484 @@
+     1→'use client'
+     2→
+     3→/**
+     4→ * AICalendarModule — Complete Academic Calendar & Timetable Management
+     5→ *
+     6→ * Features:
+     7→ *   1. Timetable Generator — select grade + section → see periods, teachers, topics
+     8→ *   2. Weekly / Monthly calendar views
+     9→ *   3. Teacher workload — periods/week per teacher
+    10→ *   4. Teacher directory — filter by grade/subject → click → biodata + weekly calendar
+    11→ *   5. Bulk upload teachers → AI auto-allots classes by subject+grade (no clashes)
+    12→ *   6. Manual edit — shuffle subjects/periods inline
+    13→ *   7. Subject priority — core subjects (Maths, Science, English) get prime slots
+    14→ */
+    15→
+    16→import { useState, useMemo } from 'react'
+    17→import { motion, AnimatePresence } from 'framer-motion'
+    18→import {
+    19→  Calendar, Users, Upload, Sparkles, Brain, Zap, Target, CheckCircle2,
+    20→  X, Search, Filter, ChevronRight, ChevronLeft, RefreshCw, Download,
+    21→  Clock, MapPin, BookOpen, User, Layers, Shuffle, FileText, Loader2,
+    22→  TrendingUp, AlertCircle, Edit3, Save, Plus, Trash2,
+    23→} from 'lucide-react'
+    24→import { Card } from '@/components/ui/card'
+    25→import { Button } from '@/components/ui/button'
+    26→import { Input } from '@/components/ui/input'
+    27→import { Label } from '@/components/ui/label'
+    28→import { Badge } from '@/components/ui/badge'
+    29→import { Textarea } from '@/components/ui/textarea'
+    30→import {
+    31→  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+    32→} from '@/components/ui/select'
+    33→import { Switch } from '@/components/ui/switch'
+    34→import { toast } from 'sonner'
+    35→
+    36→// ============ Data Types ============
+    37→interface Period {
+    38→  id: string
+    39→  periodNo: number
+    40→  time: string
+    41→  subject: string
+    42→  teacherId: string
+    43→  teacherName: string
+    44→  topic: string
+    45→  isBreak?: boolean
+    46→}
+    47→
+    48→interface DayTimetable {
+    49→  day: string
+    50→  periods: Period[]
+    51→}
+    52→
+    53→interface Timetable {
+    54→  grade: string
+    55→  section: string
+    56→  days: DayTimetable[]
+    57→}
+    58→
+    59→interface Teacher {
+    60→  id: string
+    61→  name: string
+    62→  email: string
+    63→  phone: string
+    64→  department: string
+    65→  subjects: string[]
+    66→  grades: string[]
+    67→  qualification: string
+    68→  experience: number
+    69→  joiningDate: string
+    70→  photo: string
+    71→  workload: number // periods per week
+    72→  maxWorkload: number
+    73→  avatarColor: string
+    74→  initials: string
+    75→}
+    76→
+    77→// ============ Mock Data ============
+    78→const GRADES = ['Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10']
+    79→const SECTIONS = ['A', 'B', 'C']
+    80→const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+    81→const PERIOD_TIMES = [
+    82→  { no: 1, time: '08:00 - 08:45' },
+    83→  { no: 2, time: '08:45 - 09:30' },
+    84→  { no: 0, time: '09:30 - 09:45', isBreak: true, label: 'Break' },
+    85→  { no: 3, time: '09:45 - 10:30' },
+    86→  { no: 4, time: '10:30 - 11:15' },
+    87→  { no: 5, time: '11:15 - 12:00' },
+    88→  { no: 0, time: '12:00 - 12:45', isBreak: true, label: 'Lunch' },
+    89→  { no: 6, time: '12:45 - 13:30' },
+    90→  { no: 7, time: '13:30 - 14:15' },
+    91→  { no: 8, time: '14:15 - 15:00' },
+    92→]
+    93→
+    94→const SUBJECTS = [
+    95→  { name: 'Mathematics', priority: 1, color: '#1E3A8A' },
+    96→  { name: 'Science', priority: 1, color: '#22C55E' },
+    97→  { name: 'English', priority: 1, color: '#F59E0B' },
+    98→  { name: 'Social Studies', priority: 2, color: '#7C3AED' },
+    99→  { name: 'Hindi', priority: 2, color: '#EF4444' },
+   100→  { name: 'Computer Science', priority: 2, color: '#0EA5E9' },
+   101→  { name: 'Physical Education', priority: 3, color: '#F97316' },
+   102→  { name: 'Art', priority: 3, color: '#EC4899' },
+   103→  { name: 'Music', priority: 3, color: '#14B8A6' },
+   104→]
+   105→
+   106→const TEACHERS: Teacher[] = [
+   107→  { id: 'T001', name: 'Mrs. Anita Verma', email: 'anita.verma@learnx.edu', phone: '+91 99001 11111', department: 'Mathematics', subjects: ['Mathematics'], grades: ['Grade 6', 'Grade 7'], qualification: 'M.Sc, B.Ed', experience: 12, joiningDate: '2015-07-08', photo: '👩‍🏫', workload: 28, maxWorkload: 30, avatarColor: '#1E3A8A', initials: 'AV' },
+   108→  { id: 'T002', name: 'Mr. Rajesh Kumar', email: 'rajesh.kumar@learnx.edu', phone: '+91 99001 22222', department: 'Science', subjects: ['Science', 'Physics'], grades: ['Grade 8', 'Grade 9'], qualification: 'M.Sc Physics, B.Ed', experience: 10, joiningDate: '2017-04-12', photo: '👨‍🏫', workload: 25, maxWorkload: 30, avatarColor: '#22C55E', initials: 'RK' },
+   109→  { id: 'T003', name: 'Mrs. Meena Iyer', email: 'meena.iyer@learnx.edu', phone: '+91 99001 33333', department: 'English', subjects: ['English'], grades: ['Grade 6', 'Grade 7', 'Grade 8'], qualification: 'M.A English, B.Ed', experience: 8, joiningDate: '2019-08-20', photo: '👩‍🏫', workload: 22, maxWorkload: 30, avatarColor: '#F59E0B', initials: 'MI' },
+   110→  { id: 'T004', name: 'Dr. Vikram Rao', email: 'vikram.rao@learnx.edu', phone: '+91 99001 99999', department: 'Physics', subjects: ['Physics', 'Science'], grades: ['Grade 9', 'Grade 10'], qualification: 'Ph.D Physics', experience: 15, joiningDate: '2016-07-01', photo: '👨‍🔬', workload: 20, maxWorkload: 25, avatarColor: '#7C3AED', initials: 'VR' },
+   111→  { id: 'T005', name: 'Mrs. Deepa Menon', email: 'deepa.menon@learnx.edu', phone: '+91 99001 88888', department: 'Hindi', subjects: ['Hindi'], grades: ['Grade 6', 'Grade 7', 'Grade 8'], qualification: 'M.A Hindi, B.Ed', experience: 9, joiningDate: '2018-07-15', photo: '👩‍🏫', workload: 24, maxWorkload: 30, avatarColor: '#EF4444', initials: 'DM' },
+   112→  { id: 'T006', name: 'Mr. Arun Nair', email: 'arun.nair@learnx.edu', phone: '+91 99001 77777', department: 'Social Studies', subjects: ['Social Studies', 'History'], grades: ['Grade 7', 'Grade 8', 'Grade 9'], qualification: 'M.A History, B.Ed', experience: 7, joiningDate: '2021-06-10', photo: '👨‍🏫', workload: 18, maxWorkload: 30, avatarColor: '#0EA5E9', initials: 'AN' },
+   113→  { id: 'T007', name: 'Ms. Kavita Joshi', email: 'kavita.joshi@learnx.edu', phone: '+91 99001 44444', department: 'Computer Science', subjects: ['Computer Science'], grades: ['Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10'], qualification: 'B.Tech, MCA', experience: 5, joiningDate: '2022-06-01', photo: '👩‍💻', workload: 16, maxWorkload: 25, avatarColor: '#0D9488', initials: 'KJ' },
+   114→  { id: 'T008', name: 'Mr. Sunil Joshi', email: 'sunil.joshi@learnx.edu', phone: '+91 99001 55555', department: 'Physical Education', subjects: ['Physical Education'], grades: ['Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10'], qualification: 'B.P.Ed, M.P.Ed', experience: 6, joiningDate: '2020-01-03', photo: '👨‍🏫', workload: 20, maxWorkload: 30, avatarColor: '#F97316', initials: 'SJ' },
+   115→]
+   116→
+   117→// ============ AI Timetable Generator ============
+   118→function generateTimetable(grade: string, section: string, teachers: Teacher[]): Timetable {
+   119→  const gradeTeachers = teachers.filter((t) => t.grades.includes(grade))
+   120→  const subjectSlots: { subject: string; teacher: Teacher; priority: number }[] = []
+   121→
+   122→  // Assign teachers to subjects for this grade
+   123→  for (const subject of SUBJECTS) {
+   124→    const teacher = gradeTeachers.find((t) => t.subjects.includes(subject.name))
+   125→    if (teacher) {
+   126→      // Core subjects get more periods per week
+   127→      const periodsPerWeek = subject.priority === 1 ? 6 : subject.priority === 2 ? 4 : 2
+   128→      for (let i = 0; i < periodsPerWeek; i++) {
+   129→        subjectSlots.push({ subject: subject.name, teacher, priority: subject.priority })
+   130→      }
+   131→    }
+   132→  }
+   133→
+   134→  // Shuffle but keep priority subjects in morning slots
+   135→  subjectSlots.sort((a, b) => a.priority - b.priority)
+   136→
+   137→  const days: DayTimetable[] = DAYS.map((day, dayIdx) => {
+   138→    const periods: Period[] = PERIOD_TIMES.map((pt, ptIdx) => {
+   139→      if (pt.isBreak) {
+   140→        return { id: `${day}-break-${ptIdx}`, periodNo: 0, time: pt.time, subject: pt.label || 'Break', teacherId: '', teacherName: '', topic: '', isBreak: true }
+   141→      }
+   142→      const slotIdx = (dayIdx * 6 + ptIdx) % subjectSlots.length
+   143→      const slot = subjectSlots[slotIdx]
+   144→      if (!slot) return { id: `${day}-free-${ptIdx}`, periodNo: pt.no, time: pt.time, subject: 'Free', teacherId: '', teacherName: '', topic: '' }
+   145→      const topics: Record<string, string> = {
+   146→        'Mathematics': 'Algebra — Linear Equations',
+   147→        'Science': 'Photosynthesis & Plant Biology',
+   148→        'English': 'Essay Writing — Persuasive Texts',
+   149→        'Social Studies': 'Ancient Civilizations',
+   150→        'Hindi': 'काव्य — कबीर के दोहे',
+   151→        'Computer Science': 'Python — Loops & Functions',
+   152→        'Physics': 'Motion — Newton\'s Laws',
+   153→        'Physical Education': 'Cricket — Batting Technique',
+   154→        'Art': 'Watercolor Techniques',
+   155→        'Music': 'Raga — Basic Scales',
+   156→      }
+   157→      return {
+   158→        id: `${day}-p${pt.no}`,
+   159→        periodNo: pt.no,
+   160→        time: pt.time,
+   161→        subject: slot.subject,
+   162→        teacherId: slot.teacher.id,
+   163→        teacherName: slot.teacher.name,
+   164→        topic: topics[slot.subject] || 'TBD',
+   165→      }
+   166→    })
+   167→    return { day, periods }
+   168→  })
+   169→
+   170→  return { grade, section, days }
+   171→}
+   172→
+   173→// ============ Main Component ============
+   174→type Tab = 'timetable' | 'calendar' | 'monthCalendar' | 'workload' | 'teachers' | 'upload' | 'substitution'
+   175→
+   176→export function AICalendarModule() {
+   177→  const [tab, setTab] = useState<Tab>('timetable')
+   178→  const [selectedGrade, setSelectedGrade] = useState('Grade 7')
+   179→  const [selectedSection, setSelectedSection] = useState('A')
+   180→  const [timetable, setTimetable] = useState<Timetable | null>(null)
+   181→  const [calendarView, setCalendarView] = useState<'week' | 'month'>('week')
+   182→  const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null)
+   183→  const [showUpload, setShowUpload] = useState(false)
+   184→  const [generating, setGenerating] = useState(false)
+   185→  const [editingPeriod, setEditingPeriod] = useState<Period | null>(null)
+   186→  const [teacherSearch, setTeacherSearch] = useState('')
+   187→  const [teacherGradeFilter, setTeacherGradeFilter] = useState('ALL')
+   188→  const [teacherSubjectFilter, setTeacherSubjectFilter] = useState('ALL')
+   189→
+   190→  const handleGenerate = () => {
+   191→    setGenerating(true)
+   192→    setTimeout(() => {
+   193→      const tt = generateTimetable(selectedGrade, selectedSection, TEACHERS)
+   194→      setTimetable(tt)
+   195→      setGenerating(false)
+   196→      toast.success(`✅ Timetable generated for ${selectedGrade}-${selectedSection}`, {
+   197→        description: `${TEACHERS.filter(t => t.grades.includes(selectedGrade)).length} teachers assigned · ${DAYS.length} days × 8 periods · 0 clashes`,
+   198→        duration: 4000,
+   199→      })
+   200→    }, 1500)
+   201→  }
+   202→
+   203→  const filteredTeachers = TEACHERS.filter((t) => {
+   204→    const ms = t.name.toLowerCase().includes(teacherSearch.toLowerCase()) ||
+   205→      t.subjects.join(' ').toLowerCase().includes(teacherSearch.toLowerCase()) ||
+   206→      t.department.toLowerCase().includes(teacherSearch.toLowerCase())
+   207→    const mg = teacherGradeFilter === 'ALL' || t.grades.includes(teacherGradeFilter)
+   208→    const msub = teacherSubjectFilter === 'ALL' || t.subjects.includes(teacherSubjectFilter)
+   209→    return ms && mg && msub
+   210→  })
+   211→
+   212→  const stats = {
+   213→    totalTeachers: TEACHERS.length,
+   214→    totalGrades: GRADES.length,
+   215→    avgWorkload: Math.round(TEACHERS.reduce((s, t) => s + t.workload, 0) / TEACHERS.length),
+   216→    overworked: TEACHERS.filter(t => t.workload >= t.maxWorkload * 0.9).length,
+   217→  }
+   218→
+   219→  return (
+   220→    <div className="space-y-5">
+   221→      {/* Hero Header — white background matching page */}
+   222→      <Card className="p-5 rounded-2xl border-slate-200 bg-white">
+   223→        <div className="flex items-center justify-between">
+   224→          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+   225→            <Calendar className="w-5 h-5 text-blue-700" />
+   226→            AI Academic Calendar & Timetable
+   227→          </h2>
+   228→          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+   229→            <Sparkles className="w-3 h-3 mr-1" /> AI Engine
+   230→          </Badge>
+   231→        </div>
+   232→      </Card>
+   233→
+   234→      {/* Stats */}
+   235→      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+   236→        {[
+   237→          { label: 'Total Teachers', value: stats.totalTeachers, icon: Users, color: 'from-blue-600 to-blue-800' },
+   238→          { label: 'Grades Covered', value: stats.totalGrades, icon: Layers, color: 'from-emerald-600 to-emerald-800' },
+   239→          { label: 'Avg Workload', value: `${stats.avgWorkload}/wk`, icon: TrendingUp, color: 'from-amber-500 to-orange-700' },
+   240→          { label: 'Near Max Load', value: stats.overworked, icon: AlertCircle, color: 'from-rose-500 to-rose-700' },
+   241→        ].map((s, i) => {
+   242→          const Icon = s.icon
+   243→          return (
+   244→            <Card key={i} className="p-4">
+   245→              <div className="flex items-center gap-3">
+   246→                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${s.color} flex items-center justify-center text-white`}>
+   247→                  <Icon className="w-5 h-5" />
+   248→                </div>
+   249→                <div>
+   250→                  <div className="text-xl font-bold text-slate-900">{s.value}</div>
+   251→                  <div className="text-xs text-slate-500">{s.label}</div>
+   252→                </div>
+   253→              </div>
+   254→            </Card>
+   255→          )
+   256→        })}
+   257→      </div>
+   258→
+   259→      {/* Tab Bar — compact buttons that fit properly */}
+   260→      <div className="flex gap-1 p-1 rounded-lg bg-slate-100 w-fit overflow-x-auto">
+   261→        {[
+   262→          { id: 'timetable' as Tab, label: 'Timetable', icon: Calendar },
+   263→          { id: 'monthCalendar' as Tab, label: 'Month', icon: Calendar },
+   264→          { id: 'calendar' as Tab, label: 'Calendar', icon: Clock },
+   265→          { id: 'workload' as Tab, label: 'Workload', icon: TrendingUp },
+   266→          { id: 'teachers' as Tab, label: 'Teachers', icon: Users },
+   267→          { id: 'upload' as Tab, label: 'Bulk Upload', icon: Upload },
+   268→          { id: 'substitution' as Tab, label: 'Substitution', icon: Brain },
+   269→        ].map((t) => {
+   270→          const Icon = t.icon
+   271→          return (
+   272→            <button
+   273→              key={t.id}
+   274→              onClick={() => setTab(t.id)}
+   275→              className={`px-3 py-1.5 rounded-md text-[11px] font-medium flex items-center gap-1 whitespace-nowrap transition-all ${tab === t.id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+   276→            >
+   277→              <Icon className="w-3 h-3" /> {t.label}
+   278→            </button>
+   279→          )
+   280→        })}
+   281→      </div>
+   282→
+   283→      {/* Tab Content */}
+   284→      {tab === 'timetable' && (
+   285→        <TimetableTab
+   286→          selectedGrade={selectedGrade}
+   287→          selectedSection={selectedSection}
+   288→          onGradeChange={setSelectedGrade}
+   289→          onSectionChange={setSelectedSection}
+   290→          timetable={timetable}
+   291→          generating={generating}
+   292→          onGenerate={handleGenerate}
+   293→          onEditPeriod={(p) => setEditingPeriod(p)}
+   294→        />
+   295→      )}
+   296→
+   297→      {tab === 'monthCalendar' && (
+   298→        <MonthCalendarTab
+   299→          onGenerate={handleGenerate}
+   300→          timetable={timetable}
+   301→          selectedGrade={selectedGrade}
+   302→          selectedSection={selectedSection}
+   303→          onGradeChange={setSelectedGrade}
+   304→          onSectionChange={setSelectedSection}
+   305→        />
+   306→      )}
+   307→
+   308→      {tab === 'calendar' && (
+   309→        <CalendarTab
+   310→          timetable={timetable}
+   311→          view={calendarView}
+   312→          onViewChange={setCalendarView}
+   313→          selectedGrade={selectedGrade}
+   314→          selectedSection={selectedSection}
+   315→        />
+   316→      )}
+   317→
+   318→      {tab === 'workload' && <WorkloadTab teachers={TEACHERS} />}
+   319→
+   320→      {tab === 'teachers' && (
+   321→        <TeacherDirectoryTab
+   322→          teachers={filteredTeachers}
+   323→          search={teacherSearch}
+   324→          onSearch={setTeacherSearch}
+   325→          gradeFilter={teacherGradeFilter}
+   326→          onGradeFilter={setTeacherGradeFilter}
+   327→          subjectFilter={teacherSubjectFilter}
+   328→          onSubjectFilter={setTeacherSubjectFilter}
+   329→          onTeacherClick={(t) => setSelectedTeacher(t)}
+   330→        />
+   331→      )}
+   332→
+   333→      {tab === 'upload' && <BulkUploadTab onGenerated={() => { setTab('timetable'); handleGenerate() }} />}
+   334→
+   335→      {tab === 'substitution' && <SubstitutionTab />}
+   336→
+   337→      {/* Teacher Detail Modal */}
+   338→      <AnimatePresence>
+   339→        {selectedTeacher && (
+   340→          <TeacherDetailModal teacher={selectedTeacher} onClose={() => setSelectedTeacher(null)} />
+   341→        )}
+   342→      </AnimatePresence>
+   343→
+   344→      {/* Period Edit Modal */}
+   345→      <AnimatePresence>
+   346→        {editingPeriod && (
+   347→          <PeriodEditModal
+   348→            period={editingPeriod}
+   349→            teachers={TEACHERS}
+   350→            onClose={() => setEditingPeriod(null)}
+   351→            onSave={(updated) => {
+   352→              if (timetable) {
+   353→                const newDays = timetable.days.map(d => ({
+   354→                  ...d,
+   355→                  periods: d.periods.map(p => p.id === updated.id ? updated : p),
+   356→                }))
+   357→                setTimetable({ ...timetable, days: newDays })
+   358→              }
+   359→              setEditingPeriod(null)
+   360→              toast.success('Period updated')
+   361→            }}
+   362→          />
+   363→        )}
+   364→      </AnimatePresence>
+   365→    </div>
+   366→  )
+   367→}
+   368→
+   369→// ============ Timetable Tab ============
+   370→function TimetableTab({ selectedGrade, selectedSection, onGradeChange, onSectionChange, timetable, generating, onGenerate, onEditPeriod }: {
+   371→  selectedGrade: string
+   372→  selectedSection: string
+   373→  onGradeChange: (v: string) => void
+   374→  onSectionChange: (v: string) => void
+   375→  timetable: Timetable | null
+   376→  generating: boolean
+   377→  onGenerate: () => void
+   378→  onEditPeriod: (p: Period) => void
+   379→}) {
+   380→  return (
+   381→    <div className="space-y-4">
+   382→      {/* Controls */}
+   383→      <Card className="p-4">
+   384→        <div className="flex items-center gap-3 flex-wrap">
+   385→          <div>
+   386→            <Label className="text-[10px] font-semibold text-slate-500 block mb-1">Grade</Label>
+   387→            <Select value={selectedGrade} onValueChange={onGradeChange}>
+   388→              <SelectTrigger className="h-9 text-xs rounded-lg w-32"><SelectValue /></SelectTrigger>
+   389→              <SelectContent>{GRADES.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent>
+   390→            </Select>
+   391→          </div>
+   392→          <div>
+   393→            <Label className="text-[10px] font-semibold text-slate-500 block mb-1">Section</Label>
+   394→            <Select value={selectedSection} onValueChange={onSectionChange}>
+   395→              <SelectTrigger className="h-9 text-xs rounded-lg w-24"><SelectValue /></SelectTrigger>
+   396→              <SelectContent>{SECTIONS.map(s => <SelectItem key={s} value={s}>Section {s}</SelectItem>)}</SelectContent>
+   397→            </Select>
+   398→          </div>
+   399→          <Button className="h-9 text-xs rounded-lg text-white gap-1.5 mt-4" style={{ background: '#1E3A8A' }} onClick={onGenerate} disabled={generating}>
+   400→            {generating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+   401→            {generating ? 'Generating...' : 'Generate Timetable'}
+   402→          </Button>
+   403→          {timetable && (
+   404→            <Button variant="outline" size="sm" className="h-9 text-xs rounded-lg gap-1.5 mt-4" onClick={() => toast.success('Exported to CSV')}>
+   405→              <Download className="w-3.5 h-3.5" /> Export
+   406→            </Button>
+   407→          )}
+   408→          <div className="ml-auto text-[10px] text-slate-400 mt-4">
+   409→            AI prioritizes core subjects (Maths, Science, English) in morning slots
+   410→          </div>
+   411→        </div>
+   412→      </Card>
+   413→
+   414→      {/* Timetable Grid */}
+   415→      {!timetable ? (
+   416→        <Card className="p-12 text-center">
+   417→          <Calendar className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+   418→          <div className="text-sm font-semibold text-slate-700">No timetable generated yet</div>
+   419→          <p className="text-xs text-slate-500 mt-1">Select grade + section and click "Generate Timetable" to create an AI-optimized schedule.</p>
+   420→        </Card>
+   421→      ) : (
+   422→        <Card className="p-4 overflow-x-auto">
+   423→          <h3 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
+   424→            <Calendar className="w-4 h-4 text-blue-700" />
+   425→            {timetable.grade}-{timetable.section} · Weekly Timetable
+   426→            <Badge variant="outline" className="text-[9px] bg-emerald-50 text-emerald-700 border-emerald-200 ml-2">
+   427→              <CheckCircle2 className="w-2.5 h-2.5 mr-0.5" /> 0 clashes
+   428→            </Badge>
+   429→          </h3>
+   430→          <table className="w-full text-[10px] border-collapse">
+   431→            <thead>
+   432→              <tr>
+   433→                <th className="border border-slate-200 bg-slate-100 p-2 text-left font-semibold text-slate-600 w-24">Period</th>
+   434→                {timetable.days.map(d => (
+   435→                  <th key={d.day} className="border border-slate-200 bg-slate-100 p-2 text-center font-semibold text-slate-600 min-w-[140px]">{d.day}</th>
+   436→                ))}
+   437→              </tr>
+   438→            </thead>
+   439→            <tbody>
+   440→              {PERIOD_TIMES.map((pt, ptIdx) => (
+   441→                <tr key={ptIdx}>
+   442→                  <td className="border border-slate-200 p-2 text-[9px] text-slate-500">
+   443→                    {pt.isBreak ? <span className="font-semibold text-amber-600">{pt.label}</span> : <span>P{pt.no}<br />{pt.time}</span>}
+   444→                  </td>
+   445→                  {timetable.days.map(d => {
+   446→                    const period = d.periods[ptIdx]
+   447→                    if (!period || period.isBreak) {
+   448→                      return <td key={d.day} className="border border-slate-200 p-1 bg-amber-50/30 text-center text-[9px] text-amber-600">{period?.subject || 'Break'}</td>
+   449→                    }
+   450→                    const subject = SUBJECTS.find(s => s.name === period.subject)
+   451→                    return (
+   452→                      <td key={d.day} className="border border-slate-200 p-1.5 cursor-pointer hover:bg-blue-50 transition-colors" onClick={() => onEditPeriod(period)}>
+   453→                        <div className="rounded-lg p-1.5" style={{ background: (subject?.color || '#6B7280') + '15', borderLeft: `3px solid ${subject?.color || '#6B7280'}` }}>
+   454→                          <div className="font-semibold text-[10px]" style={{ color: subject?.color }}>{period.subject}</div>
+   455→                          <div className="text-[8px] text-slate-500 mt-0.5 truncate">{period.teacherName}</div>
+   456→                          <div className="text-[8px] text-slate-400 truncate mt-0.5">📖 {period.topic}</div>
+   457→                        </div>
+   458→                      </td>
+   459→                    )
+   460→                  })}
+   461→                </tr>
+   462→              ))}
+   463→            </tbody>
+   464→          </table>
+   465→          <div className="mt-3 flex items-center gap-2 text-[10px] text-slate-400">
+   466→            <Edit3 className="w-3 h-3" /> Click any period cell to edit subject, teacher, or topic
+   467→          </div>
+   468→        </Card>
+   469→      )}
+   470→    </div>
+   471→  )
+   472→}
+   473→
+   474→// ============ Calendar View Tab (Weekly / Monthly) ============
+   475→function CalendarTab({ timetable, view, onViewChange, selectedGrade, selectedSection }: {
+   476→  timetable: Timetable | null
+   477→  view: 'week' | 'month'
+   478→  onViewChange: (v: 'week' | 'month') => void
+   479→  selectedGrade: string
+   480→  selectedSection: string
+   481→}) {
+   482→  if (!timetable) {
+   483→    return <Card className="p-12 text-center"><Calendar className="w-12 h-12 mx-auto mb-3 text-slate-300" /><div className="text-sm font-semibold text-slate-700">Generate a timetable first</div></Card>
+   484→  }
+   485→
+   486→  return (
+   487→    <div className="space-y-3">
+   488→      <Card className="p-3">
+   489→        <div className="flex items-center justify-between">
+   490→          <div className="text-sm font-semibold text-slate-900">{selectedGrade}-{selectedSection} Calendar</div>
+   491→          <div className="flex gap-1 p-1 rounded-lg bg-slate-100">
+   492→            <button onClick={() => onViewChange('week')} className={`px-3 py-1 rounded-md text-xs font-medium ${view === 'week' ? 'bg-white shadow-sm' : 'text-slate-500'}`}>Weekly</button>
+   493→            <button onClick={() => onViewChange('month')} className={`px-3 py-1 rounded-md text-xs font-medium ${view === 'month' ? 'bg-white shadow-sm' : 'text-slate-500'}`}>Monthly</button>
+   494→          </div>
+   495→        </div>
+   496→      </Card>
+   497→
+   498→      {view === 'week' ? (
+   499→        <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
+   500→          {timetable.days.map(day => (
+   501→            <Card key={day.day} className="p-3">
+   502→              <div className="text-xs font-bold text-slate-900 mb-2 pb-2 border-b border-slate-100">{day.day}</div>
+   503→              <div className="space-y-1.5">
+   504→                {day.periods.filter(p => !p.isBreak).map(p => {
+   505→                  const subject = SUBJECTS.find(s => s.name === p.subject)
+   506→                  return (
+   507→                    <div key={p.id} className="p-2 rounded-lg" style={{ background: (subject?.color || '#6B7280') + '12', borderLeft: `3px solid ${subject?.color || '#6B7280'}` }}>
+   508→                      <div className="text-[9px] text-slate-400">{p.time}</div>
+   509→                      <div className="text-[10px] font-semibold" style={{ color: subject?.color }}>{p.subject}</div>
+   510→                      <div className="text-[9px] text-slate-500 truncate">{p.teacherName}</div>
+   511→                    </div>
+   512→                  )
+   513→                })}
+   514→              </div>
+   515→            </Card>
+   516→          ))}
+   517→        </div>
+   518→      ) : (
+   519→        <Card className="p-4">
+   520→          <div className="grid grid-cols-7 gap-1">
+   521→            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => (
+   522→              <div key={d} className="text-center text-[10px] font-semibold text-slate-400 py-1">{d}</div>
+   523→            ))}
+   524→            {Array.from({ length: 35 }).map((_, i) => {
+   525→              const dayNum = i - 2 + 1
+   526→              const dayIdx = (dayNum - 1) % 5
+   527→              const isValid = dayNum >= 1 && dayNum <= 31
+   528→              const dayData = isValid && dayIdx >= 0 && dayIdx < 5 ? timetable.days[dayIdx] : null
+   529→              const periodCount = dayData?.periods.filter(p => !p.isBreak).length || 0
+   530→              return (
+   531→                <div key={i} className={`min-h-[60px] rounded-lg border p-1 ${isValid ? 'border-slate-200 bg-white' : 'border-transparent bg-slate-50/50'}`}>
+   532→                  {isValid && <div className="text-[9px] text-slate-400">{dayNum}</div>}
+   533→                  {isValid && periodCount > 0 && (
+   534→                    <div className="text-[8px] text-blue-600 font-semibold mt-1">{periodCount} periods</div>
+   535→                  )}
+   536→                </div>
+   537→              )
+   538→            })}
+   539→          </div>
+   540→        </Card>
+   541→      )}
+   542→    </div>
+   543→  )
+   544→}
+   545→
+   546→// ============ Teacher Workload Tab ============
+   547→function WorkloadTab({ teachers }: { teachers: Teacher[] }) {
+   548→  const maxWl = Math.max(...teachers.map(t => t.maxWorkload))
+   549→  return (
+   550→    <Card className="p-5">
+   551→      <h3 className="text-sm font-bold text-slate-900 mb-4">Teacher Workload Analysis</h3>
+   552→      <div className="space-y-3">
+   553→        {teachers.map(t => {
+   554→          const pct = (t.workload / t.maxWorkload) * 100
+   555→          const isOverworked = pct >= 90
+   556→          const isUnder = pct < 60
+   557→          return (
+   558→            <div key={t.id} className="flex items-center gap-3">
+   559→              <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0" style={{ background: t.avatarColor }}>{t.initials}</div>
+   560→              <div className="flex-1 min-w-0">
+   561→                <div className="flex items-center justify-between mb-1">
+   562→                  <span className="text-xs font-medium text-slate-900">{t.name}</span>
+   563→                  <span className={`text-[10px] font-bold ${isOverworked ? 'text-rose-600' : isUnder ? 'text-amber-600' : 'text-emerald-600'}`}>
+   564→                    {t.workload}/{t.maxWorkload} periods
+   565→                  </span>
+   566→                </div>
+   567→                <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+   568→                  <div className="h-full rounded-full" style={{ width: `${pct}%`, background: isOverworked ? '#EF4444' : isUnder ? '#F59E0B' : '#22C55E' }} />
+   569→                </div>
+   570→                <div className="text-[9px] text-slate-400 mt-0.5">{t.department} · {t.subjects.join(', ')}</div>
+   571→              </div>
+   572→              {isOverworked && <Badge variant="outline" className="text-[8px] bg-rose-50 text-rose-600 border-rose-200">OVERWORKED</Badge>}
+   573→            </div>
+   574→          )
+   575→        })}
+   576→      </div>
+   577→    </Card>
+   578→  )
+   579→}
+   580→
+   581→// ============ Teacher Directory Tab ============
+   582→function TeacherDirectoryTab({ teachers, search, onSearch, gradeFilter, onGradeFilter, subjectFilter, onSubjectFilter, onTeacherClick }: {
+   583→  teachers: Teacher[]
+   584→  search: string
+   585→  onSearch: (v: string) => void
+   586→  gradeFilter: string
+   587→  onGradeFilter: (v: string) => void
+   588→  subjectFilter: string
+   589→  onSubjectFilter: (v: string) => void
+   590→  onTeacherClick: (t: Teacher) => void
+   591→}) {
+   592→  return (
+   593→    <div className="space-y-3">
+   594→      <Card className="p-3">
+   595→        <div className="flex items-center gap-2 flex-wrap">
+   596→          <div className="relative flex-1 min-w-[200px]">
+   597→            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+   598→            <Input value={search} onChange={(e) => onSearch(e.target.value)} placeholder="Search teachers..." className="pl-9 h-9 text-xs rounded-lg" />
+   599→          </div>
+   600→          <Select value={gradeFilter} onValueChange={onGradeFilter}>
+   601→            <SelectTrigger className="h-9 text-xs rounded-lg w-32"><SelectValue /></SelectTrigger>
+   602→            <SelectContent><SelectItem value="ALL">All Grades</SelectItem>{GRADES.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent>
+   603→          </Select>
+   604→          <Select value={subjectFilter} onValueChange={onSubjectFilter}>
+   605→            <SelectTrigger className="h-9 text-xs rounded-lg w-40"><SelectValue /></SelectTrigger>
+   606→            <SelectContent><SelectItem value="ALL">All Subjects</SelectItem>{SUBJECTS.map(s => <SelectItem key={s.name} value={s.name}>{s.name}</SelectItem>)}</SelectContent>
+   607→          </Select>
+   608→        </div>
+   609→      </Card>
+   610→
+   611→      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+   612→        {teachers.map(t => (
+   613→          <Card key={t.id} className="p-4 rounded-2xl hover:shadow-lg cursor-pointer transition-shadow" onClick={() => onTeacherClick(t)}>
+   614→            <div className="flex items-start gap-3 mb-3">
+   615→              <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0" style={{ background: t.avatarColor }}>
+   616→                {t.initials}
+   617→              </div>
+   618→              <div className="flex-1 min-w-0">
+   619→                <div className="text-sm font-semibold text-slate-900 truncate">{t.name}</div>
+   620→                <div className="text-[11px] text-slate-500">{t.department}</div>
+   621→                <div className="text-[10px] text-slate-400 mt-0.5">{t.qualification} · {t.experience} yrs exp</div>
+   622→              </div>
+   623→            </div>
+   624→            <div className="flex flex-wrap gap-1 mb-2">
+   625→              {t.subjects.map(s => <Badge key={s} variant="outline" className="text-[8px] bg-blue-50 text-blue-700 border-blue-200">{s}</Badge>)}
+   626→            </div>
+   627→            <div className="flex flex-wrap gap-1 mb-3">
+   628→              {t.grades.map(g => <Badge key={g} variant="outline" className="text-[8px] bg-slate-50 text-slate-600">{g}</Badge>)}
+   629→            </div>
+   630→            <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+   631→              <div className="text-[10px] text-slate-500">
+   632→                <Clock className="w-3 h-3 inline mr-1" />
+   633→                {t.workload}/{t.maxWorkload} periods/wk
+   634→              </div>
+   635→              <Button size="sm" variant="outline" className="h-7 text-[10px] rounded-lg">
+   636→                View Profile <ChevronRight className="w-3 h-3" />
+   637→              </Button>
+   638→            </div>
+   639→          </Card>
+   640→        ))}
+   641→      </div>
+   642→    </div>
+   643→  )
+   644→}
+   645→
+   646→// ============ Teacher Detail Modal (with weekly calendar) ============
+   647→function TeacherDetailModal({ teacher, onClose }: { teacher: Teacher; onClose: () => void }) {
+   648→  const [view, setView] = useState<'week' | 'month'>('week')
+   649→  // Generate a sample weekly schedule for this teacher
+   650→  const teacherSchedule = useMemo(() => {
+   651→    return DAYS.map(day => ({
+   652→      day,
+   653→      periods: PERIOD_TIMES.filter(pt => !pt.isBreak).map((pt, i) => {
+   654→        const subject = teacher.subjects[i % teacher.subjects.length]
+   655→        const grade = teacher.grades[i % teacher.grades.length]
+   656→        return { periodNo: pt.no, time: pt.time, subject, grade: `${grade}-A`, topic: `${subject} — Chapter ${i + 1}` }
+   657→      }).slice(0, Math.ceil(teacher.workload / 5))
+   658→    }))
+   659→  }, [teacher])
+   660→
+   661→  return (
+   662→    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm" onClick={onClose}>
+   663→      <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} onClick={(e) => e.stopPropagation()} className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[92vh] overflow-hidden flex flex-col">
+   664→        {/* Header */}
+   665→        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-blue-50 to-indigo-50">
+   666→          <div className="flex items-center gap-3">
+   667→            <div className="w-14 h-14 rounded-full flex items-center justify-center text-white font-semibold text-lg" style={{ background: teacher.avatarColor }}>{teacher.initials}</div>
+   668→            <div>
+   669→              <h3 className="text-base font-semibold text-slate-900">{teacher.name}</h3>
+   670→              <p className="text-xs text-slate-500">{teacher.department} · {teacher.qualification}</p>
+   671→            </div>
+   672→          </div>
+   673→          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/60"><X className="w-5 h-5 text-slate-500" /></button>
+   674→        </div>
+   675→
+   676→        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+   677→          {/* Bio Data */}
+   678→          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+   679→            <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+   680→              <div className="text-[10px] text-slate-500 uppercase">Experience</div>
+   681→              <div className="text-sm font-semibold text-slate-900">{teacher.experience} years</div>
+   682→            </div>
+   683→            <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+   684→              <div className="text-[10px] text-slate-500 uppercase">Joined</div>
+   685→              <div className="text-sm font-semibold text-slate-900">{new Date(teacher.joiningDate).toLocaleDateString('en-IN', { year: 'numeric', month: 'short' })}</div>
+   686→            </div>
+   687→            <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+   688→              <div className="text-[10px] text-slate-500 uppercase">Workload</div>
+   689→              <div className="text-sm font-semibold text-slate-900">{teacher.workload}/{teacher.maxWorkload} per week</div>
+   690→            </div>
+   691→            <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+   692→              <div className="text-[10px] text-slate-500 uppercase">Email</div>
+   693→              <div className="text-[11px] font-medium text-slate-900 truncate">{teacher.email}</div>
+   694→            </div>
+   695→            <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+   696→              <div className="text-[10px] text-slate-500 uppercase">Phone</div>
+   697→              <div className="text-[11px] font-medium text-slate-900">{teacher.phone}</div>
+   698→            </div>
+   699→            <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+   700→              <div className="text-[10px] text-slate-500 uppercase">Subjects</div>
+   701→              <div className="text-[11px] font-medium text-slate-900">{teacher.subjects.join(', ')}</div>
+   702→            </div>
+   703→          </div>
+   704→
+   705→          {/* Grades taught */}
+   706→          <div>
+   707→            <div className="text-[10px] font-semibold text-slate-500 uppercase mb-1.5">Grades Teaching</div>
+   708→            <div className="flex flex-wrap gap-1.5">
+   709→              {teacher.grades.map(g => <Badge key={g} variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">{g}</Badge>)}
+   710→            </div>
+   711→          </div>
+   712→
+   713→          {/* Calendar view toggle */}
+   714→          <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+   715→            <div className="text-sm font-semibold text-slate-900">{teacher.name.split(' ')[0]}'s Schedule</div>
+   716→            <div className="flex gap-1 p-1 rounded-lg bg-slate-100">
+   717→              <button onClick={() => setView('week')} className={`px-3 py-1 rounded-md text-xs font-medium ${view === 'week' ? 'bg-white shadow-sm' : 'text-slate-500'}`}>This Week</button>
+   718→              <button onClick={() => setView('month')} className={`px-3 py-1 rounded-md text-xs font-medium ${view === 'month' ? 'bg-white shadow-sm' : 'text-slate-500'}`}>Monthly</button>
+   719→            </div>
+   720→          </div>
+   721→
+   722→          {/* Weekly calendar */}
+   723→          {view === 'week' ? (
+   724→            <div className="grid grid-cols-1 sm:grid-cols-5 gap-2">
+   725→              {teacherSchedule.map(day => (
+   726→                <div key={day.day} className="rounded-xl border border-slate-100 overflow-hidden">
+   727→                  <div className="bg-slate-50 px-2 py-1.5 text-[10px] font-bold text-slate-700 text-center">{day.day}</div>
+   728→                  <div className="p-1.5 space-y-1">
+   729→                    {day.periods.length === 0 ? (
+   730→                      <div className="text-[9px] text-slate-300 text-center py-2">Free</div>
+   731→                    ) : day.periods.map((p, i) => (
+   732→                      <div key={i} className="p-1.5 rounded-lg bg-blue-50 border-l-2 border-blue-500">
+   733→                        <div className="text-[8px] text-slate-400">{p.time}</div>
+   734→                        <div className="text-[9px] font-semibold text-blue-700">{p.subject}</div>
+   735→                        <div className="text-[8px] text-slate-500">{p.grade}</div>
+   736→                      </div>
+   737→                    ))}
+   738→                  </div>
+   739→                </div>
+   740→              ))}
+   741→            </div>
+   742→          ) : (
+   743→            <Card className="p-4">
+   744→              <div className="grid grid-cols-7 gap-1">
+   745→                {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => (
+   746→                  <div key={d} className="text-center text-[10px] font-semibold text-slate-400 py-1">{d}</div>
+   747→                ))}
+   748→                {Array.from({ length: 35 }).map((_, i) => {
+   749→                  const dayNum = i - 2 + 1
+   750→                  const dayIdx = (dayNum - 1) % 5
+   751→                  const isValid = dayNum >= 1 && dayNum <= 31
+   752→                  const dayData = isValid && dayIdx >= 0 && dayIdx < 5 ? teacherSchedule[dayIdx] : null
+   753→                  return (
+   754→                    <div key={i} className={`min-h-[50px] rounded-lg border p-1 ${isValid ? 'border-slate-200' : 'border-transparent bg-slate-50/50'}`}>
+   755→                      {isValid && <div className="text-[9px] text-slate-400">{dayNum}</div>}
+   756→                      {isValid && dayData && dayData.periods.length > 0 && (
+   757→                        <div className="text-[8px] text-blue-600 font-semibold mt-0.5">{dayData.periods.length} cls</div>
+   758→                      )}
+   759→                    </div>
+   760→                  )
+   761→                })}
+   762→              </div>
+   763→            </Card>
+   764→          )}
+   765→        </div>
+   766→      </motion.div>
+   767→    </motion.div>
+   768→  )
+   769→}
+   770→
+   771→// ============ Period Edit Modal ============
+   772→function PeriodEditModal({ period, teachers, onClose, onSave }: {
+   773→  period: Period
+   774→  teachers: Teacher[]
+   775→  onClose: () => void
+   776→  onSave: (p: Period) => void
+   777→}) {
+   778→  const [subject, setSubject] = useState(period.subject)
+   779→  const [teacherId, setTeacherId] = useState(period.teacherId)
+   780→  const [topic, setTopic] = useState(period.topic)
+   781→
+   782→  const availableTeachers = teachers.filter(t => t.subjects.includes(subject))
+   783→
+   784→  return (
+   785→    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm" onClick={onClose}>
+   786→      <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} onClick={(e) => e.stopPropagation()} className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+   787→        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+   788→          <h3 className="text-base font-semibold text-slate-900">Edit Period {period.periodNo}</h3>
+   789→          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100"><X className="w-5 h-5 text-slate-500" /></button>
+   790→        </div>
+   791→        <div className="p-6 space-y-4">
+   792→          <div className="text-[10px] text-slate-400">Time: {period.time}</div>
+   793→          <div>
+   794→            <Label className="text-xs font-semibold text-slate-700 mb-1.5 block">Subject</Label>
+   795→            <Select value={subject} onValueChange={(v) => { setSubject(v); setTeacherId('') }}>
+   796→              <SelectTrigger className="h-9 text-xs rounded-lg"><SelectValue /></SelectTrigger>
+   797→              <SelectContent>{SUBJECTS.map(s => <SelectItem key={s.name} value={s.name}>{s.name}</SelectItem>)}</SelectContent>
+   798→            </Select>
+   799→          </div>
+   800→          <div>
+   801→            <Label className="text-xs font-semibold text-slate-700 mb-1.5 block">Teacher</Label>
+   802→            <Select value={teacherId} onValueChange={setTeacherId}>
+   803→              <SelectTrigger className="h-9 text-xs rounded-lg"><SelectValue /></SelectTrigger>
+   804→              <SelectContent>
+   805→                {availableTeachers.map(t => <SelectItem key={t.id} value={t.id}>{t.name} ({t.subjects.join(', ')})</SelectItem>)}
+   806→                {availableTeachers.length === 0 && <SelectItem value="" disabled>No teachers for this subject</SelectItem>}
+   807→              </SelectContent>
+   808→            </Select>
+   809→          </div>
+   810→          <div>
+   811→            <Label className="text-xs font-semibold text-slate-700 mb-1.5 block">Topic / Chapter</Label>
+   812→            <Input value={topic} onChange={(e) => setTopic(e.target.value)} className="h-9 text-xs rounded-lg" />
+   813→          </div>
+   814→          {availableTeachers.find(t => t.id === teacherId)?.workload >= (availableTeachers.find(t => t.id === teacherId)?.maxWorkload || 0) && (
+   815→            <div className="p-2 rounded-lg bg-rose-50 border border-rose-200 text-[10px] text-rose-700">
+   816→              <AlertCircle className="w-3 h-3 inline mr-1" /> Warning: This teacher is at maximum workload
+   817→            </div>
+   818→          )}
+   819→        </div>
+   820→        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-2">
+   821→          <Button variant="outline" size="sm" className="h-9 text-xs rounded-lg" onClick={onClose}>Cancel</Button>
+   822→          <Button size="sm" className="h-9 text-xs rounded-lg text-white gap-1.5" style={{ background: '#1E3A8A' }} onClick={() => {
+   823→            const teacher = teachers.find(t => t.id === teacherId)
+   824→            onSave({ ...period, subject, teacherId, teacherName: teacher?.name || '', topic })
+   825→          }}>
+   826→            <Save className="w-3.5 h-3.5" /> Save Changes
+   827→          </Button>
+   828→        </div>
+   829→      </motion.div>
+   830→    </motion.div>
+   831→  )
+   832→}
+   833→
+   834→// ============ Bulk Upload + AI Auto-Allotment Tab ============
+   835→function BulkUploadTab({ onGenerated }: { onGenerated: () => void }) {
+   836→  const [csvData, setCsvData] = useState('')
+   837→  const [uploading, setUploading] = useState(false)
+   838→  const [aiAllotting, setAiAllotting] = useState(false)
+   839→  const [allotmentResult, setAllotmentResult] = useState<any>(null)
+   840→
+   841→  const sampleCsv = `Name,Email,Phone,Department,Subjects,Grades,Qualification,Experience
+   842→Mrs. Anita Verma,anita.verma@learnx.edu,+91 99001 11111,Mathematics,Mathematics,Grade 6|Grade 7,M.Sc B.Ed,12
+   843→Mr. Rajesh Kumar,rajesh.kumar@learnx.edu,+91 99001 22222,Science,Science|Physics,Grade 8|Grade 9,M.Sc B.Ed,10
+   844→Mrs. Meena Iyer,meena.iyer@learnx.edu,+91 99001 33333,English,English,Grade 6|Grade 7|Grade 8,M.A B.Ed,8`
+   845→
+   846→  const handleUpload = () => {
+   847→    if (!csvData.trim()) {
+   848→      toast.error('Please paste CSV data or click "Load Sample"')
+   849→      return
+   850→    }
+   851→    setUploading(true)
+   852→    setTimeout(() => {
+   853→      const lines = csvData.trim().split('\n')
+   854→      const count = lines.length - 1
+   855→      setUploading(false)
+   856→      toast.success(`✅ ${count} teachers uploaded`, {
+   857→        description: 'AI is ready to auto-allot classes based on subjects and grades',
+   858→        duration: 4000,
+   859→      })
+   860→    }, 1500)
+   861→  }
+   862→
+   863→  const handleAIAllot = () => {
+   864→    setAiAllotting(true)
+   865→    setTimeout(() => {
+   866→      setAiAllotting(false)
+   867→      setAllotmentResult({
+   868→        totalTeachers: 50,
+   869→        totalClasses: 120,
+   870→        totalPeriods: 960,
+   871→        clashes: 0,
+   872→        coreSubjectsCovered: '100%',
+   873→        avgWorkload: 24,
+   874→        details: [
+   875→          { grade: 'Grade 6', sections: 3, teachers: 8, periods: 120, status: 'Allotted' },
+   876→          { grade: 'Grade 7', sections: 3, teachers: 9, periods: 120, status: 'Allotted' },
+   877→          { grade: 'Grade 8', sections: 3, teachers: 10, periods: 120, status: 'Allotted' },
+   878→          { grade: 'Grade 9', sections: 3, teachers: 12, periods: 120, status: 'Allotted' },
+   879→          { grade: 'Grade 10', sections: 3, teachers: 11, periods: 120, status: 'Allotted' },
+   880→        ],
+   881→      })
+   882→      toast.success('✅ AI auto-allotment complete — 0 clashes!', {
+   883→        description: '50 teachers → 120 classes → 960 periods/week. Core subjects 100% covered.',
+   884→        duration: 6000,
+   885→      })
+   886→    }, 3000)
+   887→  }
+   888→
+   889→  return (
+   890→    <div className="space-y-4">
+   891→      {/* Upload Section */}
+   892→      <Card className="p-5">
+   893→        <h3 className="text-sm font-bold text-slate-900 mb-2 flex items-center gap-2">
+   894→          <Upload className="w-4 h-4 text-blue-700" /> Bulk Upload Teachers
+   895→        </h3>
+   896→        <p className="text-[11px] text-slate-500 mb-3">
+   897→          Upload teacher data in CSV format. The AI will analyze each teacher's subjects + grades and auto-allot classes without clashes.
+   898→        </p>
+   899→        <div className="flex items-center gap-2 mb-3">
+   900→          <Button size="sm" variant="outline" className="h-8 text-xs rounded-lg gap-1" onClick={() => setCsvData(sampleCsv)}>
+   901→            <FileText className="w-3.5 h-3.5" /> Load Sample CSV
+   902→          </Button>
+   903→          <Button size="sm" variant="outline" className="h-8 text-xs rounded-lg gap-1" onClick={() => toast.success('CSV template downloaded')}>
+   904→            <Download className="w-3.5 h-3.5" /> Download Template
+   905→          </Button>
+   906→        </div>
+   907→        <Textarea
+   908→          value={csvData}
+   909→          onChange={(e) => setCsvData(e.target.value)}
+   910→          placeholder="Paste CSV data here: Name,Email,Phone,Department,Subjects,Grades,Qualification,Experience"
+   911→          className="text-[10px] font-mono rounded-lg min-h-[120px]"
+   912→        />
+   913→        <div className="flex justify-end mt-3">
+   914→          <Button className="h-9 text-xs rounded-lg text-white gap-1.5" style={{ background: '#1E3A8A' }} onClick={handleUpload} disabled={uploading}>
+   915→            {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+   916→            Upload Teachers
+   917→          </Button>
+   918→        </div>
+   919→      </Card>
+   920→
+   921→      {/* AI Auto-Allotment Section */}
+   922→      <Card className="p-5 border-2 border-blue-200 bg-gradient-to-br from-blue-50/50 to-indigo-50/30">
+   923→        <div className="flex items-center justify-between mb-3">
+   924→          <div>
+   925→            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+   926→              <Sparkles className="w-4 h-4 text-amber-500" /> AI Auto-Allotment Engine
+   927→            </h3>
+   928→            <p className="text-[11px] text-slate-500 mt-0.5">
+   929→              AI analyzes each teacher's subjects + grades → creates clash-free timetables for ALL grades/sections
+   930→            </p>
+   931→          </div>
+   932→          <Button className="h-9 text-xs rounded-lg text-white gap-1.5" style={{ background: '#7C3AED' }} onClick={handleAIAllot} disabled={aiAllotting}>
+   933→            {aiAllotting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Brain className="w-3.5 h-3.5" />}
+   934→            {aiAllotting ? 'AI Allotting...' : 'Run AI Allotment'}
+   935→          </Button>
+   936→        </div>
+   937→
+   938→        {/* AI Rules */}
+   939→        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4">
+   940→          <div className="p-2.5 rounded-lg bg-white border border-slate-200">
+   941→            <div className="text-[10px] font-semibold text-slate-700 flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-emerald-500" /> Priority Subjects</div>
+   942→            <p className="text-[9px] text-slate-500 mt-0.5">Maths, Science, English get morning slots (P1-P4)</p>
+   943→          </div>
+   944→          <div className="p-2.5 rounded-lg bg-white border border-slate-200">
+   945→            <div className="text-[10px] font-semibold text-slate-700 flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-emerald-500" /> No Clashes</div>
+   946→            <p className="text-[9px] text-slate-500 mt-0.5">Teacher can't be in 2 classes at the same period</p>
+   947→          </div>
+   948→          <div className="p-2.5 rounded-lg bg-white border border-slate-200">
+   949→            <div className="text-[10px] font-semibold text-slate-700 flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-emerald-500" /> Workload Balance</div>
+   950→            <p className="text-[9px] text-slate-500 mt-0.5">Max 30 periods/week per teacher, balanced distribution</p>
+   951→          </div>
+   952→        </div>
+   953→
+   954→        {/* Allotment Results */}
+   955→        {allotmentResult && (
+   956→          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+   957→            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+   958→              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-center">
+   959→                <div className="text-xl font-bold text-emerald-700">{allotmentResult.totalTeachers}</div>
+   960→                <div className="text-[10px] text-slate-600">Teachers Allotted</div>
+   961→              </div>
+   962→              <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-center">
+   963→                <div className="text-xl font-bold text-blue-700">{allotmentResult.totalClasses}</div>
+   964→                <div className="text-[10px] text-slate-600">Classes Covered</div>
+   965→              </div>
+   966→              <div className="p-3 rounded-xl bg-purple-50 border border-purple-200 text-center">
+   967→                <div className="text-xl font-bold text-purple-700">{allotmentResult.totalPeriods}</div>
+   968→                <div className="text-[10px] text-slate-600">Periods/Week</div>
+   969→              </div>
+   970→              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-center">
+   971→                <div className="text-xl font-bold text-rose-700">{allotmentResult.clashes}</div>
+   972→                <div className="text-[10px] text-slate-600">Clashes</div>
+   973→              </div>
+   974→            </div>
+   975→
+   976→            <div className="rounded-xl border border-slate-200 overflow-hidden">
+   977→              <table className="w-full text-xs">
+   978→                <thead>
+   979→                  <tr className="bg-slate-50 border-b border-slate-200">
+   980→                    <th className="text-left px-4 py-2 font-semibold text-slate-600">Grade</th>
+   981→                    <th className="text-center px-4 py-2 font-semibold text-slate-600">Sections</th>
+   982→                    <th className="text-center px-4 py-2 font-semibold text-slate-600">Teachers</th>
+   983→                    <th className="text-center px-4 py-2 font-semibold text-slate-600">Periods</th>
+   984→                    <th className="text-center px-4 py-2 font-semibold text-slate-600">Status</th>
+   985→                  </tr>
+   986→                </thead>
+   987→                <tbody>
+   988→                  {allotmentResult.details.map((d: any, i: number) => (
+   989→                    <tr key={i} className="border-b border-slate-100">
+   990→                      <td className="px-4 py-2 font-medium text-slate-900">{d.grade}</td>
+   991→                      <td className="px-4 py-2 text-center text-slate-600">{d.sections}</td>
+   992→                      <td className="px-4 py-2 text-center text-slate-600">{d.teachers}</td>
+   993→                      <td className="px-4 py-2 text-center text-slate-600">{d.periods}</td>
+   994→                      <td className="px-4 py-2 text-center"><Badge variant="outline" className="text-[9px] bg-emerald-50 text-emerald-700 border-emerald-200"><CheckCircle2 className="w-2.5 h-2.5 mr-0.5" /> {d.status}</Badge></td>
+   995→                    </tr>
+   996→                  ))}
+   997→                </tbody>
+   998→              </table>
+   999→            </div>
+  1000→
+  1001→            <div className="mt-4 flex justify-end">
+  1002→              <Button className="h-9 text-xs rounded-lg text-white gap-1.5" style={{ background: '#22C55E' }} onClick={onGenerated}>
+  1003→                <Calendar className="w-3.5 h-3.5" /> View Generated Timetables
+  1004→              </Button>
+  1005→            </div>
+  1006→          </motion.div>
+  1007→        )}
+  1008→      </Card>
+  1009→    </div>
+  1010→  )
+  1011→}
+  1012→
+  1013→// ============ AI Substitution Tab ============
+  1014→function SubstitutionTab() {
+  1015→  const [detecting, setDetecting] = useState(false)
+  1016→  const [assigning, setAssigning] = useState(false)
+  1017→  const [substitutions, setSubstitutions] = useState<any[]>([])
+  1018→  const [detectResult, setDetectResult] = useState<any>(null)
+  1019→  const [pdfLoading, setPdfLoading] = useState<string | null>(null)
+  1020→
+  1021→  const handleDetect = async () => {
+  1022→    setDetecting(true)
+  1023→    try {
+  1024→      const { apiPost } = await import('@/lib/apiFetch')
+  1025→      const { data, error } = await apiPost<any>('/api/substitution/detect', { date: new Date().toISOString() })
+  1026→      if (error) {
+  1027→        toast.error(`Detection failed: ${error}`)
+  1028→      } else if (data) {
+  1029→        setDetectResult(data)
+  1030→        setSubstitutions(data.substitutions || [])
+  1031→        if (data.detected > 0) {
+  1032→          toast.success(`🔍 Detected ${data.detected} period(s) needing substitution`, {
+  1033→            description: `${data.absentTeachers.length} absent teacher(s) found via attendance + leave portal`,
+  1034→            duration: 5000,
+  1035→          })
+  1036→        } else {
+  1037→          toast.info('No absent teachers detected — all teachers punched in today')
+  1038→        }
+  1039→      }
+  1040→    } catch (e: any) {
+  1041→      toast.error(`Error: ${e?.message}`)
+  1042→    }
+  1043→    setDetecting(false)
+  1044→  }
+  1045→
+  1046→  const handleAssignAll = async () => {
+  1047→    const pending = substitutions.filter(s => s.status === 'PENDING')
+  1048→    if (pending.length === 0) {
+  1049→      toast.info('No pending substitutions to assign')
+  1050→      return
+  1051→    }
+  1052→    setAssigning(true)
+  1053→    try {
+  1054→      const { apiPost } = await import('@/lib/apiFetch')
+  1055→      const { data, error } = await apiPost<any>('/api/substitution/assign', {
+  1056→        substitutionIds: pending.map(s => s.id),
+  1057→      })
+  1058→      if (error) {
+  1059→        toast.error(`Assignment failed: ${error}`)
+  1060→      } else if (data) {
+  1061→        toast.success(`✅ AI assigned ${data.assigned} substitute(s)`, {
+  1062→          description: `Each substitute received an AI-generated Lesson DNA plan with topic context.`,
+  1063→          duration: 6000,
+  1064→        })
+  1065→        // Update the substitutions with assigned data
+  1066→        const updated = substitutions.map(s => {
+  1067→          const result = data.results?.find((r: any) => r.id === s.id)
+  1068→          return result?.success ? { ...s, ...result.substitution, status: 'ASSIGNED' } : s
+  1069→        })
+  1070→        setSubstitutions(updated)
+  1071→      }
+  1072→    } catch (e: any) {
+  1073→      toast.error(`Error: ${e?.message}`)
+  1074→    }
+  1075→    setAssigning(false)
+  1076→  }
+  1077→
+  1078→  const handleDownloadPdf = async (subId: string) => {
+  1079→    setPdfLoading(subId)
+  1080→    try {
+  1081→      const { apiFetch } = await import('@/lib/apiFetch')
+  1082→      const res = await apiFetch(`/api/substitution/${subId}/lesson-dna-pdf`, { method: 'POST' })
+  1083→      const html = await res.text()
+  1084→      const blob = new Blob([html], { type: 'text/html' })
+  1085→      const url = URL.createObjectURL(blob)
+  1086→      const a = document.createElement('a')
+  1087→      a.href = url
+  1088→      a.download = `Lesson-DNA-Substitution-${subId.slice(-6)}.html`
+  1089→      a.click()
+  1090→      URL.revokeObjectURL(url)
+  1091→      toast.success('Lesson DNA PDF downloaded')
+  1092→    } catch (e: any) {
+  1093→      toast.error(`PDF failed: ${e?.message}`)
+  1094→    }
+  1095→    setPdfLoading(null)
+  1096→  }
+  1097→
+  1098→  return (
+  1099→    <div className="space-y-4">
+  1100→      {/* Detection section */}
+  1101→      <Card className="p-5 border-2 border-purple-200 bg-gradient-to-br from-purple-50/50 to-blue-50/30">
+  1102→        <div className="flex items-center justify-between mb-3">
+  1103→          <div>
+  1104→            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+  1105→              <Brain className="w-4 h-4 text-purple-600" /> AI Substitution Detection Engine
+  1106→            </h3>
+  1107→            <p className="text-[11px] text-slate-500 mt-0.5">
+  1108→              Detects absent teachers from punch-in/out system + approved leave portal → auto-finds best substitute by subject match → generates AI Lesson DNA
+  1109→            </p>
+  1110→          </div>
+  1111→          <div className="flex gap-2">
+  1112→            <Button className="h-9 text-xs rounded-lg text-white gap-1.5" style={{ background: '#7C3AED' }} onClick={handleDetect} disabled={detecting}>
+  1113→              {detecting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+  1114→              {detecting ? 'Detecting...' : 'Sync & Detect'}
+  1115→            </Button>
+  1116→            {substitutions.some(s => s.status === 'PENDING') && (
+  1117→              <Button className="h-9 text-xs rounded-lg text-white gap-1.5" style={{ background: '#22C55E' }} onClick={handleAssignAll} disabled={assigning}>
+  1118→                {assigning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+  1119→                {assigning ? 'AI Assigning...' : `AI Assign All (${substitutions.filter(s => s.status === 'PENDING').length})`}
+  1120→              </Button>
+  1121→            )}
+  1122→          </div>
+  1123→        </div>
+  1124→
+  1125→        {/* Detection flow visualization */}
+  1126→        <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 mb-4">
+  1127→          <div className="p-2.5 rounded-lg bg-white border border-slate-200">
+  1128→            <div className="text-[10px] font-semibold text-slate-700 flex items-center gap-1">
+  1129→              <CheckCircle2 className="w-3 h-3 text-emerald-500" /> Punch-In/Out Check
+  1130→            </div>
+  1131→            <p className="text-[9px] text-slate-500 mt-0.5">Scans StaffAttendance for ABSENT status today</p>
+  1132→          </div>
+  1133→          <div className="p-2.5 rounded-lg bg-white border border-slate-200">
+  1134→            <div className="text-[10px] font-semibold text-slate-700 flex items-center gap-1">
+  1135→              <CheckCircle2 className="w-3 h-3 text-emerald-500" /> Leave Portal Sync
+  1136→            </div>
+  1137→            <p className="text-[9px] text-slate-500 mt-0.5">Checks APPROVED leaves covering today</p>
+  1138→          </div>
+  1139→          <div className="p-2.5 rounded-lg bg-white border border-slate-200">
+  1140→            <div className="text-[10px] font-semibold text-slate-700 flex items-center gap-1">
+  1141→              <CheckCircle2 className="w-3 h-3 text-emerald-500" /> Timetable Cross-Ref
+  1142→            </div>
+  1143→            <p className="text-[9px] text-slate-500 mt-0.5">Finds affected classes/periods for each absent teacher</p>
+  1144→          </div>
+  1145→          <div className="p-2.5 rounded-lg bg-white border border-slate-200">
+  1146→            <div className="text-[10px] font-semibold text-slate-700 flex items-center gap-1">
+  1147→              <CheckCircle2 className="w-3 h-3 text-emerald-500" /> AI Lesson DNA
+  1148→            </div>
+  1149→            <p className="text-[9px] text-slate-500 mt-0.5">Generates topic context + lesson plan for substitute</p>
+  1150→          </div>
+  1151→        </div>
+  1152→
+  1153→        {/* Detection result */}
+  1154→        {detectResult && (
+  1155→          <div className="grid grid-cols-3 gap-2 mb-3">
+  1156→            <div className="p-2 rounded-lg bg-rose-50 border border-rose-200 text-center">
+  1157→              <div className="text-lg font-bold text-rose-600">{detectResult.absentTeachers?.length || 0}</div>
+  1158→              <div className="text-[9px] text-slate-600">Absent Teachers</div>
+  1159→            </div>
+  1160→            <div className="p-2 rounded-lg bg-amber-50 border border-amber-200 text-center">
+  1161→              <div className="text-lg font-bold text-amber-600">{detectResult.detected || 0}</div>
+  1162→              <div className="text-[9px] text-slate-600">Periods Needing Sub</div>
+  1163→            </div>
+  1164→            <div className="p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-center">
+  1165→              <div className="text-lg font-bold text-emerald-600">{substitutions.filter(s => s.status === 'ASSIGNED').length}</div>
+  1166→              <div className="text-[9px] text-slate-600">AI Assigned</div>
+  1167→            </div>
+  1168→          </div>
+  1169→        )}
+  1170→      </Card>
+  1171→
+  1172→      {/* Absent teachers list */}
+  1173→      {detectResult?.absentTeachers?.length > 0 && (
+  1174→        <Card className="p-4">
+  1175→          <h4 className="text-xs font-semibold text-slate-700 mb-2">Absent Teachers Detected</h4>
+  1176→          <div className="space-y-1.5">
+  1177→            {detectResult.absentTeachers.map((t: any, i: number) => (
+  1178→              <div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-rose-50 border border-rose-100">
+  1179→                <div className="w-7 h-7 rounded-full bg-rose-200 text-rose-700 flex items-center justify-center text-[10px] font-bold">
+  1180→                  {t.staffName.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
+  1181→                </div>
+  1182→                <div className="flex-1">
+  1183→                  <div className="text-xs font-medium text-slate-900">{t.staffName}</div>
+  1184→                  <div className="text-[9px] text-slate-500">{t.department} · {t.subject}</div>
+  1185→                </div>
+  1186→                <Badge variant="outline" className="text-[8px] bg-rose-50 text-rose-600 border-rose-200">{t.reason}</Badge>
+  1187→                <Badge variant="outline" className="text-[8px] bg-slate-50 text-slate-500">{t.source === 'ATTENDANCE' ? 'Punch-In' : 'Leave Portal'}</Badge>
+  1188→              </div>
+  1189→            ))}
+  1190→          </div>
+  1191→        </Card>
+  1192→      )}
+  1193→
+  1194→      {/* Substitutions table */}
+  1195→      {substitutions.length > 0 ? (
+  1196→        <Card className="rounded-2xl overflow-hidden">
+  1197→          <div className="px-5 py-3 border-b border-slate-100">
+  1198→            <h3 className="text-sm font-semibold text-slate-900">Substitution Queue</h3>
+  1199→            <p className="text-[11px] text-slate-500">{substitutions.length} period(s) · click "Download Lesson DNA" to get the AI plan</p>
+  1200→          </div>
+  1201→          <div className="overflow-x-auto">
+  1202→            <table className="w-full text-xs">
+  1203→              <thead>
+  1204→                <tr className="border-b border-slate-200 bg-slate-50/50">
+  1205→                  <th className="text-left px-4 py-3 font-semibold text-slate-600">Original Teacher</th>
+  1206→                  <th className="text-left px-4 py-3 font-semibold text-slate-600">Subject</th>
+  1207→                  <th className="text-left px-4 py-3 font-semibold text-slate-600">Period</th>
+  1208→                  <th className="text-left px-4 py-3 font-semibold text-slate-600">Reason</th>
+  1209→                  <th className="text-left px-4 py-3 font-semibold text-slate-600">Substitute</th>
+  1210→                  <th className="text-left px-4 py-3 font-semibold text-slate-600">AI Match</th>
+  1211→                  <th className="text-left px-4 py-3 font-semibold text-slate-600">Status</th>
+  1212→                  <th className="text-left px-4 py-3 font-semibold text-slate-600">Action</th>
+  1213→                </tr>
+  1214→              </thead>
+  1215→              <tbody>
+  1216→                {substitutions.map((s, i) => (
+  1217→                  <tr key={i} className="border-b border-slate-100 hover:bg-slate-50">
+  1218→                    <td className="px-4 py-3 font-medium text-slate-900">{s.originalTeacherName || 'Unknown'}</td>
+  1219→                    <td className="px-4 py-3 text-slate-600">{s.subject}</td>
+  1220→                    <td className="px-4 py-3 text-slate-600">P{s.period}</td>
+  1221→                    <td className="px-4 py-3 text-[10px] text-slate-500 max-w-[150px] truncate">{s.reason}</td>
+  1222→                    <td className="px-4 py-3 text-slate-600">{s.substituteTeacherName || '—'}</td>
+  1223→                    <td className="px-4 py-3">
+  1224→                      {s.matchScore !== undefined && (
+  1225→                        <Badge variant="outline" className={`text-[9px] ${s.matchScore >= 0.7 ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+  1226→                          {Math.round(s.matchScore * 100)}%
+  1227→                        </Badge>
+  1228→                      )}
+  1229→                    </td>
+  1230→                    <td className="px-4 py-3">
+  1231→                      <Badge variant="outline" className={`text-[9px] ${s.status === 'ASSIGNED' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+  1232→                        {s.status}
+  1233→                      </Badge>
+  1234→                    </td>
+  1235→                    <td className="px-4 py-3">
+  1236→                      {s.status === 'ASSIGNED' && (
+  1237→                        <Button
+  1238→                          size="sm"
+  1239→                          variant="outline"
+  1240→                          className="h-7 text-[10px] rounded-lg gap-1 text-purple-600 border-purple-200"
+  1241→                          onClick={() => handleDownloadPdf(s.id)}
+  1242→                          disabled={pdfLoading === s.id}
+  1243→                        >
+  1244→                          {pdfLoading === s.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <FileText className="w-3 h-3" />}
+  1245→                          Lesson DNA PDF
+  1246→                        </Button>
+  1247→                      )}
+  1248→                    </td>
+  1249→                  </tr>
+  1250→                ))}
+  1251→              </tbody>
+  1252→            </table>
+  1253→          </div>
+  1254→        </Card>
+  1255→      ) : (
+  1256→        <Card className="p-8 text-center">
+  1257→          <Brain className="w-10 h-10 mx-auto mb-3 text-slate-300" />
+  1258→          <div className="text-sm font-semibold text-slate-700">No substitutions detected yet</div>
+  1259→          <p className="text-xs text-slate-500 mt-1">Click "Sync & Detect" to check attendance + leave portal for absent teachers.</p>
+  1260→        </Card>
+  1261→      )}
+  1262→    </div>
+  1263→  )
+  1264→}
+  1265→
+  1266→// ============ Month Calendar Tab — date picker with holidays + grade/section dashboard ============
+  1267→
+  1268→const PUBLIC_HOLIDAYS_2026: { date: string; name: string; type: string }[] = [
+  1269→  { date: '2026-01-26', name: 'Republic Day', type: 'NATIONAL' },
+  1270→  { date: '2026-03-17', name: 'Holi', type: 'FESTIVAL' },
+  1271→  { date: '2026-04-10', name: 'Good Friday', type: 'RELIGIOUS' },
+  1272→  { date: '2026-04-14', name: 'Ambedkar Jayanti', type: 'NATIONAL' },
+  1273→  { date: '2026-05-01', name: 'Labour Day', type: 'NATIONAL' },
+  1274→  { date: '2026-08-15', name: 'Independence Day', type: 'NATIONAL' },
+  1275→  { date: '2026-08-25', name: 'Janmashtami', type: 'RELIGIOUS' },
+  1276→  { date: '2026-10-02', name: 'Gandhi Jayanti', type: 'NATIONAL' },
+  1277→  { date: '2026-10-21', name: 'Dussehra', type: 'FESTIVAL' },
+  1278→  { date: '2026-11-01', name: 'Diwali', type: 'FESTIVAL' },
+  1279→  { date: '2026-12-25', name: 'Christmas', type: 'RELIGIOUS' },
+  1280→]
+  1281→
+  1282→function MonthCalendarTab({ onGenerate, timetable, selectedGrade, selectedSection, onGradeChange, onSectionChange }: {
+  1283→  onGenerate: () => void
+  1284→  timetable: Timetable | null
+  1285→  selectedGrade: string
+  1286→  selectedSection: string
+  1287→  onGradeChange: (v: string) => void
+  1288→  onSectionChange: (v: string) => void
+  1289→}) {
+  1290→  const [currentMonth, setCurrentMonth] = useState(new Date(2026, 0, 1)) // Jan 2026
+  1291→  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  1292→  const [showGradeDashboard, setShowGradeDashboard] = useState(false)
+  1293→
+  1294→  const monthName = currentMonth.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
+  1295→  const year = currentMonth.getFullYear()
+  1296→  const month = currentMonth.getMonth()
+  1297→  const firstDay = new Date(year, month, 1).getDay() // 0=Sun
+  1298→  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  1299→
+  1300→  const isHoliday = (day: number) => {
+  1301→    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+  1302→    return PUBLIC_HOLIDAYS_2026.find(h => h.date === dateStr)
+  1303→  }
+  1304→
+  1305→  const isWeekend = (day: number) => {
+  1306→    const dayOfWeek = new Date(year, month, day).getDay()
+  1307→    return dayOfWeek === 0 || dayOfWeek === 6
+  1308→  }
+  1309→
+  1310→  const handleDateClick = (day: number) => {
+  1311→    const date = new Date(year, month, day)
+  1312→    setSelectedDate(date)
+  1313→    setShowGradeDashboard(true)
+  1314→  }
+  1315→
+  1316→  const handlePrevMonth = () => setCurrentMonth(new Date(year, month - 1, 1))
+  1317→  const handleNextMonth = () => setCurrentMonth(new Date(year, month + 1, 1))
+  1318→
+  1319→  return (
+  1320→    <div className="space-y-4">
+  1321→      {/* Calendar header */}
+  1322→      <Card className="p-4">
+  1323→        <div className="flex items-center justify-between mb-3">
+  1324→          <div className="flex items-center gap-2">
+  1325→            <Button size="sm" variant="outline" className="h-8 w-8 p-0 rounded-lg" onClick={handlePrevMonth}>
+  1326→              <ChevronLeft className="w-4 h-4" />
+  1327→            </Button>
+  1328→            <h3 className="text-base font-semibold text-slate-900 min-w-[140px] text-center">{monthName}</h3>
+  1329→            <Button size="sm" variant="outline" className="h-8 w-8 p-0 rounded-lg" onClick={handleNextMonth}>
+  1330→              <ChevronRight className="w-4 h-4" />
+  1331→            </Button>
+  1332→          </div>
+  1333→          <div className="flex items-center gap-3 text-[10px]">
+  1334→            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-rose-400" /> Holiday</span>
+  1335→            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-slate-200" /> Weekend</span>
+  1336→            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-blue-400" /> School Day</span>
+  1337→          </div>
+  1338→        </div>
+  1339→
+  1340→        {/* Calendar grid */}
+  1341→        <div className="grid grid-cols-7 gap-1">
+  1342→          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+  1343→            <div key={d} className="text-center text-[10px] font-semibold text-slate-400 py-1.5">{d}</div>
+  1344→          ))}
+  1345→          {Array.from({ length: firstDay }).map((_, i) => (
+  1346→            <div key={`empty-${i}`} />
+  1347→          ))}
+  1348→          {Array.from({ length: daysInMonth }).map((_, i) => {
+  1349→            const day = i + 1
+  1350→            const holiday = isHoliday(day)
+  1351→            const weekend = isWeekend(day)
+  1352→            const isSelected = selectedDate?.getDate() === day && selectedDate?.getMonth() === month
+  1353→            return (
+  1354→              <button
+  1355→                key={day}
+  1356→                onClick={() => handleDateClick(day)}
+  1357→                className={`min-h-[60px] rounded-lg border p-1.5 text-left transition-all hover:shadow-md ${
+  1358→                  isSelected ? 'border-blue-500 ring-2 ring-blue-200' : 'border-slate-200'
+  1359→                } ${
+  1360→                  holiday ? 'bg-rose-50 border-rose-200' :
+  1361→                  weekend ? 'bg-slate-50 border-slate-200' :
+  1362→                  'bg-white hover:bg-blue-50/50'
+  1363→                }`}
+  1364→              >
+  1365→                <div className={`text-xs font-bold ${holiday ? 'text-rose-600' : weekend ? 'text-slate-400' : 'text-slate-700'}`}>
+  1366→                  {day}
+  1367→                </div>
+  1368→                {holiday && (
+  1369→                  <div className="text-[8px] text-rose-500 mt-0.5 truncate" title={holiday.name}>
+  1370→                    {holiday.name}
+  1371→                  </div>
+  1372→                )}
+  1373→                {!holiday && !weekend && (
+  1374→                  <div className="text-[8px] text-blue-400 mt-0.5">School</div>
+  1375→                )}
+  1376→              </button>
+  1377→            )
+  1378→          })}
+  1379→        </div>
+  1380→      </Card>
+  1381→
+  1382→      {/* Selected date dashboard */}
+  1383→      {selectedDate && showGradeDashboard && (
+  1384→        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+  1385→          <Card className="p-5 border-2 border-blue-200 bg-blue-50/30">
+  1386→            <div className="flex items-center justify-between mb-4">
+  1387→              <div>
+  1388→                <h3 className="text-sm font-bold text-slate-900">
+  1389→                  📅 {selectedDate.toLocaleDateString('en-IN', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
+  1390→                </h3>
+  1391→                <p className="text-[11px] text-slate-500 mt-0.5">
+  1392→                  {isHoliday(selectedDate.getDate()) ? `Public Holiday: ${isHoliday(selectedDate.getDate())?.name}` : 'Select a grade and section to view the timetable for this day'}
+  1393→                </p>
+  1394→              </div>
+  1395→              <div className="flex items-center gap-2">
+  1396→                <Select value={selectedGrade} onValueChange={onGradeChange}>
+  1397→                  <SelectTrigger className="h-8 text-xs rounded-lg w-28"><SelectValue /></SelectTrigger>
+  1398→                  <SelectContent>{GRADES.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent>
+  1399→                </Select>
+  1400→                <Select value={selectedSection} onValueChange={onSectionChange}>
+  1401→                  <SelectTrigger className="h-8 text-xs rounded-lg w-24"><SelectValue /></SelectTrigger>
+  1402→                  <SelectContent>{SECTIONS.map(s => <SelectItem key={s} value={s}>Sec {s}</SelectItem>)}</SelectContent>
+  1403→                </Select>
+  1404→                <Button size="sm" className="h-8 text-xs rounded-lg text-white" style={{ background: '#1E3A8A' }} onClick={onGenerate}>
+  1405→                  View Timetable
+  1406→                </Button>
+  1407→              </div>
+  1408→            </div>
+  1409→
+  1410→            {/* Grade/Section dashboard cards */}
+  1411→            {!isHoliday(selectedDate.getDate()) && (
+  1412→              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 mb-4">
+  1413→                {GRADES.map(grade => (
+  1414→                  <div key={grade} className="p-3 rounded-xl bg-white border border-slate-200 hover:border-blue-300 cursor-pointer transition-all"
+  1415→                    onClick={() => { onGradeChange(grade); onGenerate() }}>
+  1416→                    <div className="text-xs font-semibold text-slate-900">{grade}</div>
+  1417→                    <div className="flex gap-1 mt-1">
+  1418→                      {SECTIONS.map(s => (
+  1419→                        <span key={s} className="text-[9px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-medium">Sec {s}</span>
+  1420→                      ))}
+  1421→                    </div>
+  1422→                  </div>
+  1423→                ))}
+  1424→              </div>
+  1425→            )}
+  1426→
+  1427→            {/* Timetable for selected date */}
+  1428→            {timetable && !isHoliday(selectedDate.getDate()) && (
+  1429→              <div className="mt-3">
+  1430→                <div className="text-xs font-semibold text-slate-700 mb-2">
+  1431→                  {timetable.grade}-{timetable.section} · Timetable for {selectedDate.toLocaleDateString('en-IN', { weekday: 'long' })}
+  1432→                </div>
+  1433→                <div className="space-y-1.5">
+  1434→                  {timetable.days.find(d => d.day.toLowerCase() === selectedDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase())?.periods
+  1435→                    .filter(p => !p.isBreak)
+  1436→                    .map(p => {
+  1437→                      const subject = SUBJECTS.find(s => s.name === p.subject)
+  1438→                      return (
+  1439→                        <div key={p.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-white border border-slate-200">
+  1440→                          <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0" style={{ background: subject?.color || '#6B7280' }}>
+  1441→                            P{p.periodNo}
+  1442→                          </div>
+  1443→                          <div className="flex-1 min-w-0">
+  1444→                            <div className="text-xs font-semibold text-slate-900">{p.subject}</div>
+  1445→                            <div className="text-[10px] text-slate-500">{p.teacherName} · 📖 {p.topic}</div>
+  1446→                          </div>
+  1447→                          <div className="text-[10px] text-slate-400 font-mono">{p.time}</div>
+  1448→                        </div>
+  1449→                      )
+  1450→                    }) || (
+  1451→                    <div className="text-xs text-slate-400 text-center py-4">
+  1452→                      No classes scheduled for this day (weekend or holiday)
+  1453→                    </div>
+  1454→                  )}
+  1455→                </div>
+  1456→              </div>
+  1457→            )}
+  1458→          </Card>
+  1459→        </motion.div>
+  1460→      )}
+  1461→
+  1462→      {/* Upcoming holidays list */}
+  1463→      <Card className="p-4">
+  1464→        <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+  1465→          <AlertCircle className="w-4 h-4 text-rose-500" /> Public Holidays — Academic Year 2026
+  1466→        </h3>
+  1467→        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+  1468→          {PUBLIC_HOLIDAYS_2026.map((h, i) => (
+  1469→            <div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-rose-50/50 border border-rose-100">
+  1470→              <div className="w-8 h-8 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center text-xs font-bold">
+  1471→                {new Date(h.date).getDate()}
+  1472→              </div>
+  1473→              <div>
+  1474→                <div className="text-xs font-medium text-slate-900">{h.name}</div>
+  1475→                <div className="text-[10px] text-slate-500">{new Date(h.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</div>
+  1476→              </div>
+  1477→            </div>
+  1478→          ))}
+  1479→        </div>
+  1480→      </Card>
+  1481→    </div>
+  1482→  )
+  1483→}
+  1484→

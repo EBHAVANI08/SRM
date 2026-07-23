@@ -75,8 +75,14 @@ interface Teacher {
 }
 
 // ============ Mock Data ============
-const GRADES = ['Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10']
-const SECTIONS = ['A', 'B', 'C']
+// Full LKG–12 grade range (matches the 15 grades seeded in the DB)
+const GRADES = [
+  'Nursery', 'LKG', 'UKG',
+  'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5',
+  'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10',
+  'Grade 11', 'Grade 12',
+]
+const SECTIONS = ['A', 'B', 'C', 'D']
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
 const PERIOD_TIMES = [
   { no: 1, time: '08:00 - 08:45' },
@@ -103,15 +109,32 @@ const SUBJECTS = [
   { name: 'Music', priority: 3, color: '#14B8A6' },
 ]
 
+// Representative teacher sample — mirrors the 150 teachers seeded in the DB.
+// Each teacher covers different subjects across different grades (KG → Sr Secondary),
+// demonstrating the multi-grade, multi-subject teaching load across all 15 grades.
 const TEACHERS: Teacher[] = [
-  { id: 'T001', name: 'Mrs. Anita Verma', email: 'anita.verma@learnx.edu', phone: '+91 99001 11111', department: 'Mathematics', subjects: ['Mathematics'], grades: ['Grade 6', 'Grade 7'], qualification: 'M.Sc, B.Ed', experience: 12, joiningDate: '2015-07-08', photo: '👩‍🏫', workload: 28, maxWorkload: 30, avatarColor: '#1E3A8A', initials: 'AV' },
-  { id: 'T002', name: 'Mr. Rajesh Kumar', email: 'rajesh.kumar@learnx.edu', phone: '+91 99001 22222', department: 'Science', subjects: ['Science', 'Physics'], grades: ['Grade 8', 'Grade 9'], qualification: 'M.Sc Physics, B.Ed', experience: 10, joiningDate: '2017-04-12', photo: '👨‍🏫', workload: 25, maxWorkload: 30, avatarColor: '#22C55E', initials: 'RK' },
-  { id: 'T003', name: 'Mrs. Meena Iyer', email: 'meena.iyer@learnx.edu', phone: '+91 99001 33333', department: 'English', subjects: ['English'], grades: ['Grade 6', 'Grade 7', 'Grade 8'], qualification: 'M.A English, B.Ed', experience: 8, joiningDate: '2019-08-20', photo: '👩‍🏫', workload: 22, maxWorkload: 30, avatarColor: '#F59E0B', initials: 'MI' },
-  { id: 'T004', name: 'Dr. Vikram Rao', email: 'vikram.rao@learnx.edu', phone: '+91 99001 99999', department: 'Physics', subjects: ['Physics', 'Science'], grades: ['Grade 9', 'Grade 10'], qualification: 'Ph.D Physics', experience: 15, joiningDate: '2016-07-01', photo: '👨‍🔬', workload: 20, maxWorkload: 25, avatarColor: '#7C3AED', initials: 'VR' },
-  { id: 'T005', name: 'Mrs. Deepa Menon', email: 'deepa.menon@learnx.edu', phone: '+91 99001 88888', department: 'Hindi', subjects: ['Hindi'], grades: ['Grade 6', 'Grade 7', 'Grade 8'], qualification: 'M.A Hindi, B.Ed', experience: 9, joiningDate: '2018-07-15', photo: '👩‍🏫', workload: 24, maxWorkload: 30, avatarColor: '#EF4444', initials: 'DM' },
-  { id: 'T006', name: 'Mr. Arun Nair', email: 'arun.nair@learnx.edu', phone: '+91 99001 77777', department: 'Social Studies', subjects: ['Social Studies', 'History'], grades: ['Grade 7', 'Grade 8', 'Grade 9'], qualification: 'M.A History, B.Ed', experience: 7, joiningDate: '2021-06-10', photo: '👨‍🏫', workload: 18, maxWorkload: 30, avatarColor: '#0EA5E9', initials: 'AN' },
-  { id: 'T007', name: 'Ms. Kavita Joshi', email: 'kavita.joshi@learnx.edu', phone: '+91 99001 44444', department: 'Computer Science', subjects: ['Computer Science'], grades: ['Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10'], qualification: 'B.Tech, MCA', experience: 5, joiningDate: '2022-06-01', photo: '👩‍💻', workload: 16, maxWorkload: 25, avatarColor: '#0D9488', initials: 'KJ' },
-  { id: 'T008', name: 'Mr. Sunil Joshi', email: 'sunil.joshi@learnx.edu', phone: '+91 99001 55555', department: 'Physical Education', subjects: ['Physical Education'], grades: ['Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10'], qualification: 'B.P.Ed, M.P.Ed', experience: 6, joiningDate: '2020-01-03', photo: '👨‍🏫', workload: 20, maxWorkload: 30, avatarColor: '#F97316', initials: 'SJ' },
+  // —— Kindergarten (Nursery / LKG / UKG) ——
+  { id: 'T001', name: 'Mrs. Lakshmi Rao', email: 'lakshmi.rao@learnx.edu', phone: '+91 99001 10001', department: 'Early Childhood', subjects: ['English', 'EVS', 'Art'], grades: ['Nursery', 'LKG', 'UKG'], qualification: 'B.Ed (ECE)', experience: 8, joiningDate: '2018-06-15', photo: '👩‍🏫', workload: 22, maxWorkload: 25, avatarColor: '#F97316', initials: 'LR' },
+  { id: 'T002', name: 'Mrs. Shobha Patil', email: 'shobha.patil@learnx.edu', phone: '+91 99001 10002', department: 'Early Childhood', subjects: ['Mathematics', 'Music'], grades: ['LKG', 'UKG'], qualification: 'NTT, B.Ed', experience: 6, joiningDate: '2020-04-10', photo: '👩‍🏫', workload: 18, maxWorkload: 25, avatarColor: '#EC4899', initials: 'SP' },
+  // —— Primary (Grade 1-5) ——
+  { id: 'T003', name: 'Mrs. Anita Verma', email: 'anita.verma@learnx.edu', phone: '+91 99001 10003', department: 'Mathematics', subjects: ['Mathematics'], grades: ['Grade 1', 'Grade 2', 'Grade 3'], qualification: 'M.Sc, B.Ed', experience: 12, joiningDate: '2015-07-08', photo: '👩‍🏫', workload: 28, maxWorkload: 30, avatarColor: '#1E3A8A', initials: 'AV' },
+  { id: 'T004', name: 'Mr. Suresh Kumar', email: 'suresh.kumar@learnx.edu', phone: '+91 99001 10004', department: 'English', subjects: ['English'], grades: ['Grade 2', 'Grade 3', 'Grade 4'], qualification: 'M.A English, B.Ed', experience: 9, joiningDate: '2017-06-12', photo: '👨‍🏫', workload: 26, maxWorkload: 30, avatarColor: '#F59E0B', initials: 'SK' },
+  { id: 'T005', name: 'Mrs. Kavita Nair', email: 'kavita.nair@learnx.edu', phone: '+91 99001 10005', department: 'Science', subjects: ['Science', 'EVS'], grades: ['Grade 3', 'Grade 4', 'Grade 5'], qualification: 'M.Sc, B.Ed', experience: 7, joiningDate: '2019-08-20', photo: '👩‍🔬', workload: 24, maxWorkload: 30, avatarColor: '#22C55E', initials: 'KN' },
+  { id: 'T006', name: 'Mr. Ravi Desai', email: 'ravi.desai@learnx.edu', phone: '+91 99001 10006', department: 'Hindi', subjects: ['Hindi'], grades: ['Grade 4', 'Grade 5', 'Grade 6'], qualification: 'M.A Hindi, B.Ed', experience: 11, joiningDate: '2016-07-15', photo: '👨‍🏫', workload: 23, maxWorkload: 30, avatarColor: '#EF4444', initials: 'RD' },
+  // —— Middle (Grade 6-8) ——
+  { id: 'T007', name: 'Mr. Rajesh Kumar', email: 'rajesh.kumar@learnx.edu', phone: '+91 99001 10007', department: 'Mathematics', subjects: ['Mathematics'], grades: ['Grade 6', 'Grade 7', 'Grade 8'], qualification: 'M.Sc Maths, B.Ed', experience: 10, joiningDate: '2017-04-12', photo: '👨‍🏫', workload: 25, maxWorkload: 30, avatarColor: '#0EA5E9', initials: 'RK' },
+  { id: 'T008', name: 'Mrs. Deepa Menon', email: 'deepa.menon@learnx.edu', phone: '+91 99001 10008', department: 'English', subjects: ['English', 'Literature'], grades: ['Grade 6', 'Grade 7', 'Grade 8'], qualification: 'M.A English, B.Ed', experience: 9, joiningDate: '2018-07-15', photo: '👩‍🏫', workload: 24, maxWorkload: 30, avatarColor: '#7C3AED', initials: 'DM' },
+  { id: 'T009', name: 'Mr. Arun Iyer', email: 'arun.iyer@learnx.edu', phone: '+91 99001 10009', department: 'Social Studies', subjects: ['Social Studies', 'History'], grades: ['Grade 7', 'Grade 8', 'Grade 9'], qualification: 'M.A History, B.Ed', experience: 7, joiningDate: '2021-06-10', photo: '👨‍🏫', workload: 18, maxWorkload: 30, avatarColor: '#6366F1', initials: 'AI' },
+  { id: 'T010', name: 'Ms. Kavita Joshi', email: 'kavita.joshi@learnx.edu', phone: '+91 99001 10010', department: 'Computer Science', subjects: ['Computer Science'], grades: ['Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10'], qualification: 'B.Tech, MCA', experience: 5, joiningDate: '2022-06-01', photo: '👩‍💻', workload: 16, maxWorkload: 25, avatarColor: '#0D9488', initials: 'KJ' },
+  // —— Secondary (Grade 9-10) ——
+  { id: 'T011', name: 'Dr. Vikram Rao', email: 'vikram.rao@learnx.edu', phone: '+91 99001 10011', department: 'Physics', subjects: ['Physics', 'Science'], grades: ['Grade 9', 'Grade 10'], qualification: 'Ph.D Physics', experience: 15, joiningDate: '2016-07-01', photo: '👨‍🔬', workload: 20, maxWorkload: 25, avatarColor: '#7C3AED', initials: 'VR' },
+  { id: 'T012', name: 'Mrs. Priya Bhat', email: 'priya.bhat@learnx.edu', phone: '+91 99001 10012', department: 'Chemistry', subjects: ['Chemistry', 'Science'], grades: ['Grade 9', 'Grade 10'], qualification: 'M.Sc Chem, B.Ed', experience: 8, joiningDate: '2019-06-20', photo: '👩‍🔬', workload: 22, maxWorkload: 30, avatarColor: '#06B6D4', initials: 'PB' },
+  { id: 'T013', name: 'Mr. Sanjay Gupta', email: 'sanjay.gupta@learnx.edu', phone: '+91 99001 10013', department: 'Biology', subjects: ['Biology', 'Science'], grades: ['Grade 9', 'Grade 10'], qualification: 'M.Sc Bio, B.Ed', experience: 10, joiningDate: '2017-07-22', photo: '👨‍🔬', workload: 21, maxWorkload: 30, avatarColor: '#16A34A', initials: 'SG' },
+  // —— Sr. Secondary (Grade 11-12) ——
+  { id: 'T014', name: 'Dr. Meena Krishnan', email: 'meena.krishnan@learnx.edu', phone: '+91 99001 10014', department: 'Mathematics', subjects: ['Mathematics'], grades: ['Grade 11', 'Grade 12'], qualification: 'Ph.D Maths', experience: 18, joiningDate: '2014-06-15', photo: '👩‍🏫', workload: 18, maxWorkload: 20, avatarColor: '#1E40AF', initials: 'MK' },
+  { id: 'T015', name: 'Mr. Anil Sharma', email: 'anil.sharma@learnx.edu', phone: '+91 99001 10015', department: 'Commerce', subjects: ['Commerce', 'Accountancy', 'Economics'], grades: ['Grade 11', 'Grade 12'], qualification: 'M.Com, B.Ed', experience: 14, joiningDate: '2015-07-12', photo: '👨‍🏫', workload: 19, maxWorkload: 25, avatarColor: '#9333EA', initials: 'AS' },
+  // —— Cross-grade specialists ——
+  { id: 'T016', name: 'Mr. Sunil Joshi', email: 'sunil.joshi@learnx.edu', phone: '+91 99001 10016', department: 'Physical Education', subjects: ['Physical Education'], grades: ['Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'], qualification: 'B.P.Ed, M.P.Ed', experience: 6, joiningDate: '2020-01-03', photo: '👨‍🏫', workload: 20, maxWorkload: 30, avatarColor: '#F97316', initials: 'SJ' },
 ]
 
 // ============ AI Timetable Generator ============
@@ -1012,17 +1035,26 @@ Mrs. Meena Iyer,meena.iyer@learnx.edu,+91 99001 33333,English,English,Grade 6|Gr
 
 // ============ AI Substitution Tab ============
 function SubstitutionTab() {
+  // Default to today's date — the user can change it via the date picker below.
+  const todayStr = new Date().toISOString().slice(0, 10) // YYYY-MM-DD for <input type="date">
+  const [selectedDate, setSelectedDate] = useState(todayStr)
   const [detecting, setDetecting] = useState(false)
   const [assigning, setAssigning] = useState(false)
   const [substitutions, setSubstitutions] = useState<any[]>([])
   const [detectResult, setDetectResult] = useState<any>(null)
   const [pdfLoading, setPdfLoading] = useState<string | null>(null)
 
+  // Display the selected date in a friendly format with a "Today" badge when it equals today
+  const selectedDateObj = new Date(selectedDate + 'T00:00:00')
+  const isToday = selectedDate === todayStr
+  const selectedDateLabel = selectedDateObj.toLocaleDateString('en-IN', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })
+
   const handleDetect = async () => {
     setDetecting(true)
     try {
       const { apiPost } = await import('@/lib/apiFetch')
-      const { data, error } = await apiPost<any>('/api/substitution/detect', { date: new Date().toISOString() })
+      // Pass the user-selected date — the API uses it to scope attendance + leave + timetable lookups.
+      const { data, error } = await apiPost<any>('/api/substitution/detect', { date: selectedDateObj.toISOString() })
       if (error) {
         toast.error(`Detection failed: ${error}`)
       } else if (data) {
@@ -1030,11 +1062,13 @@ function SubstitutionTab() {
         setSubstitutions(data.substitutions || [])
         if (data.detected > 0) {
           toast.success(`🔍 Detected ${data.detected} period(s) needing substitution`, {
-            description: `${data.absentTeachers.length} absent teacher(s) found via attendance + leave portal`,
+            description: `${data.absentTeachers.length} absent teacher(s) found for ${selectedDateLabel}`,
             duration: 5000,
           })
         } else {
-          toast.info('No absent teachers detected — all teachers punched in today')
+          toast.info(`No absent teachers detected for ${selectedDateLabel}`, {
+            description: 'All teachers punched in on the selected date.',
+          })
         }
       }
     } catch (e: any) {
@@ -1122,19 +1156,62 @@ function SubstitutionTab() {
           </div>
         </div>
 
+        {/* Date picker — defaults to today; user can pick any date from the month/year */}
+        <div className="flex flex-wrap items-center gap-3 mb-4 p-3 rounded-xl bg-white border border-purple-200">
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-purple-600" />
+            <label className="text-xs font-semibold text-slate-700">Detection Date:</label>
+          </div>
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => {
+              setSelectedDate(e.target.value)
+              // Clear previous results so the user knows a re-detect is needed for the new date
+              setDetectResult(null)
+              setSubstitutions([])
+            }}
+            className="h-9 px-3 text-xs rounded-lg border border-slate-200 bg-white text-slate-900 focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all"
+            aria-label="Select detection date"
+          />
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-9 px-3 rounded-lg text-xs font-medium border-purple-200 text-purple-700 hover:bg-purple-50"
+            onClick={() => {
+              setSelectedDate(todayStr)
+              setDetectResult(null)
+              setSubstitutions([])
+            }}
+            disabled={isToday}
+          >
+            <RefreshCw className="w-3 h-3 mr-1" /> Today
+          </Button>
+          <div className="flex items-center gap-2 ml-auto">
+            <span className="text-xs text-slate-600">
+              {selectedDateLabel}
+            </span>
+            {isToday ? (
+              <Badge variant="outline" className="text-[9px] bg-emerald-50 text-emerald-700 border-emerald-200">PRESENT DAY</Badge>
+            ) : (
+              <Badge variant="outline" className="text-[9px] bg-slate-50 text-slate-500 border-slate-200">{selectedDateObj.toLocaleDateString('en-IN', { weekday: 'short' })}</Badge>
+            )}
+          </div>
+        </div>
+
         {/* Detection flow visualization */}
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 mb-4">
           <div className="p-2.5 rounded-lg bg-white border border-slate-200">
             <div className="text-[10px] font-semibold text-slate-700 flex items-center gap-1">
               <CheckCircle2 className="w-3 h-3 text-emerald-500" /> Punch-In/Out Check
             </div>
-            <p className="text-[9px] text-slate-500 mt-0.5">Scans StaffAttendance for ABSENT status today</p>
+            <p className="text-[9px] text-slate-500 mt-0.5">Scans StaffAttendance for ABSENT status on the selected date</p>
           </div>
           <div className="p-2.5 rounded-lg bg-white border border-slate-200">
             <div className="text-[10px] font-semibold text-slate-700 flex items-center gap-1">
               <CheckCircle2 className="w-3 h-3 text-emerald-500" /> Leave Portal Sync
             </div>
-            <p className="text-[9px] text-slate-500 mt-0.5">Checks APPROVED leaves covering today</p>
+            <p className="text-[9px] text-slate-500 mt-0.5">Checks APPROVED leaves covering the selected date</p>
           </div>
           <div className="p-2.5 rounded-lg bg-white border border-slate-200">
             <div className="text-[10px] font-semibold text-slate-700 flex items-center gap-1">
@@ -1265,18 +1342,19 @@ function SubstitutionTab() {
 
 // ============ Month Calendar Tab — date picker with holidays + grade/section dashboard ============
 
-const PUBLIC_HOLIDAYS_2026: { date: string; name: string; type: string }[] = [
-  { date: '2026-01-26', name: 'Republic Day', type: 'NATIONAL' },
-  { date: '2026-03-17', name: 'Holi', type: 'FESTIVAL' },
-  { date: '2026-04-10', name: 'Good Friday', type: 'RELIGIOUS' },
-  { date: '2026-04-14', name: 'Ambedkar Jayanti', type: 'NATIONAL' },
-  { date: '2026-05-01', name: 'Labour Day', type: 'NATIONAL' },
-  { date: '2026-08-15', name: 'Independence Day', type: 'NATIONAL' },
-  { date: '2026-08-25', name: 'Janmashtami', type: 'RELIGIOUS' },
-  { date: '2026-10-02', name: 'Gandhi Jayanti', type: 'NATIONAL' },
-  { date: '2026-10-21', name: 'Dussehra', type: 'FESTIVAL' },
-  { date: '2026-11-01', name: 'Diwali', type: 'FESTIVAL' },
-  { date: '2026-12-25', name: 'Christmas', type: 'RELIGIOUS' },
+// Year-agnostic holiday list — keyed by MM-DD so it works for any year the user navigates to.
+const PUBLIC_HOLIDAYS: { mmdd: string; name: string; type: string }[] = [
+  { mmdd: '01-26', name: 'Republic Day', type: 'NATIONAL' },
+  { mmdd: '03-17', name: 'Holi', type: 'FESTIVAL' },
+  { mmdd: '04-10', name: 'Good Friday', type: 'RELIGIOUS' },
+  { mmdd: '04-14', name: 'Ambedkar Jayanti', type: 'NATIONAL' },
+  { mmdd: '05-01', name: 'Labour Day', type: 'NATIONAL' },
+  { mmdd: '08-15', name: 'Independence Day', type: 'NATIONAL' },
+  { mmdd: '08-25', name: 'Janmashtami', type: 'RELIGIOUS' },
+  { mmdd: '10-02', name: 'Gandhi Jayanti', type: 'NATIONAL' },
+  { mmdd: '10-21', name: 'Dussehra', type: 'FESTIVAL' },
+  { mmdd: '11-01', name: 'Diwali', type: 'FESTIVAL' },
+  { mmdd: '12-25', name: 'Christmas', type: 'RELIGIOUS' },
 ]
 
 function MonthCalendarTab({ onGenerate, timetable, selectedGrade, selectedSection, onGradeChange, onSectionChange }: {
@@ -1287,9 +1365,11 @@ function MonthCalendarTab({ onGenerate, timetable, selectedGrade, selectedSectio
   onGradeChange: (v: string) => void
   onSectionChange: (v: string) => void
 }) {
-  const [currentMonth, setCurrentMonth] = useState(new Date(2026, 0, 1)) // Jan 2026
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
-  const [showGradeDashboard, setShowGradeDashboard] = useState(false)
+  // Default to today's month + today's date so the user lands on the present day on earth.
+  const today = new Date()
+  const [currentMonth, setCurrentMonth] = useState(new Date(today.getFullYear(), today.getMonth(), 1))
+  const [selectedDate, setSelectedDate] = useState<Date | null>(today)
+  const [showGradeDashboard, setShowGradeDashboard] = useState(true)
 
   const monthName = currentMonth.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
   const year = currentMonth.getFullYear()
@@ -1297,9 +1377,22 @@ function MonthCalendarTab({ onGenerate, timetable, selectedGrade, selectedSectio
   const firstDay = new Date(year, month, 1).getDay() // 0=Sun
   const daysInMonth = new Date(year, month + 1, 0).getDate()
 
+  // Is the given day-of-month the actual present day on earth?
+  const isToday = (day: number) =>
+    today.getFullYear() === year &&
+    today.getMonth() === month &&
+    today.getDate() === day
+
   const isHoliday = (day: number) => {
-    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-    return PUBLIC_HOLIDAYS_2026.find(h => h.date === dateStr)
+    const mmdd = `${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+    return PUBLIC_HOLIDAYS.find(h => h.mmdd === mmdd)
+  }
+
+  // Date-aware holiday check — works for any selected date, not just the displayed month
+  const isHolidayForDate = (date: Date | null) => {
+    if (!date) return undefined
+    const mmdd = `${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+    return PUBLIC_HOLIDAYS.find(h => h.mmdd === mmdd)
   }
 
   const isWeekend = (day: number) => {
@@ -1315,6 +1408,12 @@ function MonthCalendarTab({ onGenerate, timetable, selectedGrade, selectedSectio
 
   const handlePrevMonth = () => setCurrentMonth(new Date(year, month - 1, 1))
   const handleNextMonth = () => setCurrentMonth(new Date(year, month + 1, 1))
+  const handleToday = () => {
+    const now = new Date()
+    setCurrentMonth(new Date(now.getFullYear(), now.getMonth(), 1))
+    setSelectedDate(now)
+    setShowGradeDashboard(true)
+  }
 
   return (
     <div className="space-y-4">
@@ -1329,11 +1428,15 @@ function MonthCalendarTab({ onGenerate, timetable, selectedGrade, selectedSectio
             <Button size="sm" variant="outline" className="h-8 w-8 p-0 rounded-lg" onClick={handleNextMonth}>
               <ChevronRight className="w-4 h-4" />
             </Button>
+            <Button size="sm" variant="outline" className="h-8 px-3 ml-1 rounded-lg text-xs font-medium border-blue-200 text-blue-700 hover:bg-blue-50" onClick={handleToday}>
+              Today
+            </Button>
           </div>
           <div className="flex items-center gap-3 text-[10px]">
             <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-rose-400" /> Holiday</span>
             <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-slate-200" /> Weekend</span>
             <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-blue-400" /> School Day</span>
+            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded ring-2 ring-blue-500 bg-white" /> Today</span>
           </div>
         </div>
 
@@ -1349,28 +1452,35 @@ function MonthCalendarTab({ onGenerate, timetable, selectedGrade, selectedSectio
             const day = i + 1
             const holiday = isHoliday(day)
             const weekend = isWeekend(day)
-            const isSelected = selectedDate?.getDate() === day && selectedDate?.getMonth() === month
+            const todayHighlight = isToday(day)
+            const isSelected = selectedDate?.getDate() === day && selectedDate?.getMonth() === month && selectedDate?.getFullYear() === year
             return (
               <button
                 key={day}
                 onClick={() => handleDateClick(day)}
                 className={`min-h-[60px] rounded-lg border p-1.5 text-left transition-all hover:shadow-md ${
-                  isSelected ? 'border-blue-500 ring-2 ring-blue-200' : 'border-slate-200'
+                  isSelected ? 'border-blue-500 ring-2 ring-blue-200' : todayHighlight ? 'border-blue-500' : 'border-slate-200'
                 } ${
                   holiday ? 'bg-rose-50 border-rose-200' :
                   weekend ? 'bg-slate-50 border-slate-200' :
                   'bg-white hover:bg-blue-50/50'
                 }`}
               >
-                <div className={`text-xs font-bold ${holiday ? 'text-rose-600' : weekend ? 'text-slate-400' : 'text-slate-700'}`}>
+                <div className={`text-xs font-bold flex items-center gap-1 ${holiday ? 'text-rose-600' : weekend ? 'text-slate-400' : 'text-slate-700'}`}>
                   {day}
+                  {todayHighlight && (
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-500" title="Today" />
+                  )}
                 </div>
-                {holiday && (
+                {todayHighlight && !holiday && (
+                  <div className="text-[8px] text-blue-600 mt-0.5 font-semibold">TODAY</div>
+                )}
+                {!todayHighlight && holiday && (
                   <div className="text-[8px] text-rose-500 mt-0.5 truncate" title={holiday.name}>
                     {holiday.name}
                   </div>
                 )}
-                {!holiday && !weekend && (
+                {!todayHighlight && !holiday && !weekend && (
                   <div className="text-[8px] text-blue-400 mt-0.5">School</div>
                 )}
               </button>
@@ -1389,7 +1499,7 @@ function MonthCalendarTab({ onGenerate, timetable, selectedGrade, selectedSectio
                   📅 {selectedDate.toLocaleDateString('en-IN', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
                 </h3>
                 <p className="text-[11px] text-slate-500 mt-0.5">
-                  {isHoliday(selectedDate.getDate()) ? `Public Holiday: ${isHoliday(selectedDate.getDate())?.name}` : 'Select a grade and section to view the timetable for this day'}
+                  {isHolidayForDate(selectedDate) ? `Public Holiday: ${isHolidayForDate(selectedDate)?.name}` : 'Select a grade and section to view the timetable for this day'}
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -1408,7 +1518,7 @@ function MonthCalendarTab({ onGenerate, timetable, selectedGrade, selectedSectio
             </div>
 
             {/* Grade/Section dashboard cards */}
-            {!isHoliday(selectedDate.getDate()) && (
+            {!isHolidayForDate(selectedDate) && (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 mb-4">
                 {GRADES.map(grade => (
                   <div key={grade} className="p-3 rounded-xl bg-white border border-slate-200 hover:border-blue-300 cursor-pointer transition-all"
@@ -1425,7 +1535,7 @@ function MonthCalendarTab({ onGenerate, timetable, selectedGrade, selectedSectio
             )}
 
             {/* Timetable for selected date */}
-            {timetable && !isHoliday(selectedDate.getDate()) && (
+            {timetable && !isHolidayForDate(selectedDate) && (
               <div className="mt-3">
                 <div className="text-xs font-semibold text-slate-700 mb-2">
                   {timetable.grade}-{timetable.section} · Timetable for {selectedDate.toLocaleDateString('en-IN', { weekday: 'long' })}
@@ -1459,23 +1569,27 @@ function MonthCalendarTab({ onGenerate, timetable, selectedGrade, selectedSectio
         </motion.div>
       )}
 
-      {/* Upcoming holidays list */}
+      {/* Upcoming holidays list — uses the currently displayed year so it always reflects the user's calendar view */}
       <Card className="p-4">
         <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 text-rose-500" /> Public Holidays — Academic Year 2026
+          <AlertCircle className="w-4 h-4 text-rose-500" /> Public Holidays — {year}
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-          {PUBLIC_HOLIDAYS_2026.map((h, i) => (
-            <div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-rose-50/50 border border-rose-100">
-              <div className="w-8 h-8 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center text-xs font-bold">
-                {new Date(h.date).getDate()}
+          {PUBLIC_HOLIDAYS.map((h, i) => {
+            const [mm, dd] = h.mmdd.split('-')
+            const holidayDate = new Date(year, Number(mm) - 1, Number(dd))
+            return (
+              <div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-rose-50/50 border border-rose-100">
+                <div className="w-8 h-8 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center text-xs font-bold">
+                  {holidayDate.getDate()}
+                </div>
+                <div>
+                  <div className="text-xs font-medium text-slate-900">{h.name}</div>
+                  <div className="text-[10px] text-slate-500">{holidayDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</div>
+                </div>
               </div>
-              <div>
-                <div className="text-xs font-medium text-slate-900">{h.name}</div>
-                <div className="text-[10px] text-slate-500">{new Date(h.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</div>
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </Card>
     </div>

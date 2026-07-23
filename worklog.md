@@ -315,3 +315,60 @@ Stage Summary:
 - Old production server (running stale pre-05:00 build) killed
 - User's next publish/preview will serve the new build with smaller sidebar + 7000 students + 150 teachers
 - Files changed: src/components/layout/Sidebar.tsx, src/app/globals.css
+
+---
+Task ID: academic-curriculum-lesson-planner
+Agent: main (Super Z) — continuation session
+Task: User requested (a) AI Calendar "Month" view show today's date, (b) full LKG-12 grade range with sections + 150 teachers teaching different subjects across grades, (c) AI Substitution Detection Engine have a date picker (default=today) that captures the selection. Then in Academic Management module: (d) clicking Curriculum opens an in-page Curriculum Builder with Back button, (e) clicking Lesson Planner opens an in-page Lesson Plan Generator with Back button. Both must be board/grade/subject selectable, AI-generated, detailed, and downloadable as PDF. Reference screenshots provided.
+
+Work Log:
+- Analyzed 8 uploaded reference screenshots via VLM CLI (parallel calls):
+  * Screenshots 1-2: Curriculum Builder config form (green banner header, 3-col field grid, calculation summary box, Generate button, generating state)
+  * Screenshots 3-5: Lesson Plan Library + lesson plan detail modal (Learning Objectives, Warm-Up, Main Content, Differentiation 3-col, Assessment, Resources, Key Vocabulary, Homework)
+  * Screenshot 6: Step-by-Step AI Lesson Plan Generator modal (6 numbered fields: Topic, Board, Grade, Subject, Sub-Topics, Class Duration)
+  * Screenshots 7-8: Lesson plan viewer with 8 numbered sections, color-coded, download button
+- DB expansion (scripts/expand-grades-and-timetables.js):
+  * Added 10 missing grades (Nursery, LKG, UKG, Grade 1-5, Grade 11, Grade 12) → now 15 total grades
+  * Added sections A/B/C/D for every grade → 60 sections total
+  * Created 60 Class records (one per section × academic year 2026-27)
+  * Redistributed all 7000 students across the 60 sections
+  * Generated 2850 Timetable entries linking all 150 teachers to grades + sections + subjects (3-5 periods/week per teacher-class assignment)
+- AICalendarModule.tsx changes:
+  * Expanded GRADES array from 5 (Grade 6-10) to 15 (Nursery → Grade 12)
+  * Expanded SECTIONS from ['A','B','C'] to ['A','B','C','D']
+  * Replaced 8-teacher mock sample with 16-teacher sample covering KG/Primary/Middle/Secondary/Sr-Secondary — different subjects per grade band
+  * MonthCalendarTab: default currentMonth from Jan 2026 → today's month; default selectedDate from null → today; added isToday() highlighter (blue dot + "TODAY" label); added "Today" button to jump back to present; converted PUBLIC_HOLIDAYS_2026 (date-string) → PUBLIC_HOLIDAYS (mmdd) so it works for any year; added isHolidayForDate() helper for the selected-date dashboard; fixed 3 isHoliday(selectedDate.getDate()) references → isHolidayForDate(selectedDate); upcoming holidays list now uses the displayed year dynamically
+  * SubstitutionTab: added selectedDate state (default = today's YYYY-MM-DD); added date picker input + "Today" button + "PRESENT DAY" badge; handleDetect now sends the user-selected date to /api/substitution/detect; toast messages show the selected date label; updated detection-flow card text from "today" → "the selected date"
+- New API routes:
+  * /api/curriculum/generate — LLM-powered (zai.chat.completions.create), 7-section output (overview, scopeAndSequence, unitBreakdown, assessmentFramework, resources, pacingCalendar, integrationLayers), board/grade/subject configurable, returns config + curriculum JSON, scope-guarded via enforceAction('exam','create',user)
+  * /api/lesson-plan/generate — LLM-powered, 8-section output (learningObjectives with Bloom's level, warmUp, mainContent with 3 phases, differentiation Support/Core/Challenge, assessment formative+exitTicket, resources, keyVocabulary table, homework with extension), topic/board/grade/subject/subTopics/duration configurable, scope-guarded via enforceAction('exam','create',user)
+- New components:
+  * CurriculumBuilderPanel.tsx (~770 lines) — inline panel (NOT a fixed overlay) with green banner header + Back button + Download PDF button; config form with 10 fields; live calculation box (total periods − 12% buffer = teaching periods ≈ hours); generating state; 7 collapsible section cards with rich renderers (tables for scope/pacing/vocabulary, colored cards for units/assessment/resources/integration); HTML/PDF download with print-ready styling
+  * LessonPlannerPanel.tsx (~820 lines) — inline panel with dark green banner + Back button; 3 sub-views (library / generator / viewer); Library shows saved plans as cards with search + grade/board filters + View/Download/Delete actions; Generator is a 6-field step-by-step form (Topic, Board, Grade, Subject, Sub-Topics textarea, Class Duration) matching screenshot 6; Viewer renders all 8 sections with color-coded headers, 3-column differentiation, vocabulary table, homework extension box; plans persisted to localStorage; HTML/PDF download with print-ready styling
+- AcademicModuleEnhanced.tsx wiring:
+  * Replaced curriculumOpen/lessonPlannerOpen boolean state with inlineView state ('cards' | 'curriculum' | 'lesson-planner')
+  * openCard() routes 'Curriculum' → setInlineView('curriculum'), 'Lesson Planner' → setInlineView('lesson-planner')
+  * Wrapped SectionHeader + Tabs + cards grid in a {inlineView === 'cards' && (<>...</>)} conditional
+  * When inlineView === 'curriculum', renders <CurriculumBuilderPanel onBack={() => setInlineView('cards')} /> in-page (sidebar + topbar preserved)
+  * When inlineView === 'lesson-planner', renders <LessonPlannerPanel onBack={() => setInlineView('cards')} /> in-page
+  * Both panels have a "← Back" button in their green header that returns to the cards grid
+- Build + scope fix:
+  * Initial test: both APIs returned 403 "Your role (SUPER_ADMIN) cannot edit on academic" — because 'academic' is not a valid ResourceKey in roleScope.ts
+  * Fixed: changed enforceAction('academic','edit',user) → enforceAction('exam','create',user) in both routes (exam resource is granted to SUPER_ADMIN/SCHOOL_HEAD/ADMIN/TEACHER with create action)
+  * Build succeeded after fixing 2 stray </div> tags from the refactor
+  * End-to-end test confirmed:
+    - /api/curriculum/generate → success: true, 7 sections, 8 units, 8 pacing rows, vision text generated
+    - /api/lesson-plan/generate → success: true, 8 sections, 3 objectives, 3 phases, 6 vocabulary terms
+- New BUILD_ID: BqmMtWYTjBOzEZEbdXMXA (built 2026-07-23 09:41:53, then rebuilt after scope fix + inline refactor)
+
+Stage Summary:
+- All 5 user requirements delivered:
+  1. ✅ AI Calendar "Month" view defaults to today's month + highlights today with blue dot + "TODAY" label + "Today" button to jump back
+  2. ✅ Full LKG-12 grade range (15 grades × 4 sections = 60 sections) in DB + in AICalendarModule GRADES array; 16-teacher sample shows different subjects across grade bands
+  3. ✅ AI Substitution Detection Engine has a date picker (default=today) + "Today" button + "PRESENT DAY" badge; selection is captured and sent to /api/substitution/detect
+  4. ✅ Academic Management → Curriculum card opens CurriculumBuilderPanel in-page (sidebar preserved) with Back button; admin/teacher configures board/grade/subject/weeks/periods → AI generates 7-section annual curriculum → downloadable as PDF
+  5. ✅ Academic Management → Lesson Planner card opens LessonPlannerPanel in-page with Back button; teacher selects board/grade/subject/topic/sub-topics/duration → AI generates 8-section lesson plan → downloadable as PDF; library persists plans to localStorage
+- Files created: src/app/api/curriculum/generate/route.ts, src/app/api/lesson-plan/generate/route.ts, src/components/dashboard/CurriculumBuilderPanel.tsx, src/components/dashboard/LessonPlannerPanel.tsx, scripts/expand-grades-and-timetables.js, scripts/verify-final-state.js, scripts/test-curriculum-lesson-apis.sh
+- Files modified: src/components/dashboard/AICalendarModule.tsx (GRADES expansion, MonthCalendarTab today-highlight + Today button, SubstitutionTab date picker, holiday list year-agnostic), src/components/dashboard/AcademicModuleEnhanced.tsx (inline view switcher wiring)
+- DB state: 15 grades, 60 sections, 60 classes, 7000 students redistributed, 150 teachers, 2850 timetable entries linking all 150 teachers to grades+subjects
+- Both new APIs verified end-to-end against the running production build with real LLM calls
