@@ -20,6 +20,14 @@ import { SectionHeader } from './SectionHeader'
 import { useNotificationPreview } from './NotificationPreviewModal'
 import { CurriculumBuilderPanel } from './CurriculumBuilderPanel'
 import { LessonPlannerPanel } from './LessonPlannerPanel'
+import { ReportCardPanel } from './ReportCardPanel'
+import {
+  LearningOutcomesPanel, PerformanceAnalyticsPanel, AIInsightsPanel,
+  AcademicCalendarPanel, AchievementTrackerPanel,
+} from './AcademicTools'
+import {
+  CampaignsPanel, AdmissionCrmPanel, LeadManagementPanel, LeadNurturingPanel,
+} from './AdmissionsTools'
 import { toast } from 'sonner'
 
 const ACADEMIC_CARDS = [
@@ -85,20 +93,35 @@ export function AcademicModuleEnhanced() {
   const { preview } = useNotificationPreview()
   const [selectedCard, setSelectedCard] = useState<{ title: string; desc: string } | null>(null)
   const [nurtureLead, setNurtureLead] = useState<Lead | null>(null)
-  // Inline view switcher: 'cards' shows the module grid, 'curriculum' / 'lesson-planner'
-  // render the dedicated panels in-page (preserving sidebar + topbar) with a Back button.
-  const [inlineView, setInlineView] = useState<'cards' | 'curriculum' | 'lesson-planner'>('cards')
+  // Inline view switcher: every card opens its own working tool in-page
+  // (preserving sidebar + topbar) with a Back button. Falls through to a generic
+  // launcher modal only for cards without a dedicated panel yet.
+  const [inlineView, setInlineView] = useState<
+    'cards' | 'curriculum' | 'lesson-planner' | 'report-cards' |
+    'learning-outcomes' | 'performance-analytics' | 'ai-insights' |
+    'academic-calendar' | 'achievement-tracker' |
+    'campaigns' | 'admission-crm' | 'lead-management' | 'lead-nurturing'
+  >('cards')
 
   const openCard = (card: { title: string; desc: string }) => {
-    // Route known cards to their dedicated inline panels; others fall through to the generic launcher modal.
-    if (card.title === 'Curriculum') {
-      setInlineView('curriculum')
-      toast.info('Opening Curriculum Builder…')
-      return
+    const map: Record<string, typeof inlineView> = {
+      'Curriculum': 'curriculum',
+      'Lesson Planner': 'lesson-planner',
+      'Report Cards': 'report-cards',
+      'Learning Outcomes': 'learning-outcomes',
+      'Performance Analytics': 'performance-analytics',
+      'AI Insights': 'ai-insights',
+      'Academic Calendar': 'academic-calendar',
+      'Achievement Tracker': 'achievement-tracker',
+      'Campaigns': 'campaigns',
+      'Admission CRM': 'admission-crm',
+      'Lead Management': 'lead-management',
+      'Lead Nurturing': 'lead-nurturing',
     }
-    if (card.title === 'Lesson Planner') {
-      setInlineView('lesson-planner')
-      toast.info('Opening Lesson Plan Generator…')
+    const target = map[card.title]
+    if (target) {
+      setInlineView(target)
+      toast.info(`Opening ${card.title}…`)
       return
     }
     setSelectedCard(card)
@@ -128,6 +151,36 @@ export function AcademicModuleEnhanced() {
       )}
       {inlineView === 'lesson-planner' && (
         <LessonPlannerPanel onBack={() => setInlineView('cards')} />
+      )}
+      {inlineView === 'report-cards' && (
+        <ReportCardPanel onBack={() => setInlineView('cards')} />
+      )}
+      {inlineView === 'learning-outcomes' && (
+        <LearningOutcomesPanel onBack={() => setInlineView('cards')} />
+      )}
+      {inlineView === 'performance-analytics' && (
+        <PerformanceAnalyticsPanel onBack={() => setInlineView('cards')} />
+      )}
+      {inlineView === 'ai-insights' && (
+        <AIInsightsPanel onBack={() => setInlineView('cards')} />
+      )}
+      {inlineView === 'academic-calendar' && (
+        <AcademicCalendarPanel onBack={() => setInlineView('cards')} />
+      )}
+      {inlineView === 'achievement-tracker' && (
+        <AchievementTrackerPanel onBack={() => setInlineView('cards')} />
+      )}
+      {inlineView === 'campaigns' && (
+        <CampaignsPanel onBack={() => setInlineView('cards')} />
+      )}
+      {inlineView === 'admission-crm' && (
+        <AdmissionCrmPanel onBack={() => setInlineView('cards')} />
+      )}
+      {inlineView === 'lead-management' && (
+        <LeadManagementPanel onBack={() => setInlineView('cards')} />
+      )}
+      {inlineView === 'lead-nurturing' && (
+        <LeadNurturingPanel onBack={() => setInlineView('cards')} />
       )}
       {inlineView === 'cards' && (
         <>

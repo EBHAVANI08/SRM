@@ -372,3 +372,40 @@ Stage Summary:
 - Files modified: src/components/dashboard/AICalendarModule.tsx (GRADES expansion, MonthCalendarTab today-highlight + Today button, SubstitutionTab date picker, holiday list year-agnostic), src/components/dashboard/AcademicModuleEnhanced.tsx (inline view switcher wiring)
 - DB state: 15 grades, 60 sections, 60 classes, 7000 students redistributed, 150 teachers, 2850 timetable entries linking all 150 teachers to grades+subjects
 - Both new APIs verified end-to-end against the running production build with real LLM calls
+
+---
+Task ID: report-card-move-and-all-cards-working
+Agent: main (Super Z) — continuation session
+Task: User requested (1) move the Report Card feature from Examination & Result System into Academic Management → Report Cards card so clicking it shows the actual feature in-page; (2) every card in Academic Management AND Admissions CRM should open a working tool/page (like Curriculum Builder and Lesson Planner do), each doing what its role promises.
+
+Work Log:
+- Audited ExamsModuleEnhanced.tsx — found Report Cards tab with full feature: 4 board templates (CBSE/ICSE/IGCSE/State), class+term selectors, student list, generating overlay, preview modal with marks table + AI teacher comment + PDF/Print/Send-to-parent/Send-to-teacher actions
+- Created ReportCardPanel.tsx (~280 lines) — extracted the Report Cards feature into a reusable in-page panel with purple banner header + Back button + all original functionality (templates, term, students, preview modal, AI comment, send actions)
+- Created AcademicTools.tsx (~470 lines) with 5 working panels:
+  * LearningOutcomesPanel — outcome→lesson mapping table, mastery progress bars, Bloom level filter, "Link Lesson" action, stats cards (total/avg mastery/linked/below 70%)
+  * PerformanceAnalyticsPanel — class-wise subject performance table (avg/top/low/attendance/trend) + student performance cards with subject-wise breakdown + rank badges
+  * AIInsightsPanel — at-risk student cards with risk score, contributing factors, AI-recommended intervention, "Activate Intervention" action + live AI analysis runner
+  * AcademicCalendarPanel — event list (milestone/exam/event/PTM/holiday) with colored date badges, add-event form, remove-event action, sorted chronologically
+  * AchievementTrackerPanel — achievement cards by category (Academic/Extracurricular/Sports/Arts/Leadership) with badges + points + certificate download, add-achievement form, category filter
+- Created AdmissionsTools.tsx (~480 lines) with 4 working panels:
+  * CampaignsPanel — campaign cards with leads/converted/revenue/conversion-rate stats, create-campaign form, pause/resume toggle, report download
+  * AdmissionCrmPanel — 6-stage Kanban pipeline (New → Docs → Assessment → Offer → Fee → Enrolled), applicant cards with prev/next stage buttons, applicant detail panel with move/notify/download actions
+  * LeadManagementPanel — lead table with search + stage filter + AI score progress bars, capture-lead form, advance-stage action, stage badges
+  * LeadNurturingPanel — 2-col layout: leads list + 6-step drip sequence with completed/current/upcoming states, per-step Send button (uses NotificationPreviewModal), Activate Full Sequence action
+- Wired all 11 panels into AcademicModuleEnhanced.tsx:
+  * Expanded inlineView union type to include 12 values: cards + curriculum + lesson-planner + report-cards + learning-outcomes + performance-analytics + ai-insights + academic-calendar + achievement-tracker + campaigns + admission-crm + lead-management + lead-nurturing
+  * Refactored openCard() to use a title→view map (12 entries) instead of if-else chain — every card now routes to its dedicated panel
+  * Mounted all 11 panels at the top of the return with `{inlineView === 'X' && <XPanel onBack={() => setInlineView('cards')} />}` conditionals
+  * Each panel renders in-page (sidebar + topbar preserved) with a "← Back" button returning to the cards grid
+- Build succeeded: BUILD_ID = fxTN-NAs9jJS2bozO8gq7 (2026-07-23)
+- Verified all 5 panel signatures compiled into .next/static/chunks/eabd054535824406.js
+
+Stage Summary:
+- All 12 cards now open working tools in-page:
+  * Academic: Curriculum (AI 7-section generator), Lesson Planner (AI 8-section generator), Report Cards (board templates + AI comments + PDF/print/send), Learning Outcomes (mastery tracker), Performance Analytics (class+student dashboards), AI Insights (at-risk prediction + interventions), Academic Calendar (event planner), Achievement Tracker (milestone recorder)
+  * Admissions CRM: Campaigns (marketing tracker), Admission CRM (Kanban pipeline), Lead Management (capture+qualify+score), Lead Nurturing (drip sequence automation)
+- Report Card feature now accessible from BOTH Examination & Result System (original tab) AND Academic Management → Report Cards card (new in-page panel) — same UX, same functionality
+- Every panel has: colored banner header + Back button + working tool that does what the card promises + toast feedback on actions
+- Files created: ReportCardPanel.tsx, AcademicTools.tsx, AdmissionsTools.tsx
+- Files modified: AcademicModuleEnhanced.tsx (expanded inlineView + openCard router + 11 panel mounts)
+- New BUILD_ID: fxTN-NAs9jJS2bozO8gq7
