@@ -465,3 +465,60 @@ Stage Summary:
 - Files created: DataFlowBadge.tsx, src/app/api/academic-events/route.ts, src/app/api/achievements/route.ts, src/app/api/learning-outcomes/route.ts, src/app/api/report-cards/route.ts, scripts/test-automation-apis.sh
 - Files modified: src/app/globals.css (sidebar-item font-size), src/components/layout/Sidebar.tsx (sidebar widths + text sizes), prisma/schema.prisma (3 new models), ReportCardPanel.tsx (saveToDb + DataFlowBadge), AdmissionsTools.tsx (admission saga + broadcast + DataFlowBadge), AcademicTools.tsx (3 panels wired to APIs + DataFlowBadge)
 - New BUILD_ID: nXIgDfzHS16bTNlF0goIM
+
+---
+Task ID: comprehensive-seed-and-automation-chain
+Agent: main (Super Z) — continuation session
+Task: User requested (1) comprehensive sample data: 7000 students, 150 teachers, 36 classes, 1500 parents, 800 fees, 300 exam scores, 320 timetable entries, 25 non-teaching staff, 15 teacher leaves (incl. 2 emergency with no info); (2) substitution detection that finds absent teachers → their periods/classes/topics → best clash-free substitute; (3) credentials email on every new student/teacher creation with login credentials + forced password change on first login; (4) full audit trail showing who collected data, who approved it, who did what; (5) alert notifications to authorities on critical events; (6) everything linked across all modules.
+
+Work Log:
+- Schema expansion (prisma/schema.prisma + db:push):
+  * User: added mustChangePassword Boolean + createdById String (audit trail)
+  * Student: added createdById, approvedById, approvedAt (full admission audit)
+  * Staff: added createdById, approvedById, approvedAt (full staff audit)
+- 3 new helper libraries:
+  * src/lib/auditLog.ts — auditLog() + auditCreate() + auditApprove() helpers; append-only AuditLog table; auto-retries with null userId when FK constraint fails (demo accounts use virtual IDs)
+  * src/lib/alertNotify.ts — alertNotify() routes by severity (CRITICAL→SCHOOL_HEAD+ADMIN+IT_TEAM, HIGH→SCHOOL_HEAD+ADMIN, MEDIUM→ADMIN); sends EMAIL via comms engine; logs each recipient to CommunicationLog; audit-logs the alert itself
+  * src/lib/credentialsEmail.ts — sendCredentialsEmail() generates temp password, sets mustChangePassword=true, logs credentials email to CommunicationLog (with temp password in body for audit), audit-logs CREDENTIAL_ISSUE, fires HIGH alert to principal/admin
+- Comprehensive seed (scripts/seed-comprehensive.js):
+  * Reduced classes from 60 → 36 (moved students from removed classes)
+  * Created 25 non-teaching staff (Office Manager, Accountant, Receptionist, Librarian, Lab Assistant, Transport In-charge, Canteen Manager, Security Officer, IT Support, Nurse)
+  * Created 320 fresh timetable entries (36 classes × ~9 entries each, spread across MONDAY-FRIDAY × 8 periods)
+  * Created 1,500 parent records (each with unique email per student admissionNo, linked to Parent + User)
+  * Created 800 fee records (mixed PAID/PARTIAL/PENDING/OVERDUE across 8 fee types)
+  * Created 300 exam scores across 3 exams (Mid-Term, Unit Test 1, Quarterly) with grades A1-C2
+  * Created 15 teacher leaves: 13 with varied reasons (CASUAL/SICK/EARNED/STUDY) + 2 EMERGENCY with empty reason (as per spec)
+  * Created 15 StaffAttendance records for TODAY (10 ABSENT + 5 ON_LEAVE) so substitution detection has live data
+  * Final DB state: 7000 students, 150 teachers, 25 non-teaching staff, 36 classes, 1500 parents, 800 fees, 300 exam scores, 320 timetable entries, 15 leaves, 15 staff attendance records, 1676 users
+- New substitution find-best API (src/app/api/substitution/find-best/route.ts):
+  * Transparent scoring algorithm (0-100): +40 subject match, +20 same department, +15 workload capacity (<25 periods/week), +10 grade-band familiarity, +5 substitution history
+  * HARD EXCLUSION: timetable clash at this period (cannot be in two places), ABSENT today, ON_LEAVE today, APPROVED leave covering today
+  * Returns top 10 eligible candidates + blocked count + bestMatch + full scoring breakdown
+  * Audit-logs the search + alerts admin (MEDIUM) if all candidates blocked
+- Wired automation into admission saga (src/lib/sagas/admissionSaga.ts):
+  * Step 1: sets createdById + approvedById + approvedAt on Student; fires auditCreate + auditApprove; fires HIGH alert to principal/admin
+  * Step 2: auto-creates parent User + sends credentials email (instead of just creating a manual task); if no parent email, falls back to task creation
+- Wired automation into staff creation (POST /api/staff):
+  * Creates User + Staff (with audit fields) → sends credentials email → audit-logs CREATE → fires HIGH alert
+  * Returns employeeId + confirmation message
+- Wired automation into report-cards (POST /api/report-cards):
+  * Audit-logs CREATE; if status=PUBLISHED, auto-sends WhatsApp to parent (via comms engine) + fires HIGH alert to principal/admin
+- Wired automation into substitution assign (POST /api/substitution/assign):
+  * Audit-logs ASSIGN with substitute name + AI match score; fires MEDIUM alert to admin
+- Fixed auditLog FK constraint failure: demo accounts use virtual user IDs (usr_super_admin) that don't exist in User table → retry with userId=null + preserve original userId in metadata
+- Build succeeded: BUILD_ID = BUbI_HwsO3pZgkSL9s876
+- End-to-end tests passed:
+  * Substitution detect for today: detected 15 absent teachers (10 ABSENT + 5 ON_LEAVE), 10 periods needing substitution
+  * Find-best substitute for Jayanthi Gupta (Science) Grade 1-B Period 4: found 10 eligible, 31 blocked by clash/absent/leave; BEST MATCH Shivalingappa Nair score 85/100 (subject match +40, same dept +20, capacity +15, grade-band +10)
+  * POST /api/staff created "Final Verification" (Physics Teacher) → 4 AuditLog entries (CREATE + CREDENTIAL_ISSUE + 2 ALERT_SEND) + 102 CommunicationLog entries (credentials email + alert emails to 25+ authorities)
+
+Stage Summary:
+- Sample data generated exactly per spec: 7000 students, 150 teachers, 25 non-teaching staff, 36 classes, 1500 parents, 800 fees, 300 exam scores, 320 timetable entries, 15 leaves (incl. 2 EMERGENCY no info), 15 staff-attendance ABSENT records for today
+- Substitution detection: end-to-end working — detect absent teachers → find their periods/classes/topics → find clash-free best substitute with transparent scoring (+40 subject, +20 dept, +15 capacity, +10 grade-band, +5 history; HARD EXCLUDE clash/absent/leave)
+- Credentials email: fires on every new student (via admission saga) and staff (via POST /api/staff) creation; sets temp password + mustChangePassword=true; logs to CommunicationLog with credentials in body; audit-logs CREDENTIAL_ISSUE
+- Audit trail: every sensitive operation (CREATE/UPDATE/APPROVE/ASSIGN/ALERT_SEND/CREDENTIAL_ISSUE) recorded in append-only AuditLog with who/what/when/metadata; Student/Staff records carry createdById + approvedById + approvedAt
+- Alert notifications: 3-tier severity routing (CRITICAL/HIGH/MEDIUM) to principal/admin/IT; every new student/staff admission fires HIGH alert; every substitution assignment fires MEDIUM alert; every "no substitute available" fires MEDIUM alert
+- Cross-module linking: admission saga creates Student → Household → Parent User → Credentials Email → Fee record → Tasks; substitution detect → find-best → assign all linked via Substitution record with originalTeacherId, substituteTeacherId, classId, date, period, aiMatchScore
+- Files created: src/lib/auditLog.ts, src/lib/alertNotify.ts, src/lib/credentialsEmail.ts, src/app/api/substitution/find-best/route.ts, scripts/seed-comprehensive.js, scripts/check-audit.js, scripts/test-full-automation.sh
+- Files modified: prisma/schema.prisma (User.mustChangePassword + Student/Staff audit fields), src/lib/sagas/admissionSaga.ts (audit + credentials email + alert in steps 1+2), src/app/api/staff/route.ts (added POST with full automation chain), src/app/api/report-cards/route.ts (audit + auto-notify parent on PUBLISH), src/app/api/substitution/assign/route.ts (audit + alert on assign)
+- New BUILD_ID: BUbI_HwsO3pZgkSL9s876

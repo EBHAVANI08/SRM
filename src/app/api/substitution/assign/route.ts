@@ -15,6 +15,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getUserFromHeaders, enforceAction } from '@/lib/apiScope'
 import { publishEvent } from '@/lib/eventBus'
+import { auditLog } from '@/lib/auditLog'
+import { alertNotify } from '@/lib/alertNotify'
 import ZAI from 'z-ai-web-dev-sdk'
 
 export const runtime = 'nodejs'
@@ -240,6 +242,34 @@ Return ONLY the JSON, no markdown.`
           aiLessonDNA,
           aiMatchScore,
         },
+      })
+
+      // Audit: substitution assigned
+      await auditLog({
+        userId: user.userId,
+        action: 'ASSIGN',
+        module: 'SUBSTITUTION',
+        description: `Substitute ${bestMatch.staffName} assigned to cover ${sub.originalTeacherId}'s period ${sub.period} class ${sub.classId} on ${new Date(sub.date).toDateString()}. AI match score: ${Math.round(aiMatchScore * 100)}%.`,
+        metadata: {
+          substitutionId: subId,
+          originalTeacherId: sub.originalTeacherId,
+          substituteTeacherId: bestMatch.staffId,
+          substituteName: bestMatch.staffName,
+          classId: sub.classId,
+          period: sub.period,
+          date: sub.date,
+          aiMatchScore,
+        },
+      })
+
+      // Alert: notify admin (MEDIUM) so they're aware of the assignment
+      await alertNotify({
+        severity: 'MEDIUM',
+        title: 'Substitute teacher assigned',
+        message: `${bestMatch.staffName} has been assigned to cover a ${sub.subject} period ${sub.period} class on ${new Date(sub.date).toDateString()}. AI match score: ${Math.round(aiMatchScore * 100)}%.`,
+        triggeredBy: user.userId,
+        module: 'SUBSTITUTION',
+        recordId: subId,
       })
 
       await publishEvent({

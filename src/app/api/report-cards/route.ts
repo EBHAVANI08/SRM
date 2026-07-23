@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getUserFromHeaders, enforceAction } from '@/lib/apiScope'
+import { auditLog, auditCreate } from '@/lib/auditLog'
+import { alertNotify } from '@/lib/alertNotify'
+import { sendCommunication } from '@/lib/comms'
 
 export const runtime = 'nodejs'
 
@@ -68,6 +71,47 @@ export async function POST(req: NextRequest) {
         status: body.status || 'DRAFT',
       },
     })
+
+    // Audit: report card created
+    await auditCreate(user.userId, 'REPORT_CARD', report.id,
+      `Report card created for student ${body.studentId} (term: ${body.term}, grade: ${body.overallGrade}, %: ${body.overallPercentage}). Status: ${report.status}.`,
+      { studentId: body.studentId, term: body.term, status: report.status })
+
+    // Automation: if status is PUBLISHED, auto-notify the parent via WhatsApp + alert principal
+    if (report.status === 'PUBLISHED') {
+      const student = await db.student.findUnique({
+        where: { id: body.studentId },
+        select: { id: true, fullName: true, guardianPhone: true, guardianEmail: true, parent: { include: { user: { select: { id: true, email: true } } } } },
+      })
+      if (student) {
+        const parentContact = student.parent?.user?.email || student.guardianEmail || student.guardianPhone || 'N/A'
+        const parentUserId = student.parent?.user?.id || student.id
+        try {
+          await sendCommunication({
+            channel: 'WHATSAPP',
+            recipientType: 'PARENT',
+            recipientId: parentUserId,
+            recipientContact: student.guardianPhone || parentContact,
+            subject: `${body.term} Report Card Published — ${student.fullName}`,
+            body: `Dear Parent,\n\n${student.fullName}'s ${body.term} report card has been published.\n\n📊 Overall: ${body.overallPercentage}% (Grade ${body.overallGrade})${body.overallRank ? `\n🏆 Rank: #${body.overallRank}` : ''}\n\nView the full report on the LearnX Parent Portal.\n\n— LearnX School`,
+            category: 'ACADEMIC',
+            metadata: { reportCardId: report.id, studentId: student.id, term: body.term },
+          })
+        } catch (e) {
+          console.error('[report-cards] Failed to notify parent:', e)
+        }
+      }
+      // Alert principal/admin
+      await alertNotify({
+        severity: 'HIGH',
+        title: 'Report card published',
+        message: `A ${body.term} report card was published for student ${student?.fullName || body.studentId} (${body.overallPercentage}% — Grade ${body.overallGrade}). Parent has been auto-notified via WhatsApp.`,
+        triggeredBy: user.userId,
+        module: 'REPORT_CARD',
+        recordId: report.id,
+      })
+    }
+
     return NextResponse.json({ success: true, report }, { status: 201 })
   } catch (e: any) {
     console.error('POST /api/report-cards error:', e)

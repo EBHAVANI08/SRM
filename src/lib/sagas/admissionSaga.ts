@@ -18,6 +18,9 @@
 import { db } from '../db'
 import { publishEvent } from '../eventBus'
 import { sendCommunication } from '../comms'
+import { auditLog, auditCreate, auditApprove } from '../auditLog'
+import { alertNotify } from '../alertNotify'
+import { sendCredentialsEmail } from '../credentialsEmail'
 
 export interface AdmissionInput {
   firstName: string
@@ -101,9 +104,27 @@ export async function executeAdmissionSaga(input: AdmissionInput): Promise<SagaR
         medicalConditions: input.medicalConditions || null,
         allergies: input.allergies || null,
         academicYearId: (await db.academicYear.findFirst({ where: { isActive: true } }))?.id || null,
+        // Audit trail: who created + approved this student record
+        createdById: input.actorId,
+        approvedById: input.actorId,
+        approvedAt: new Date(),
       },
     })
     studentId = student.id
+
+    // Audit: student record created + approved (admission saga = both)
+    await auditCreate(input.actorId, 'STUDENT', studentId, `Student ${input.firstName} ${input.lastName} admitted via Admission Saga. Admission No: ${admissionNo}.`, { admissionNo, householdId: undefined })
+    await auditApprove(input.actorId, 'STUDENT', studentId, `Admission approved by ${input.actorId} — student record is now live.`, { admissionNo })
+
+    // Alert: principal/admin notified of new admission
+    await alertNotify({
+      severity: 'HIGH',
+      title: 'New student admitted',
+      message: `Student ${input.firstName} ${input.lastName} (Admission No: ${admissionNo}) has been admitted via the Admission Saga. Parent credentials will be emailed to ${input.guardianEmail || input.guardianPhone}.`,
+      triggeredBy: input.actorId,
+      module: 'STUDENT',
+      recordId: studentId,
+    })
 
     const household = await db.household.create({
       data: {
@@ -145,7 +166,7 @@ export async function executeAdmissionSaga(input: AdmissionInput): Promise<SagaR
     return { success: false, steps, errors }
   }
 
-  // === STEP 2: ID Card + Portal Credentials Tasks ===
+  // === STEP 2: ID Card + Portal Credentials (auto-emailed to parent) ===
   try {
     await db.task.create({
       data: {
@@ -156,18 +177,63 @@ export async function executeAdmissionSaga(input: AdmissionInput): Promise<SagaR
         metadata: JSON.stringify({ step: 'id_card', admissionNo }),
       },
     })
-    await db.task.create({
-      data: {
-        schoolId, title: `Create Portal Credentials — ${input.firstName} ${input.lastName}`,
-        description: `Generate student + parent portal login credentials and deliver.`,
-        assigneeRole: 'IT_TEAM', entityType: 'STUDENT', entityId: studentId,
-        priority: 'HIGH', slaDeadline: new Date(Date.now() + 24 * 3600000),
-        metadata: JSON.stringify({ step: 'portal_credentials', admissionNo }),
-      },
-    })
-    steps.push({ name: 'ID Card + Portal Credentials Tasks', status: 'COMPLETED' })
+
+    // Auto-create parent User account + send credentials email (instead of just a task)
+    if (input.guardianEmail) {
+      const parentEmail = input.guardianEmail
+      const parentName = input.guardianName || `Parent of ${input.firstName} ${input.lastName}`
+      let parentUser = await db.user.findUnique({ where: { email: parentEmail } })
+      if (!parentUser) {
+        parentUser = await db.user.create({
+          data: {
+            email: parentEmail,
+            password: 'demo1234', // will be overwritten by sendCredentialsEmail below
+            name: parentName,
+            phone: input.guardianPhone,
+            role: 'PARENT',
+            isActive: true,
+            createdById: input.actorId,
+          },
+        })
+      }
+      // Link parent to student
+      const existingParentLink = await db.parent.findUnique({ where: { studentId: studentId! } })
+      if (!existingParentLink) {
+        await db.parent.create({
+          data: {
+            userId: parentUser.id,
+            studentId: studentId!,
+            relation: 'FATHER',
+            occupation: input.guardianOccupation || null,
+            income: input.annualIncome || null,
+          },
+        })
+      }
+      // Send credentials email (sets temp password + mustChangePassword=true + logs to CommunicationLog + audit + alert)
+      await sendCredentialsEmail({
+        userId: parentUser.id,
+        role: 'PARENT',
+        fullName: parentName,
+        email: parentEmail,
+        createdById: input.actorId,
+        linkedRecordId: studentId,
+      })
+      steps.push({ name: 'ID Card + Portal Credentials', status: 'COMPLETED', detail: `Parent credentials emailed to ${parentEmail}` })
+    } else {
+      // No parent email provided — fall back to creating a task for manual credential delivery
+      await db.task.create({
+        data: {
+          schoolId, title: `Create Portal Credentials — ${input.firstName} ${input.lastName}`,
+          description: `Generate student + parent portal login credentials and deliver manually (no parent email on file).`,
+          assigneeRole: 'IT_TEAM', entityType: 'STUDENT', entityId: studentId,
+          priority: 'HIGH', slaDeadline: new Date(Date.now() + 24 * 3600000),
+          metadata: JSON.stringify({ step: 'portal_credentials', admissionNo, reason: 'no_parent_email' }),
+        },
+      })
+      steps.push({ name: 'ID Card + Portal Credentials', status: 'COMPLETED', detail: 'No parent email — manual credential task created' })
+    }
   } catch (error: any) {
-    steps.push({ name: 'ID Card + Portal Credentials Tasks', status: 'FAILED', detail: error?.message })
+    steps.push({ name: 'ID Card + Portal Credentials', status: 'FAILED', detail: error?.message })
     errors.push(`Step 2: ${error?.message}`)
   }
 
