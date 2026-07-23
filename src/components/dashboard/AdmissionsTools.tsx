@@ -26,6 +26,8 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { useNotificationPreview } from './NotificationPreviewModal'
+import { DataFlowBadge } from './DataFlowBadge'
+import { apiPost } from '@/lib/apiFetch'
 import { toast } from 'sonner'
 
 function PanelHeader({
@@ -69,6 +71,38 @@ export function CampaignsPanel({ onBack }: { onBack: () => void }) {
   const [campaigns, setCampaigns] = useState(CAMPAIGNS)
   const [showForm, setShowForm] = useState(false)
   const [newCamp, setNewCamp] = useState({ name: '', channel: 'WhatsApp', source: 'Website' })
+  const [broadcastingId, setBroadcastingId] = useState<string | null>(null)
+
+  // Automation: dispatch a real broadcast message to all leads from this campaign's source
+  // via the comms engine. Side-effect: each recipient gets a WhatsApp/Email logged in CommunicationLog.
+  const launchBroadcast = async (campaign: typeof CAMPAIGNS[0]) => {
+    setBroadcastingId(campaign.id)
+    toast.info(`📢 Broadcasting "${campaign.name}"…`, {
+      description: `Dispatching to ${campaign.leads} leads via ${campaign.channel}`,
+    })
+    try {
+      const { data, error } = await apiPost<any>('/api/communications', {
+        channel: campaign.channel.split(' ')[0].toUpperCase(), // WHATSAPP / EMAIL / SMS
+        recipientType: 'PARENT',
+        subject: `${campaign.name} — LearnX Admissions`,
+        body: `Dear Parent,\n\nWe're excited to share "${campaign.name}" from LearnX International School.\n\nLimited seats available for academic year 2026-27. Reply YES to schedule a campus visit.\n\n— LearnX School`,
+        source: 'admission_campaign',
+        sourceId: campaign.id,
+        recipientCount: campaign.leads,
+      })
+      if (error) {
+        toast.error(`Broadcast failed: ${error}`)
+      } else if (data?.success) {
+        toast.success(`✅ Broadcast dispatched to ${campaign.leads} parents`, {
+          description: `Logged in CommunicationLog · ${data.dispatched || data.queued || 'Queued for delivery'}`,
+          duration: 6000,
+        })
+      }
+    } catch (e: any) {
+      toast.error(`Error: ${e?.message}`)
+    }
+    setBroadcastingId(null)
+  }
 
   const handleCreate = () => {
     if (!newCamp.name) { toast.error('Campaign name required'); return }
@@ -156,6 +190,15 @@ export function CampaignsPanel({ onBack }: { onBack: () => void }) {
               <div className="flex items-center justify-between pt-3 border-t border-slate-100">
                 <div className="text-xs font-bold text-amber-700">₹{(c.revenue / 100000).toFixed(1)}L revenue</div>
                 <div className="flex gap-1.5">
+                  <Button
+                    size="sm"
+                    className="h-7 text-[10px] rounded-lg text-white"
+                    style={{ background: '#1E3A8A' }}
+                    onClick={() => launchBroadcast(c)}
+                    disabled={broadcastingId === c.id || c.status === 'PAUSED'}
+                  >
+                    {broadcastingId === c.id ? '📡…' : '📢 Broadcast'}
+                  </Button>
                   <Button size="sm" variant="outline" className="h-7 text-[10px] rounded-lg" onClick={() => toast.success('Performance report downloaded')}><Download className="w-3 h-3 mr-1" /> Report</Button>
                   <Button size="sm" variant="outline" className="h-7 text-[10px] rounded-lg" onClick={() => setCampaigns(prev => prev.map(x => x.id === c.id ? { ...x, status: x.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE' } : x))}>
                     {c.status === 'ACTIVE' ? 'Pause' : 'Resume'}
@@ -166,6 +209,13 @@ export function CampaignsPanel({ onBack }: { onBack: () => void }) {
           )
         })}
       </div>
+
+      {/* Data flow transparency */}
+      <DataFlowBadge
+        source="Campaign form + Broadcast button"
+        destination="/api/communications → CommunicationLog table → WhatsApp/Email gateway"
+        sideEffect="Broadcast dispatches to all leads from the campaign's source channel"
+      />
     </div>
   )
 }
@@ -342,15 +392,53 @@ export function LeadManagementPanel({ onBack }: { onBack: () => void }) {
     toast.success('✅ Lead captured + AI score calculated')
   }
 
-  const advanceStage = (id: string) => {
+  const [enrollingId, setEnrollingId] = useState<string | null>(null)
+
+  const advanceStage = async (id: string) => {
     const stages = ['new', 'contacted', 'visited', 'applied', 'enrolled']
-    setLeads(prev => prev.map(l => {
-      if (l.id !== id) return l
-      const idx = stages.indexOf(l.stage)
-      if (idx === -1 || idx === stages.length - 1) return l
-      return { ...l, stage: stages[idx + 1], lastContact: 'Just now' }
-    }))
-    toast.success('Lead advanced to next stage')
+    const lead = leads.find(l => l.id === id)
+    if (!lead) return
+    const idx = stages.indexOf(lead.stage)
+    if (idx === -1 || idx === stages.length - 1) return
+    const nextStage = stages[idx + 1]
+
+    // Update local state immediately for responsive UX
+    setLeads(prev => prev.map(l => l.id === id ? { ...l, stage: nextStage, lastContact: 'Just now' } : l))
+
+    // Automation: when a lead reaches "enrolled", fire the Admission Saga
+    // which auto-creates Student + Household + ID card + Fees + Transport + Library + RAG + Welcome message
+    if (nextStage === 'enrolled') {
+      setEnrollingId(id)
+      toast.info('🚀 Triggering Admission Saga…', {
+        description: 'Auto-creating Student + Household + Fees + Welcome message',
+      })
+      try {
+        const [firstName, ...rest] = lead.name.split(' ')
+        const lastName = rest.join(' ') || firstName
+        const { data, error } = await apiPost<any>('/api/admissions/approve', {
+          firstName,
+          lastName,
+          guardianPhone: lead.phone,
+          guardianEmail: lead.email,
+          guardianName: lead.parentName,
+          grade: lead.grade,
+          source: 'LEAD_MANAGEMENT',
+        })
+        if (error) {
+          toast.error(`Admission saga failed: ${error}`)
+        } else if (data?.success) {
+          toast.success(`✅ Admission complete! Student ${lead.name} is now live`, {
+            description: `Admission No: ${data.admissionNo} · ${data.steps?.filter((s: any) => s.status === 'COMPLETED').length}/${data.steps?.length} saga steps completed`,
+            duration: 8000,
+          })
+        }
+      } catch (e: any) {
+        toast.error(`Error: ${e?.message}`)
+      }
+      setEnrollingId(null)
+    } else {
+      toast.success(`Lead advanced to "${nextStage}"`)
+    }
   }
 
   return (
@@ -457,6 +545,13 @@ export function LeadManagementPanel({ onBack }: { onBack: () => void }) {
           </table>
         </div>
       </Card>
+
+      {/* Data flow transparency */}
+      <DataFlowBadge
+        source="Lead capture form / advance-stage action"
+        destination="Lead table (local) → /api/admissions/approve → Admission Saga (8 steps) → Student + Household + Fees + Welcome WhatsApp"
+        sideEffect="Enrolling a lead auto-creates the student record + fee structure + parent welcome message"
+      />
     </div>
   )
 }

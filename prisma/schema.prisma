@@ -411,6 +411,63 @@ model ReportCard {
   status      String   @default("DRAFT") // DRAFT, PUBLISHED, PRINTED
 }
 
+// ============ Academic Management — new persistence models ============
+
+model AcademicEvent {
+  id          String   @id @default(cuid())
+  schoolId    String   @default("school_default")
+  title       String
+  description String?
+  date        DateTime
+  endDate     DateTime?
+  type        String   // MILESTONE, EXAM, EVENT, PTM, HOLIDAY
+  gradeScope  String   @default("All") // "All" or "Grade 6" etc.
+  createdBy   String?
+  createdAt   DateTime @default(now())
+
+  @@index([schoolId, date])
+  @@index([schoolId, type])
+}
+
+model Achievement {
+  id          String   @id @default(cuid())
+  schoolId    String   @default("school_default")
+  studentName String
+  studentId   String?  // optional link to Student record
+  grade       String
+  category    String   // ACADEMIC, EXTRACURRICULAR, SPORTS, ARTS, LEADERSHIP
+  title       String
+  description String?
+  achievementDate DateTime
+  points      Int      @default(0)
+  badge       String   @default("⭐")
+  certificateUrl String?
+  awardedBy   String?
+  createdAt   DateTime @default(now())
+
+  @@index([schoolId, category])
+  @@index([schoolId, achievementDate])
+}
+
+model LearningOutcome {
+  id          String   @id @default(cuid())
+  schoolId    String   @default("school_default")
+  code        String   // e.g. MATH.G6.01
+  description String
+  subject     String
+  grade       String
+  bloomLevel  String   // Remember, Understand, Apply, Analyze, Evaluate, Create
+  masteryPercentage Float @default(0)
+  lessonsLinked Int    @default(0)
+  studentsMastered Int @default(0)
+  studentsTotal Int   @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([schoolId, subject])
+  @@index([schoolId, grade])
+}
+
 model LessonPlan {
   id          String   @id @default(cuid())
   subjectId   String

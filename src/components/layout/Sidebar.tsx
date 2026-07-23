@@ -76,7 +76,7 @@ export function Sidebar() {
   return (
     <aside
       className={`sidebar-luxury relative h-screen flex flex-col transition-all duration-300 ease-out ${
-        collapsed ? 'w-[64px]' : 'w-[228px]'
+        collapsed ? 'w-[68px]' : 'w-[244px]'
       }`}
     >
       {/* Brand header — logo on top-left */}
@@ -118,7 +118,7 @@ export function Sidebar() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search modules..."
-              className="w-full pl-7 pr-2 py-1.5 text-[11px] rounded-md bg-slate-100 border border-transparent text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-slate-200 transition-all"
+              className="w-full pl-7 pr-2 py-1.5 text-xs rounded-md bg-slate-100 border border-transparent text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-slate-200 transition-all"
             />
           </div>
         </div>
@@ -132,7 +132,7 @@ export function Sidebar() {
           return (
             <div key={cat} className="mb-4">
               {!collapsed && (
-                <div className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider px-2 mb-1 mt-1">
+                <div className="text-[10.5px] font-semibold text-slate-400 uppercase tracking-wider px-2 mb-1 mt-1">
                   {CATEGORY_LABELS[cat]}
                 </div>
               )}
@@ -149,7 +149,7 @@ export function Sidebar() {
                       }`}
                       title={collapsed ? m.title : undefined}
                     >
-                      <span className="text-[13px] flex-shrink-0 leading-none">{m.emoji}</span>
+                      <span className="text-[15px] flex-shrink-0 leading-none">{m.emoji}</span>
                       {!collapsed && (
                         <>
                           <span className="flex-1 text-left truncate">{m.shortTitle}</span>
@@ -185,8 +185,8 @@ export function Sidebar() {
           </div>
           {!collapsed && (
             <div className="flex-1 min-w-0">
-              <div className="text-[11px] font-semibold text-slate-900 truncate">{user.name}</div>
-              <div className="text-[9px] text-slate-500 truncate">{roleInfo.label}</div>
+              <div className="text-xs font-semibold text-slate-900 truncate">{user.name}</div>
+              <div className="text-[10.5px] text-slate-500 truncate">{roleInfo.label}</div>
             </div>
           )}
           {!collapsed && (

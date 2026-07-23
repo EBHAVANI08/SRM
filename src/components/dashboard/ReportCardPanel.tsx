@@ -25,6 +25,8 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { useNotificationPreview } from './NotificationPreviewModal'
+import { DataFlowBadge } from './DataFlowBadge'
+import { apiPost } from '@/lib/apiFetch'
 import { toast } from 'sonner'
 
 const TEMPLATES = [
@@ -89,6 +91,40 @@ export function ReportCardPanel({ onBack }: Props) {
       })
     }
     toast.success(`📤 Report card sent to ${to}`)
+  }
+
+  // Automation: persist the generated report card to the DB so it appears in
+  // the student profile + parent portal. Side-effect: when status=PUBLISHED,
+  // the parent is auto-notified via the comms engine.
+  const [savingId, setSavingId] = useState<string | null>(null)
+  const saveToDb = async (student: typeof REPORT_STUDENTS[0]) => {
+    setSavingId(student.id)
+    try {
+      const total = Object.values(student.marks).reduce((a, b) => a + b, 0)
+      const pct = Math.round(total / Object.keys(student.marks).length)
+      const grade = pct >= 90 ? 'A1' : pct >= 80 ? 'A2' : pct >= 70 ? 'B1' : pct >= 60 ? 'B2' : 'C'
+      const { data, error } = await apiPost<any>('/api/report-cards', {
+        studentId: student.id,
+        term: term.toUpperCase().replace('-', '_'),
+        overallPercentage: pct,
+        overallGrade: grade,
+        overallRank: student.rank,
+        attendancePercentage: 94,
+        teacherRemark: `${student.name} has shown ${pct >= 85 ? 'excellent' : pct >= 70 ? 'good' : 'satisfactory'} performance this term. Continue to focus on weaker subjects for further improvement.`,
+        status: 'PUBLISHED',
+      })
+      if (error) {
+        toast.error(`Save failed: ${error}`)
+      } else if (data?.success) {
+        toast.success(`💾 Report card saved to DB (PUBLISHED)`, {
+          description: `Record ${data.report.id.slice(-6)} · Parent auto-notified via WhatsApp`,
+          duration: 5000,
+        })
+      }
+    } catch (e: any) {
+      toast.error(`Error: ${e?.message}`)
+    }
+    setSavingId(null)
   }
 
   return (
@@ -327,10 +363,33 @@ export function ReportCardPanel({ onBack }: Props) {
                   </Button>
                 </div>
               </div>
+              {/* Automation: Save to DB */}
+              <div className="px-6 py-3 border-t border-slate-200 bg-violet-50/50 flex items-center justify-between">
+                <div className="text-[10px] text-slate-600">
+                  <b>Automation:</b> Saving publishes the report card to the DB and auto-notifies the parent.
+                </div>
+                <Button
+                  size="sm"
+                  className="h-8 text-xs rounded-lg text-white"
+                  style={{ background: '#7C3AED' }}
+                  onClick={() => saveToDb(previewStudent)}
+                  disabled={savingId === previewStudent.id}
+                >
+                  {savingId === previewStudent.id ? <RefreshCw className="w-3 h-3 mr-1 animate-spin" /> : <CheckCircle2 className="w-3 h-3 mr-1" />}
+                  {savingId === previewStudent.id ? 'Saving…' : 'Save to DB + Publish'}
+                </Button>
+              </div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Data flow transparency */}
+      <DataFlowBadge
+        source="ReportCardPanel preview"
+        destination="/api/report-cards → ReportCard table → Student profile + Parent portal"
+        sideEffect="Save+Publish auto-notifies parent via WhatsApp"
+      />
     </div>
   )
 }

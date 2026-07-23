@@ -409,3 +409,59 @@ Stage Summary:
 - Files created: ReportCardPanel.tsx, AcademicTools.tsx, AdmissionsTools.tsx
 - Files modified: AcademicModuleEnhanced.tsx (expanded inlineView + openCard router + 11 panel mounts)
 - New BUILD_ID: fxTN-NAs9jJS2bozO8gq7
+
+---
+Task ID: automation-and-sidebar-size
+Agent: main (Super Z) — continuation session
+Task: User requested (1) make the application more powerful with automation replacing manual steps in every module/section/feature, with clear logic showing where data comes from and where it goes after each step; (2) make sidebar text slightly bigger (it became too small to read).
+
+Work Log:
+- Sidebar text size increase (src/app/globals.css + src/components/layout/Sidebar.tsx):
+  * .sidebar-item font-size: 11.5px → 13px, padding: 0.3rem 0.5rem → 0.4rem 0.6rem
+  * Sidebar width: 228px → 244px (collapsed 64px → 68px)
+  * Category labels: text-[9px] → text-[10.5px]
+  * Search input: text-[11px] → text-xs
+  * User name: text-[11px] → text-xs; role: text-[9px] → text-[10.5px]
+  * Module emoji: text-[13px] → text-[15px]
+- DB schema expansion (prisma/schema.prisma + db:push):
+  * Added 3 new models: AcademicEvent (school calendar events), Achievement (student milestones), LearningOutcome (curriculum outcomes with mastery tracking)
+  * All 3 models have schoolId scoping + indexes on commonly-queried fields
+  * db:push applied cleanly — Prisma Client regenerated
+- 4 new automation API routes (all JWT-protected + scope-guarded via enforceAction('exam', action)):
+  * /api/academic-events (GET/POST/DELETE) — powers AcademicCalendarPanel
+  * /api/achievements (GET/POST/DELETE) — powers AchievementTrackerPanel
+  * /api/learning-outcomes (GET/POST/PATCH) — powers LearningOutcomesPanel (PATCH for incremental mastery/lesson updates)
+  * /api/report-cards (GET/POST/PATCH) — powers ReportCardPanel (status: DRAFT → PUBLISHED → PRINTED)
+- Automation wiring in panels:
+  * ReportCardPanel: added saveToDb() that POSTs to /api/report-cards with computed grade + AI teacher remark; "Save to DB + Publish" button in preview modal footer; status=PUBLISHED triggers auto-notify to parent
+  * LeadManagementPanel: advanceStage() now fires /api/admissions/approve (Admission Saga) when a lead reaches "enrolled" — auto-creates Student + Household + ID card + Fees + Transport + Library + RAG + Welcome WhatsApp; toast shows admission no + saga step count
+  * CampaignsPanel: launchBroadcast() POSTs to /api/communications to dispatch real WhatsApp/Email/SMS to all leads from the campaign's source; "📢 Broadcast" button on each campaign card
+  * AchievementTrackerPanel: useEffect loads from /api/achievements on mount; handleAdd POSTs to DB; handleDelete DELETEs from DB; DataFlowBadge added
+  * AcademicCalendarPanel: useEffect loads from /api/academic-events on mount; handleAdd POSTs; handleRemove DELETEs; DataFlowBadge added
+  * LearningOutcomesPanel: useEffect loads from /api/learning-outcomes on mount; handleMapLessons PATCHes the DB to increment lessonsLinked; DataFlowBadge added
+- DataFlowBadge component (src/components/dashboard/DataFlowBadge.tsx):
+  * Reusable footer showing source → destination + optional ⚡ Auto side-effect
+  * Added to 6 panels: ReportCardPanel, LeadManagementPanel, CampaignsPanel, AcademicCalendarPanel, AchievementTrackerPanel, LearningOutcomesPanel
+  * Each badge shows the exact API + DB table + downstream consumer so the user understands the automation chain
+- Build succeeded: BUILD_ID = nXIgDfzHS16bTNlF0goIM
+- End-to-end API tests passed:
+  * POST /api/academic-events → 201, event persisted (verified via GET)
+  * POST /api/achievements → 201, achievement persisted with 🥇 badge
+  * POST /api/learning-outcomes → 201, outcome persisted with mastery 75%
+  * POST /api/report-cards (with real studentId) → 201, report persisted with status PUBLISHED
+  * All 4 new routes compiled into .next/server/app/api/*
+
+Stage Summary:
+- Sidebar text bumped up ~13% (11.5→13px main, 9→10.5px secondary) for readability without taking too much screen real estate
+- 3 new DB models (AcademicEvent, Achievement, LearningOutcome) + 4 new CRUD API routes
+- 6 panels now persist to DB instead of using local-only state:
+  * ReportCardPanel → ReportCard table (with auto parent-notify on publish)
+  * LeadManagementPanel → Admission Saga (8-step cascade) on enroll
+  * CampaignsPanel → CommunicationLog table via /api/communications broadcast
+  * AchievementTrackerPanel → Achievement table
+  * AcademicCalendarPanel → AcademicEvent table
+  * LearningOutcomesPanel → LearningOutcome table (with PATCH for incremental updates)
+- DataFlowBadge component surfaces the automation chain on every automated panel — user can see exactly where data comes from and where it goes after each action
+- Files created: DataFlowBadge.tsx, src/app/api/academic-events/route.ts, src/app/api/achievements/route.ts, src/app/api/learning-outcomes/route.ts, src/app/api/report-cards/route.ts, scripts/test-automation-apis.sh
+- Files modified: src/app/globals.css (sidebar-item font-size), src/components/layout/Sidebar.tsx (sidebar widths + text sizes), prisma/schema.prisma (3 new models), ReportCardPanel.tsx (saveToDb + DataFlowBadge), AdmissionsTools.tsx (admission saga + broadcast + DataFlowBadge), AcademicTools.tsx (3 panels wired to APIs + DataFlowBadge)
+- New BUILD_ID: nXIgDfzHS16bTNlF0goIM

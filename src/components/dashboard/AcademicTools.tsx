@@ -13,7 +13,7 @@
  *   - AchievementTrackerPanel  (Academic + extracurricular milestones)
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   ArrowLeft, Target, TrendingUp, Brain, Calendar, Award, Sparkles,
   Download, RefreshCw, AlertTriangle, CheckCircle2, Plus, ChevronRight,
@@ -27,6 +27,8 @@ import { Badge } from '@/components/ui/badge'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
+import { DataFlowBadge } from './DataFlowBadge'
+import { apiGet, apiPost, apiFetch } from '@/lib/apiFetch'
 import { toast } from 'sonner'
 
 // ============ Shared header ============
@@ -80,7 +82,25 @@ const SAMPLE_OUTCOMES = [
 export function LearningOutcomesPanel({ onBack }: { onBack: () => void }) {
   const [filterSubject, setFilterSubject] = useState('all')
   const [filterBloom, setFilterBloom] = useState('all')
-  const [outcomes, setOutcomes] = useState(SAMPLE_OUTCOMES)
+  const [outcomes, setOutcomes] = useState<any[]>(SAMPLE_OUTCOMES)
+
+  // Automation: load outcomes from DB on mount
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const { data, error } = await apiGet<any>('/api/learning-outcomes')
+      if (cancelled) return
+      if (!error && data?.success && data.outcomes?.length > 0) {
+        setOutcomes(data.outcomes.map((o: any) => ({
+          id: o.id, code: o.code, description: o.description, subject: o.subject,
+          grade: o.grade, bloom: o.bloomLevel, mastery: o.masteryPercentage,
+          lessonsLinked: o.lessonsLinked, studentsMastered: o.studentsMastered,
+          studentsTotal: o.studentsTotal, _persisted: true,
+        })))
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
 
   const filtered = outcomes.filter(o =>
     (filterSubject === 'all' || o.subject === filterSubject) &&
@@ -91,9 +111,19 @@ export function LearningOutcomesPanel({ onBack }: { onBack: () => void }) {
     ? Math.round(filtered.reduce((s, o) => s + o.mastery, 0) / filtered.length)
     : 0
 
-  const handleMapLessons = (code: string) => {
-    setOutcomes(prev => prev.map(o => o.id === code ? { ...o, lessonsLinked: o.lessonsLinked + 1 } : o))
-    toast.success(`Linked a new lesson to ${code}`)
+  // Automation: link a lesson to this outcome → PATCH the DB (increment lessonsLinked)
+  const handleMapLessons = async (id: string) => {
+    const outcome = outcomes.find(o => o.id === id)
+    if (!outcome) return
+    const newCount = outcome.lessonsLinked + 1
+    setOutcomes(prev => prev.map(o => o.id === id ? { ...o, lessonsLinked: newCount } : o))
+    if (outcome._persisted) {
+      await apiFetch('/api/learning-outcomes', {
+        method: 'PATCH',
+        body: JSON.stringify({ id, lessonsLinked: newCount }),
+      })
+    }
+    toast.success(`Linked a new lesson to ${outcome.code} (now ${newCount})`)
   }
 
   return (
@@ -185,6 +215,13 @@ export function LearningOutcomesPanel({ onBack }: { onBack: () => void }) {
           </table>
         </div>
       </Card>
+
+      {/* Data flow transparency */}
+      <DataFlowBadge
+        source="LearningOutcomesPanel + Link Lesson action"
+        destination="/api/learning-outcomes → LearningOutcome table → Lesson plan mastery tracker"
+        sideEffect="Linking a lesson auto-updates lessonsLinked count in DB"
+      />
     </div>
   )
 }
@@ -422,19 +459,72 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
 }
 
 export function AcademicCalendarPanel({ onBack }: { onBack: () => void }) {
-  const [events, setEvents] = useState(CALENDAR_EVENTS)
+  const [events, setEvents] = useState<any[]>(CALENDAR_EVENTS)
   const [showAddForm, setShowAddForm] = useState(false)
   const [newEvent, setNewEvent] = useState({ date: '', title: '', type: 'EVENT', grade: 'All' })
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
 
-  const handleAdd = () => {
+  // Automation: load events from DB on mount
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const { data, error } = await apiGet<any>('/api/academic-events')
+      if (cancelled) return
+      if (!error && data?.success && data.events?.length > 0) {
+        // Normalize DB shape → component shape
+        setEvents(data.events.map((e: any) => ({
+          id: e.id,
+          date: new Date(e.date).toISOString().slice(0, 10),
+          title: e.title,
+          type: e.type,
+          grade: e.gradeScope,
+          _persisted: true,
+        })))
+      }
+      setLoading(false)
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  // Automation: persist new event to DB
+  const handleAdd = async () => {
     if (!newEvent.date || !newEvent.title) {
       toast.error('Please fill date and title')
       return
     }
-    setEvents(prev => [...prev, { id: 'E-' + Date.now(), ...newEvent }].sort((a, b) => a.date.localeCompare(b.date)))
-    setNewEvent({ date: '', title: '', type: 'EVENT', grade: 'All' })
-    setShowAddForm(false)
-    toast.success('✅ Event added to academic calendar')
+    setSaving(true)
+    const { data, error } = await apiPost<any>('/api/academic-events', {
+      title: newEvent.title,
+      date: newEvent.date,
+      type: newEvent.type,
+      gradeScope: newEvent.grade,
+    })
+    setSaving(false)
+    if (error) {
+      toast.error(`Save failed: ${error}`)
+      return
+    }
+    if (data?.success) {
+      const ev = data.event
+      setEvents(prev => [...prev, {
+        id: ev.id,
+        date: new Date(ev.date).toISOString().slice(0, 10),
+        title: ev.title, type: ev.type, grade: ev.gradeScope, _persisted: true,
+      }].sort((a, b) => a.date.localeCompare(b.date)))
+      setNewEvent({ date: '', title: '', type: 'EVENT', grade: 'All' })
+      setShowAddForm(false)
+      toast.success('✅ Event saved to DB')
+    }
+  }
+
+  // Automation: delete from DB
+  const handleRemove = async (ev: any) => {
+    if (ev._persisted) {
+      await apiFetch(`/api/academic-events?id=${ev.id}`, { method: 'DELETE' })
+    }
+    setEvents(prev => prev.filter(e => e.id !== ev.id))
+    toast.success('Event removed')
   }
 
   return (
@@ -472,8 +562,8 @@ export function AcademicCalendarPanel({ onBack }: { onBack: () => void }) {
             </div>
           </div>
           <div className="flex gap-2 mt-3">
-            <Button size="sm" className="h-9 text-xs rounded-lg text-white" style={{ background: '#06B6D4' }} onClick={handleAdd}>
-              <Plus className="w-3 h-3 mr-1" /> Add Event
+            <Button size="sm" className="h-9 text-xs rounded-lg text-white" style={{ background: '#06B6D4' }} onClick={handleAdd} disabled={saving}>
+              {saving ? <RefreshCw className="w-3 h-3 mr-1 animate-spin" /> : <Plus className="w-3 h-3 mr-1" />} Add Event
             </Button>
             <Button size="sm" variant="outline" className="h-9 text-xs rounded-lg" onClick={() => setShowAddForm(false)}>Cancel</Button>
           </div>
@@ -482,7 +572,7 @@ export function AcademicCalendarPanel({ onBack }: { onBack: () => void }) {
 
       <Card className="rounded-2xl overflow-hidden">
         <div className="px-5 py-3 border-b border-slate-100">
-          <h3 className="text-sm font-semibold text-slate-900">Academic Year 2026-27 — {events.length} events</h3>
+          <h3 className="text-sm font-semibold text-slate-900">Academic Year 2026-27 — {events.length} events {loading && '· loading…'}</h3>
         </div>
         <div className="divide-y divide-slate-100">
           {events.map(ev => (
@@ -496,13 +586,20 @@ export function AcademicCalendarPanel({ onBack }: { onBack: () => void }) {
                 <div className="text-[10px] text-slate-500">{new Date(ev.date).toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric' })} · Grade: {ev.grade}</div>
               </div>
               <Badge variant="outline" className="text-[9px]" style={{ background: EVENT_TYPE_COLORS[ev.type] + '15', color: EVENT_TYPE_COLORS[ev.type], borderColor: EVENT_TYPE_COLORS[ev.type] + '40' }}>{ev.type}</Badge>
-              <Button size="sm" variant="outline" className="h-7 text-[10px] rounded-lg text-rose-600 hover:bg-rose-50" onClick={() => { setEvents(prev => prev.filter(e => e.id !== ev.id)); toast.success('Event removed') }}>
+              <Button size="sm" variant="outline" className="h-7 text-[10px] rounded-lg text-rose-600 hover:bg-rose-50" onClick={() => handleRemove(ev)}>
                 Remove
               </Button>
             </div>
           ))}
         </div>
       </Card>
+
+      {/* Data flow transparency */}
+      <DataFlowBadge
+        source="Calendar form"
+        destination="/api/academic-events → AcademicEvent table → Dashboard calendar widget"
+        sideEffect="Adding/removing events persists to DB instantly"
+      />
     </div>
   )
 }
@@ -524,25 +621,76 @@ const ACHIEVEMENT_COLORS: Record<string, string> = {
 
 export function AchievementTrackerPanel({ onBack }: { onBack: () => void }) {
   const [filterCat, setFilterCat] = useState('all')
-  const [achievements, setAchievements] = useState(ACHIEVEMENTS)
+  const [achievements, setAchievements] = useState<any[]>(ACHIEVEMENTS)
   const [showAddForm, setShowAddForm] = useState(false)
   const [newAch, setNewAch] = useState({ student: '', category: 'ACADEMIC', title: '', date: '' })
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  // Automation: load achievements from DB on mount
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const { data, error } = await apiGet<any>('/api/achievements')
+      if (cancelled) return
+      if (!error && data?.success && data.achievements?.length > 0) {
+        setAchievements(data.achievements.map((a: any) => ({
+          id: a.id,
+          student: a.studentName,
+          grade: a.grade,
+          category: a.category,
+          title: a.title,
+          date: new Date(a.achievementDate).toISOString().slice(0, 10),
+          points: a.points,
+          badge: a.badge,
+          _persisted: true,
+        })))
+      }
+      setLoading(false)
+    })()
+    return () => { cancelled = true }
+  }, [])
 
   const filtered = achievements.filter(a => filterCat === 'all' || a.category === filterCat)
 
-  const handleAdd = () => {
+  // Automation: persist new achievement to DB
+  const handleAdd = async () => {
     if (!newAch.student || !newAch.title || !newAch.date) {
       toast.error('Please fill all fields')
       return
     }
-    setAchievements(prev => [...prev, {
-      id: 'A-' + Date.now(),
-      student: newAch.student, grade: 'Grade 7-A', category: newAch.category,
-      title: newAch.title, date: newAch.date, points: 30, badge: '⭐',
-    }])
-    setNewAch({ student: '', category: 'ACADEMIC', title: '', date: '' })
-    setShowAddForm(false)
-    toast.success('✅ Achievement recorded')
+    setSaving(true)
+    const { data, error } = await apiPost<any>('/api/achievements', {
+      studentName: newAch.student,
+      grade: 'Grade 7-A',
+      category: newAch.category,
+      title: newAch.title,
+      achievementDate: newAch.date,
+      points: 30,
+      badge: '⭐',
+    })
+    setSaving(false)
+    if (error) { toast.error(`Save failed: ${error}`); return }
+    if (data?.success) {
+      const a = data.achievement
+      setAchievements(prev => [{
+        id: a.id, student: a.studentName, grade: a.grade, category: a.category,
+        title: a.title, date: new Date(a.achievementDate).toISOString().slice(0, 10),
+        points: a.points, badge: a.badge, _persisted: true,
+      }, ...prev])
+      setNewAch({ student: '', category: 'ACADEMIC', title: '', date: '' })
+      setShowAddForm(false)
+      toast.success('✅ Achievement saved to DB')
+    }
+  }
+
+  // Automation: delete from DB
+  const handleDelete = async (a: any) => {
+    if (a._persisted) {
+      await apiFetch(`/api/achievements?id=${a.id}`, { method: 'DELETE' })
+    }
+    setAchievements(prev => prev.filter(x => x.id !== a.id))
+    toast.success('Achievement removed')
   }
 
   return (
@@ -566,8 +714,8 @@ export function AchievementTrackerPanel({ onBack }: { onBack: () => void }) {
             <Input type="date" className="h-9 text-xs rounded-lg" value={newAch.date} onChange={(e) => setNewAch({ ...newAch, date: e.target.value })} />
           </div>
           <div className="flex gap-2 mt-3">
-            <Button size="sm" className="h-9 text-xs rounded-lg text-white" style={{ background: '#F97316' }} onClick={handleAdd}>
-              <Plus className="w-3 h-3 mr-1" /> Save Achievement
+            <Button size="sm" className="h-9 text-xs rounded-lg text-white" style={{ background: '#F97316' }} onClick={handleAdd} disabled={saving}>
+              {saving ? <RefreshCw className="w-3 h-3 mr-1 animate-spin" /> : <Plus className="w-3 h-3 mr-1" />} Save Achievement
             </Button>
             <Button size="sm" variant="outline" className="h-9 text-xs rounded-lg" onClick={() => setShowAddForm(false)}>Cancel</Button>
           </div>
@@ -595,13 +743,25 @@ export function AchievementTrackerPanel({ onBack }: { onBack: () => void }) {
             <div className="text-[10px] text-slate-500 mt-1">{a.grade} · {new Date(a.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
             <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
               <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-700 border-amber-200">+{a.points} pts</Badge>
-              <Button size="sm" variant="outline" className="h-7 text-[10px] rounded-lg" onClick={() => toast.success(`Certificate downloaded for ${a.student}`)}>
-                <Download className="w-3 h-3 mr-1" /> Certificate
-              </Button>
+              <div className="flex gap-1">
+                <Button size="sm" variant="outline" className="h-7 text-[10px] rounded-lg" onClick={() => toast.success(`Certificate downloaded for ${a.student}`)}>
+                  <Download className="w-3 h-3 mr-1" /> Cert
+                </Button>
+                <Button size="sm" variant="outline" className="h-7 text-[10px] rounded-lg text-rose-600 hover:bg-rose-50" onClick={() => handleDelete(a)}>
+                  <Plus className="w-3 h-3 rotate-45" />
+                </Button>
+              </div>
             </div>
           </Card>
         ))}
       </div>
+
+      {/* Data flow transparency */}
+      <DataFlowBadge
+        source="Achievement form"
+        destination="/api/achievements → Achievement table → Student profile + leaderboard (future)"
+        sideEffect="Recording auto-awards points + generates certificate URL"
+      />
     </div>
   )
 }
