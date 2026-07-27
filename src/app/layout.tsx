@@ -25,9 +25,12 @@ export const metadata: Metadata = {
     "Education ERP", "CBSE", "ICSE", "IB", "School Software",
   ],
   authors: [{ name: "LearnX AI" }],
+  manifest: "/manifest.json",
   icons: {
     icon: "/logo.png",
+    apple: "/logo.png",
   },
+  themeColor: "#0EA5E9",
   openGraph: {
     title: "LearnX AI — Fully AI-Powered School ERP",
     description: "30+ AI modules · RAG-powered assistant · Built for schools of the future.",
@@ -49,6 +52,19 @@ export default function RootLayout({
         {children}
         <Toaster />
         <SonnerToaster position="top-right" richColors closeButton />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js').catch(function(err) {
+                    console.log('ServiceWorker registration failed: ', err);
+                  });
+                });
+              }
+            `,
+          }}
+        />
       </body>
     </html>
   );
