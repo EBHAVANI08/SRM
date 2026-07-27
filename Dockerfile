@@ -28,6 +28,9 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# Install OpenSSL 3.0 for Prisma query engine on Alpine Linux
+RUN apk add --no-cache openssl libc6-compat
+
 # Create a non-root user for security
 RUN addgroup --system --gid 1001 nodejs && \
     adduser  --system --uid 1001 nextjs
