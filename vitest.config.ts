@@ -3,7 +3,7 @@ import path from 'path'
 
 export default defineConfig({
   test: {
-    // Run tests in Node.js environment (no browser needed for unit tests)
+    // Run tests in Node.js environment (no browser, no CSS)
     environment: 'node',
     // Look for test files in the tests/ directory
     include: ['tests/**/*.test.ts'],
@@ -11,18 +11,22 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
-      include: ['src/lib/**/*.ts', 'src/lib/**/*.tsx'],
+      include: ['src/lib/**/*.ts'],
       exclude: ['src/lib/db.ts', 'node_modules', '.next'],
     },
-    // Global test setup
     globals: true,
-    // Timeout per test (10s)
     testTimeout: 10000,
   },
   resolve: {
     alias: {
       // Match Next.js @/ path alias
       '@': path.resolve(__dirname, './src'),
+    },
+  },
+  // Disable CSS processing entirely — unit tests are pure logic, no styles needed
+  css: {
+    postcss: {
+      plugins: [],
     },
   },
 })
