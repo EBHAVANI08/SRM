@@ -1,0 +1,49 @@
+version: "3.9"
+
+services:
+  # ── LearnX Next.js App ───────────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: learnx_app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=file:./db/custom.db
+      - MONGODB_URI=${MONGODB_URI}
+      - MONGODB_URL=${MONGODB_URL}
+    volumes:
+      # Persist SQLite database across container restarts
+      - ./db:/app/db
+      # Persist uploaded files
+      - ./uploads:/app/uploads
+    networks:
+      - learnx_net
+
+  # ── Caddy Reverse Proxy (HTTPS + HTTP/2) ───────────────────────────────
+  caddy:
+    image: caddy:2-alpine
+    container_name: learnx_caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - learnx_net
+    depends_on:
+      - app
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  learnx_net:
+    driver: bridge
