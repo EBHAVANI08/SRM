@@ -1006,7 +1006,7 @@ function RoadmapModule() {
       />
 
       <div className="space-y-3">
-        {data.roadmap.map((phase: any) => {
+        {((data as any)?.roadmap || []).map((phase: any) => {
           const c = statusColors[phase.status]
           return (
             <Card key={phase.phase} className="p-5 bg-white border-slate-200/70 shadow-sm">

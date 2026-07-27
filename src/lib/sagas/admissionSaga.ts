@@ -66,9 +66,9 @@ export async function executeAdmissionSaga(input: AdmissionInput): Promise<SagaR
   const correlationId = `admission-${Date.now()}`
   const steps: SagaResult['steps'] = []
   const errors: string[] = []
-  let studentId: string | undefined
-  let admissionNo: string | undefined
-  let householdId: string | undefined
+  let studentId = ''
+  let admissionNo = ''
+  let householdId = ''
 
   // === STEP 1: Canonical Student + Household ===
   try {
@@ -113,15 +113,15 @@ export async function executeAdmissionSaga(input: AdmissionInput): Promise<SagaR
     studentId = student.id
 
     // Audit: student record created + approved (admission saga = both)
-    await auditCreate(input.actorId, 'STUDENT', studentId, `Student ${input.firstName} ${input.lastName} admitted via Admission Saga. Admission No: ${admissionNo}.`, { admissionNo, householdId: undefined })
-    await auditApprove(input.actorId, 'STUDENT', studentId, `Admission approved by ${input.actorId} — student record is now live.`, { admissionNo })
+    await auditCreate(input.actorId || 'system', 'STUDENT', studentId, `Student ${input.firstName} ${input.lastName} admitted via Admission Saga. Admission No: ${admissionNo}.`, { admissionNo, householdId: undefined })
+    await auditApprove(input.actorId || 'system', 'STUDENT', studentId, `Admission approved by ${input.actorId || 'system'} — student record is now live.`, { admissionNo })
 
     // Alert: principal/admin notified of new admission
     await alertNotify({
       severity: 'HIGH',
       title: 'New student admitted',
       message: `Student ${input.firstName} ${input.lastName} (Admission No: ${admissionNo}) has been admitted via the Admission Saga. Parent credentials will be emailed to ${input.guardianEmail || input.guardianPhone}.`,
-      triggeredBy: input.actorId,
+      triggeredBy: input.actorId || 'system',
       module: 'STUDENT',
       recordId: studentId,
     })
@@ -155,7 +155,7 @@ export async function executeAdmissionSaga(input: AdmissionInput): Promise<SagaR
       entityType: 'STUDENT',
       entityId: studentId,
       payload: { admissionNo, name: student.fullName, householdId },
-      actorType: 'human', actorId: input.actorId,
+      actorType: 'human', actorId: input.actorId || 'system',
       correlationId, schoolId,
     })
 

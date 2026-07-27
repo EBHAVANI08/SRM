@@ -78,7 +78,7 @@ Time: ${new Date().toLocaleString('en-IN')}`
           recipientContact: r.email,
           subject,
           body,
-          category: 'CRITICAL',
+          category: 'SAFETY', // critical alerts are routed as SAFETY category
           metadata: { alertSeverity: input.severity, alertModule: input.module, recordId: input.recordId },
         })
       } catch (e) {

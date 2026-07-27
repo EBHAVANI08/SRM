@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
     })
 
     // 3. Generate substitution plan
-    let substitutionPlan = null
+    let substitutionPlan: any = null
     if (leave.staffId) {
       try {
         substitutionPlan = await generateSubstitutionPlan(

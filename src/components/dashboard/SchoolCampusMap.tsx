@@ -364,8 +364,8 @@ export function SchoolCampusMap({
               fill="none"
               stroke="#DC2626"
               strokeWidth="3"
-              strokelinecap="round"
-              strokelinejoin="round"
+              strokeLinecap="round"
+              strokeLinejoin="round"
               strokeDasharray="6 4"
               opacity="0.85"
             />

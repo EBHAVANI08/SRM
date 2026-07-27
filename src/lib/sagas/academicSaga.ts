@@ -53,7 +53,7 @@ export async function automateExamSchedule(examId: string, schoolId: string, act
     })
 
     const rooms = Math.ceil((await db.student.count({ where: { status: 'ACTIVE' } })) / 30)
-    const roster = []
+    const roster: any[] = []
     for (let r = 0; r < rooms; r++) {
       const invigilator = staff[r % staff.length]
       roster.push({

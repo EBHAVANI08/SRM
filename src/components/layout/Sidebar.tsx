@@ -12,7 +12,7 @@ import {
   Cpu, BellRing, Lightbulb, GitBranch, Timer, Grid3x3, Map,
   AlertTriangle, Image, Calendar,
 } from 'lucide-react'
-import { useAppStore } from '@/lib/store'
+import { useAppStore, type ViewKey } from '@/lib/store'
 import { MODULES, ROLE_INFO } from '@/lib/modules'
 
 const ICON_MAP: Record<string, any> = {
@@ -64,13 +64,13 @@ export function Sidebar() {
 
   // Handle module click: 'ask-learnx-ai' opens the AI panel as an overlay,
   // all others navigate normally.
-  const handleModuleClick = (key: string) => {
+  const handleModuleClick = (key: any) => {
     if (key === 'ask-learnx-ai') {
-      setView(key)              // keep the module highlighted in the sidebar
+      setView(key as ViewKey)   // keep the module highlighted in the sidebar
       setAIAssistantOpen(true)  // open the AI overlay panel
       return
     }
-    setView(key)
+    setView(key as ViewKey)
   }
 
   return (

@@ -251,7 +251,7 @@ export function OverviewHeatmap() {
             <div className="flex items-center gap-1 mt-1">
               <Badge variant="outline" className="text-[9px]" style={{
                 borderColor: zoneDataBySvgId[hoveredZone].riskLevel === 'critical' ? '#DC2626' : zoneDataBySvgId[hoveredZone].riskLevel === 'high' ? '#F97316' : zoneDataBySvgId[hoveredZone].riskLevel === 'moderate' ? '#F59E0B' : '#10B981',
-                color: zoneDataBySvgId[hoveredZone].riskLevel === 'critical' ? '#DC2626' : zoneDataBySvgId[hoveredZone].riskLevel === 'high' ? '#F97316' : zoneDataBySvgID[hoveredZone].riskLevel === 'moderate' ? '#F59E0B' : '#10B981',
+                color: zoneDataBySvgId[hoveredZone].riskLevel === 'critical' ? '#DC2626' : zoneDataBySvgId[hoveredZone].riskLevel === 'high' ? '#F97316' : zoneDataBySvgId[hoveredZone].riskLevel === 'moderate' ? '#F59E0B' : '#10B981',
               }}>
                 {zoneDataBySvgId[hoveredZone].riskLevel} risk
               </Badge>

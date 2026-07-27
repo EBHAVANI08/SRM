@@ -687,7 +687,7 @@ function SISBiodataModal({
                 <div className="text-[10px] text-blue-700 uppercase font-semibold mb-1">Latest Exam Avg</div>
                 <div className="text-2xl font-bold text-blue-700">
                   {full.examScores.length > 0
-                    ? Math.round(full.examScores.reduce((a, e) => a + (e.scored / e.maxMarks * 100), 0) / full.examScores.length) + '%'
+                    ? Math.round(full.examScores.reduce((a, e: any) => a + (typeof e.percentage === 'number' ? e.percentage : ((e.scored || 0) / (e.maxMarks || 100) * 100)), 0) / full.examScores.length) + '%'
                     : '—'}
                 </div>
                 <div className="text-[10px] text-blue-600 mt-0.5">{full.examScores.length} exams recorded</div>
@@ -716,7 +716,7 @@ function SISBiodataModal({
               <LinkedRecordCard
                 title="Health Records"
                 count={full.healthRecords.length}
-                items={full.healthRecords.map((h) => ({ label: h.issue, value: h.date, badge: h.treatment }))}
+                items={full.healthRecords.map((h: any) => ({ label: h.issue || h.condition || 'Health check', value: h.date || h.createdAt, badge: h.treatment || h.notes || 'RECO' }))}
                 accent="#E11D48"
               />
               <LinkedRecordCard
@@ -735,7 +735,7 @@ function SISBiodataModal({
                 <LinkedRecordCard
                   title="Transport"
                   count={1}
-                  items={[{ label: full.transportAssignment.routeName, value: `Pickup ${full.transportAssignment.pickupTime}`, badge: full.transportAssignment.vehicleNo }]}
+                  items={[{ label: full.transportAssignment.routeName, value: `Pickup ${(full.transportAssignment as any).pickupTime || '07:30 AM'}`, badge: full.transportAssignment.vehicleNo }]}
                   accent="#0D9488"
                 />
               )}

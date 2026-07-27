@@ -476,7 +476,7 @@ function CameraCard({ camera, onClick }: { camera: CameraFeed; onClick: () => vo
 // ============ Live Camera Modal ============
 function LiveCameraModal({ camera, videoRef, streaming, onClose }: {
   camera: CameraFeed
-  videoRef: React.RefObject<HTMLVideoElement>
+  videoRef: React.RefObject<HTMLVideoElement | null>
   streaming: boolean
   onClose: () => void
 }) {

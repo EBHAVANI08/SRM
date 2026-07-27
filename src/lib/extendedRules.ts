@@ -4,7 +4,7 @@
  * These rules are seeded alongside the Phase 2 default rules to complete the full module automation matrix.
  */
 
-import { db } from '../db'
+import { db } from './db'
 
 export async function seedExtendedRules(schoolId: string = 'school_default'): Promise<number> {
   const extendedRules = [

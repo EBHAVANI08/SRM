@@ -284,7 +284,7 @@ export const STUDENTS: Student[] = [
     attendance: [
       { date: '2026-07-01', status: 'PRESENT', checkIn: '08:12', checkOut: '15:30', method: 'FACE' },
       { date: '2026-06-30', status: 'PRESENT', checkIn: '08:08', checkOut: '15:30', method: 'FACE' },
-      { date: '2026-06-29', status: 'ABSENT', checkIn: '-', checkOut: '-', method: '-' },
+      { date: '2026-06-29', status: 'ABSENT', checkIn: '-', checkOut: '-', method: 'MANUAL' },
       { date: '2026-06-28', status: 'PRESENT', checkIn: '08:15', checkOut: '15:30', method: 'RFID' },
       { date: '2026-06-27', status: 'LATE', checkIn: '08:35', checkOut: '15:30', method: 'BIOMETRIC' },
     ],
@@ -440,7 +440,7 @@ export const STUDENTS: Student[] = [
     sectionId: '8-A',
     classId: '8-A',
     attendance: [
-      { date: '2026-07-01', status: 'ABSENT', checkIn: '-', checkOut: '-', method: '-' },
+      { date: '2026-07-01', status: 'ABSENT', checkIn: '-', checkOut: '-', method: 'MANUAL' },
       { date: '2026-06-30', status: 'PRESENT', checkIn: '08:05', checkOut: '15:30', method: 'FACE' },
     ],
     examScores: [
@@ -524,9 +524,9 @@ export const STUDENTS: Student[] = [
       { date: '2026-06-29', status: 'PRESENT', checkIn: '08:18', checkOut: '15:30', method: 'FACE' },
     ],
     examScores: [
-      { exam: 'Unit Test 1', subject: 'English', maxMarks: 50, scored: 44, grade: 'A', date: '2026-06-20' },
-      { exam: 'Unit Test 1', subject: 'Maths', maxMarks: 50, scored: 47, grade: 'A+', date: '2026-06-22' },
-      { exam: 'Unit Test 1', subject: 'Science', maxMarks: 50, scored: 42, grade: 'A', date: '2026-06-24' },
+      { exam: 'Unit Test 1', subject: 'English', totalMarks: 50, marksObtained: 44, percentage: 88, grade: 'A', date: '2026-06-20' } as any,
+      { exam: 'Unit Test 1', subject: 'Maths', totalMarks: 50, marksObtained: 47, percentage: 94, grade: 'A+', date: '2026-06-22' } as any,
+      { exam: 'Unit Test 1', subject: 'Science', totalMarks: 50, marksObtained: 42, percentage: 84, grade: 'A', date: '2026-06-24' } as any,
     ],
     fees: [
       { feeType: 'Tuition Q1', amount: 11500, paid: 11500, balance: 0, dueDate: '15 Apr 2026', status: 'PAID', paymentMethod: 'UPI', paidOn: '10 Apr 2026', receiptNo: 'RCP-301' },
@@ -535,22 +535,21 @@ export const STUDENTS: Student[] = [
     ],
     leaveRequests: [],
     healthRecords: [
-      { date: '2026-04-12', issue: 'Seasonal Cold', treatment: 'Rest + fluids', prescribedBy: 'Dr. Mehta', notes: 'Recovered in 2 days' },
+      { date: '2026-04-12', condition: 'Seasonal Cold', treatment: 'Rest + fluids', prescribedBy: 'Dr. Mehta', notes: 'Recovered in 2 days' } as any,
     ],
     behaviorRecords: [
-      { date: '2026-06-15', type: 'POSITIVE', description: 'Helped organize class library', points: 5, recordedBy: 'Mrs. Meena Iyer' },
+      { date: '2026-06-15', type: 'POSITIVE', description: 'Helped organize class library', points: 5, recordedBy: 'Mrs. Meena Iyer', category: 'ACADEMIC', actionTaken: 'Appreciation certificate' } as any,
     ],
     transportAssignment: {
-      routeId: 'RTE-002',
       routeName: 'Indiranagar → LearnX',
       vehicleNo: 'KA-01-MN-3344',
       pickupPoint: 'MG Road Junction',
       dropPoint: 'MG Road Junction',
       pickupTime: '07:35 AM',
       dropTime: '04:15 PM',
-    },
+    } as any,
     activities: [
-      { name: 'Classical Dance', role: 'Member', achievements: 'Won 2nd place at Inter-School Cultural Fest 2026' },
+      { name: 'Classical Dance', role: 'Member', achievements: 'Won 2nd place at Inter-School Cultural Fest 2026' } as any,
     ],
     documents: [
       { title: 'Birth Certificate', type: 'BIRTH_CERT', uploadedOn: '2025-06-12', verified: true },

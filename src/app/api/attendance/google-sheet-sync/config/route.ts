@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   try {
     const user = getUserFromHeaders(req)
     const actionCheck = enforceAction('attendance', 'view', user)
-    if (!actionCheck.ok) {
+    if (!actionCheck.allowed) {
       return NextResponse.json({ success: false, error: actionCheck.reason }, { status: 403 })
     }
 
@@ -47,7 +47,7 @@ export async function PUT(req: NextRequest) {
   try {
     const user = getUserFromHeaders(req)
     const actionCheck = enforceAction('attendance', 'update', user)
-    if (!actionCheck.ok) {
+    if (!actionCheck.allowed) {
       return NextResponse.json({ success: false, error: actionCheck.reason }, { status: 403 })
     }
     // Only admins can configure

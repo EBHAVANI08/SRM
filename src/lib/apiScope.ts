@@ -37,6 +37,10 @@ export interface ApiUser {
   role: UserRole
   schoolId: string
   permissions: string[]
+  /** Display name from JWT, used for audit logs & notifications */
+  name?: string
+  /** Email from JWT, used for notifications */
+  email?: string
   /** Optional: assigned section/student IDs for TEACHER scope */
   assignedSectionIds?: string[]
   assignedStudentIds?: string[]
@@ -50,6 +54,8 @@ export function getUserFromHeaders(req: NextRequest): ApiUser {
     role: (req.headers.get('x-user-role') || '') as UserRole,
     schoolId: req.headers.get('x-user-school-id') || 'school_default',
     permissions: JSON.parse(req.headers.get('x-user-permissions') || '[]'),
+    name: req.headers.get('x-user-name') || undefined,
+    email: req.headers.get('x-user-email') || undefined,
   }
 }
 

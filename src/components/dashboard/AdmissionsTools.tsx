@@ -582,7 +582,7 @@ export function LeadNurturingPanel({ onBack }: { onBack: () => void }) {
     if (!lead) return
     const step = NURTURING_STEPS[stepIdx]
     preview({
-      recipients: [{ id: lead.id, name: lead.parent, contact: lead.phone, channel: step.channel === 'Phone' ? 'WHATSAPP' : step.channel.toUpperCase(), recipientType: 'PARENT' }],
+      recipients: [{ id: lead.id, name: lead.parent, contact: lead.phone, channel: (step.channel === 'Phone' ? 'WHATSAPP' : step.channel.toUpperCase()) as any, recipientType: 'PARENT' }],
       body: `Dear ${lead.parent},\n\n${step.action} for ${lead.name} (${lead.grade}).\n\nLearnX School — Nurturing Future Leaders.\nReply STOP to opt-out.`,
       subject: `Admission Update: ${lead.name}`,
       source: 'lead_nurturing_workflow',

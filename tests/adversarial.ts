@@ -53,7 +53,7 @@ async function runTests() {
         'Teacher cannot see student financial data in context'
       )
       assert(
-        ctx?.entity.aadhaarNo === '[REDACTED]' || ctx?._meta.redactedFields.includes('aadhaarNo'),
+        Boolean(ctx?.entity?.aadhaarNo === '[REDACTED]' || (ctx as any)?._meta?.redactedFields?.includes('aadhaarNo')),
         'Teacher cannot see Aadhaar number'
       )
     }
@@ -132,7 +132,7 @@ async function runTests() {
 
     const plan = await prepareAction({
       user: adminUser, actionType: 'create_task', description: 'Test task',
-    })
+    } as any)
 
     await db.aiActionPlan.update({
       where: { planId: plan.planId },
@@ -153,7 +153,7 @@ async function runTests() {
 
     const plan = await prepareAction({
       user: teacherUser, actionType: 'approve_payroll', description: 'Run payroll',
-    })
+    } as any)
 
     const result = await confirmAction(plan.planId, teacherUser)
     assert(!result.executed, 'Teacher cannot execute Tier C action (payroll)')

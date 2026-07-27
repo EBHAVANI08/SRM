@@ -429,7 +429,7 @@ function StructureBuilderModal({ catalog, editing, onClose, onSaved }: {
   // starting from April (start of academic year in India).
   const generateInstallmentSchedule = (count: number, academicYear: string) => {
     if (count <= 1) return [{ installment: 1, dueDate: 'April 15, ' + academicYear.split('-')[0], amount: finalTotal }]
-    const schedule = []
+    const schedule: any[] = []
     const startYear = parseInt(academicYear.split('-')[0].split('/').pop() || '2026')
     const monthsMap = {
       3: [3, 6, 9],           // Quarterly: Apr, Jul, Oct

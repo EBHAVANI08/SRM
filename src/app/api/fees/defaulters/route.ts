@@ -13,7 +13,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { scoreAllFeeRisk, type FeeRiskScore } from '@/lib/agents/financeAgent'
 import { sendCommunication } from '@/lib/comms'
-import { getUserFromHeaders, enforceAction, enforceScope } from '@/lib/apiScope'
+import { getUserFromHeaders, enforceAction, enforceScope, guardQuery } from '@/lib/apiScope'
 
 export const runtime = 'nodejs'
 

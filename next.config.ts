@@ -7,16 +7,7 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
-  // Allow eslint warnings but do not fail the build from lint-only issues
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   reactStrictMode: true,
-  experimental: {
-    turbopack: {
-      root: path.resolve(__dirname),
-    },
-  },
 };
 
 export default nextConfig;

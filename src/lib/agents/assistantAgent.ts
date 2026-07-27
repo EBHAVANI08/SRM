@@ -431,6 +431,7 @@ export async function prepareAction(params: {
  */
 export async function confirmAction(planId: string, user: RequestingUser): Promise<{
   success: boolean
+  executed?: boolean
   result?: any
   message: string
 }> {

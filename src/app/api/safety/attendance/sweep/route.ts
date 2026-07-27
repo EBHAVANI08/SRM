@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    const results = []
+    const results: any[] = []
     for (const sched of due) {
       // Defer to the run endpoint logic by calling the same flow
       // (In production this would be a direct function call; here we just

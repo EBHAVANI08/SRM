@@ -834,7 +834,7 @@ function PeriodEditModal({ period, teachers, onClose, onSave }: {
             <Label className="text-xs font-semibold text-slate-700 mb-1.5 block">Topic / Chapter</Label>
             <Input value={topic} onChange={(e) => setTopic(e.target.value)} className="h-9 text-xs rounded-lg" />
           </div>
-          {availableTeachers.find(t => t.id === teacherId)?.workload >= (availableTeachers.find(t => t.id === teacherId)?.maxWorkload || 0) && (
+          {(availableTeachers.find(t => t.id === teacherId)?.workload ?? 0) >= (availableTeachers.find(t => t.id === teacherId)?.maxWorkload || 0) && (
             <div className="p-2 rounded-lg bg-rose-50 border border-rose-200 text-[10px] text-rose-700">
               <AlertCircle className="w-3 h-3 inline mr-1" /> Warning: This teacher is at maximum workload
             </div>

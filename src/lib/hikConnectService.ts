@@ -45,6 +45,7 @@ export interface GateDetection {
   faceConfidence: number
   faceMatchType: 'ENROLLED' | 'UNKNOWN' | 'STAFF'
   detectedAt: Date
+  reason?: string
 }
 
 export interface ProcessResult {
@@ -53,6 +54,7 @@ export interface ProcessResult {
   safetyAlertId?: string
   notificationsSent?: number
   reason?: string
+  error?: string
   skipped?: boolean
 }
 
@@ -218,7 +220,7 @@ Auto-notifications dispatched to admin + parent (WhatsApp + SMS + Email).`
       actorRole: 'AI',
     })
 
-    const safetyAlertId = 'suppressed' in safetyAlertResult ? null : safetyAlertResult.id
+    const safetyAlertId = (safetyAlertResult as any)?.id || null
     if (safetyAlertId) {
       await db.gateExitAlert.update({
         where: { id: alert.id },

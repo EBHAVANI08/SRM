@@ -280,7 +280,7 @@ function SafetyModuleInner({ role }: { role: string }) {
     rules: ['SUPER_ADMIN', 'SCHOOL_HEAD'].includes(role),
   }
 
-  const tabs: { id: Tab; label: string; icon: any }[] = [
+  const tabs: { id: Tab; label: string; icon: any }[] = ([
     { id: 'overview', label: 'Overview', icon: Activity },
     { id: 'cameras', label: 'Live Cameras', icon: Video },
     { id: 'detection', label: 'AI Detection', icon: Brain },
@@ -294,7 +294,7 @@ function SafetyModuleInner({ role }: { role: string }) {
     { id: 'audit', label: 'Audit Log', icon: ShieldCheck },
     { id: 'zones', label: 'Zones', icon: Grid3x3 },
     { id: 'rules', label: 'Rules', icon: Settings },
-  ].filter((t) => roleCanSee[t.id])
+  ] as { id: Tab; label: string; icon: any }[]).filter((t) => roleCanSee[t.id])
 
   // ============ Data fetchers ============
   const fetchSummary = useCallback(async () => {

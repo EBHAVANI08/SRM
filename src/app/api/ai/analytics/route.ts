@@ -5,11 +5,14 @@ export const runtime = 'nodejs'
 export const maxDuration = 60
 
 export async function POST(req: NextRequest) {
+  let moduleName = 'attendance'
   try {
-    const { module, timeRange = '30d', userRole = 'ADMIN' } = await req.json()
+    const body = await req.json()
+    moduleName = String(body.module || 'attendance')
+    const timeRange = body.timeRange || '30d'
 
     // Real ERP metrics (simulated from realistic seed data)
-    const metrics = generateModuleMetrics(module, timeRange)
+    const metrics = generateModuleMetrics(moduleName, timeRange)
 
     const zai = await ZAI.create()
 
@@ -40,8 +43,8 @@ export async function POST(req: NextRequest) {
     console.error('Analytics Error:', error)
     return NextResponse.json(
       {
-        module,
-        metrics: generateModuleMetrics(module, '30d'),
+        module: moduleName,
+        metrics: generateModuleMetrics(moduleName, '30d'),
         aiInsights: 'AI insights temporarily unavailable. Showing raw metrics.',
         error: error?.message,
       },

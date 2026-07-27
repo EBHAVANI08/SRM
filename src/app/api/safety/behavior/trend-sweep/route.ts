@@ -46,14 +46,16 @@ export async function POST(req: NextRequest) {
     for (const r of currentReports) {
       const prev = prevBySubject.get(`${r.subjectType}:${r.subjectId}`)
       if (!prev) continue
-      const delta = r.score - prev.score // negative = worse
+      const rScore = (r as any).score ?? 0
+      const prevScore = (prev as any).score ?? 0
+      const delta = rScore - prevScore // negative = worse
       if (-delta >= threshold) {
         flagged.push({
           subjectId: r.subjectId,
           subjectName: r.subjectName,
           subjectType: r.subjectType,
-          currentScore: r.score,
-          prevScore: prev.score,
+          currentScore: rScore,
+          prevScore: prevScore,
           delta,
           reportId: r.id,
         })

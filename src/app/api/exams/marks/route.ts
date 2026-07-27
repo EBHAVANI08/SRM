@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     // Support both single entry and bulk entry
     if (Array.isArray(body.marks)) {
       // Bulk entry
-      const results = []
+      const results: any[] = []
       let totalAnomalies = 0
 
       for (const entry of body.marks) {

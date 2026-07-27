@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = getUserFromHeaders(req)
     const actionCheck = enforceAction('attendance', 'update', user)
-    if (!actionCheck.ok) {
+    if (!actionCheck.allowed) {
       return NextResponse.json({ success: false, error: actionCheck.reason }, { status: 403 })
     }
     if (!['SUPER_ADMIN', 'SCHOOL_HEAD', 'ADMIN'].includes(user.role)) {

@@ -20,6 +20,17 @@ const CHECKPOINTS = [
   { time: '22:00', name: 'Night Scan', description: 'InsightAgent full-stream scan; at-risk score refresh; index maintenance; backup verification' },
 ]
 
+async function checkUnacknowledgedCriticals(schoolId: string) {
+  try {
+    return await db.notificationAck.findMany({
+      where: { schoolId, isAcknowledged: false },
+      take: 20,
+    })
+  } catch {
+    return []
+  }
+}
+
 export async function GET(req: NextRequest) {
   try {
     const schoolId = req.headers.get('x-user-school-id') || 'school_default'

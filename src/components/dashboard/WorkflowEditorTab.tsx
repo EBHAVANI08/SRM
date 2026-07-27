@@ -210,9 +210,9 @@ export function WorkflowEditorTab() {
                       className="h-7 text-[11px] rounded-lg text-rose-600 border-rose-200 hover:bg-rose-50"
                       onClick={async () => {
                         if (!confirm(`Delete workflow "${w.name}"?`)) return
-                        const { error } = await apiFetch(`/api/safety/workflows/${w.id}`, { method: 'DELETE' })
-                        const data = await (error as any)?.json?.() || {}
-                        if (!error || data?.success) {
+                        const res = await apiFetch(`/api/safety/workflows/${w.id}`, { method: 'DELETE' })
+                        const data = await res.json().catch(() => ({}))
+                        if (res.ok && data?.success !== false) {
                           toast.success('Workflow deleted')
                           fetchWorkflows()
                         } else {

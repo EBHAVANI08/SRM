@@ -15,13 +15,14 @@
  */
 
 import { db } from './db'
-import { canBroadcast, type UserRole } from './roleScope'
+import { canBroadcast } from './roleScope'
+import type { UserRole } from './store'
 
 // ============ Types ============
 export type CommChannel = 'SMS' | 'WHATSAPP' | 'EMAIL' | 'PUSH' | 'IN_APP'
 export type CommStatus = 'PENDING' | 'QUEUED' | 'SENT' | 'DELIVERED' | 'READ' | 'FAILED'
 export type CommRecipientType = 'STUDENT' | 'PARENT' | 'STAFF' | 'CLASS' | 'SECTION' | 'SCHOOL'
-export type CommCategory = 'GENERAL' | 'ATTENDANCE' | 'FEE' | 'EXAM' | 'SAFETY' | 'TRANSPORT' | 'HR' | 'ADMISSIONS'
+export type CommCategory = 'GENERAL' | 'ATTENDANCE' | 'FEE' | 'EXAM' | 'SAFETY' | 'TRANSPORT' | 'HR' | 'ADMISSIONS' | 'ACADEMIC'
 
 /** Categories that REQUIRE acknowledgement tracking */
 export const CRITICAL_CATEGORIES: CommCategory[] = ['SAFETY', 'FEE', 'EXAM']
@@ -316,6 +317,7 @@ const ESCALATION_WINDOWS: Record<CommCategory, number[]> = {
   TRANSPORT: [],
   HR: [],
   ADMISSIONS: [],
+  ACADEMIC: [],
 }
 
 const ESCALATION_TEMPLATES: Record<CommCategory, string> = {
@@ -327,6 +329,7 @@ const ESCALATION_TEMPLATES: Record<CommCategory, string> = {
   TRANSPORT: '',
   HR: '',
   ADMISSIONS: '',
+  ACADEMIC: '',
 }
 
 export async function sweepUnacknowledgedNotifications(now: Date = new Date()): Promise<{

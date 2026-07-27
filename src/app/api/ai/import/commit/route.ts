@@ -49,9 +49,10 @@ export async function POST(req: NextRequest) {
       try {
         // Apply mapping
         const mapped: Record<string, any> = {}
-        for (const [sourceCol, targetField] of Object.entries(mappedColumns)) {
-          if (targetField && targetField !== 'null' && row[sourceCol] !== undefined) {
-            mapped[targetField] = row[sourceCol]
+        for (const [sourceCol, targetField] of Object.entries(mappedColumns || {})) {
+          const fieldStr = String(targetField)
+          if (targetField && fieldStr !== 'null' && row[sourceCol] !== undefined) {
+            mapped[fieldStr] = row[sourceCol]
           }
         }
 

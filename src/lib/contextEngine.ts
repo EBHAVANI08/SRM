@@ -28,11 +28,7 @@ export interface RequestingUser {
 }
 
 export interface EntityContext {
-  entity: {
-    type: string
-    id: string
-    [key: string]: any
-  }
+  entity: Record<string, any>
   household?: any
   attendance?: {
     rate: number
