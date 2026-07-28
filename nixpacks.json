@@ -1,0 +1,4 @@
+{
+  "providers": ["node"],
+  "nixPkgs": ["nodejs_22", "openssl"]
+}
