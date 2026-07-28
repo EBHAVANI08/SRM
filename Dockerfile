@@ -1,8 +1,8 @@
 FROM node:22-alpine AS dependencies
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml ./
-RUN npm install
+COPY package.json ./
+RUN npm install --legacy-peer-deps
 
 FROM node:22-alpine AS builder
 WORKDIR /app
