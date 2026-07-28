@@ -51,14 +51,14 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Admin access required' }, { status: 403 })
     }
 
-    let accounts = await db.chartOfAccount.findMany({ where: { schoolId: user.schoolId }, orderBy: { accountCode: 'asc' } })
+    let accounts = await (db as any).chartOfAccount.findMany({ where: { schoolId: user.schoolId }, orderBy: { accountCode: 'asc' } })
 
     // If no accounts exist, seed the defaults
     if (accounts.length === 0) {
-      await db.chartOfAccount.createMany({
+      await (db as any).chartOfAccount.createMany({
         data: DEFAULT_ACCOUNTS.map(a => ({ schoolId: user.schoolId, ...a })),
       })
-      accounts = await db.chartOfAccount.findMany({ where: { schoolId: user.schoolId }, orderBy: { accountCode: 'asc' } })
+      accounts = await (db as any).chartOfAccount.findMany({ where: { schoolId: user.schoolId }, orderBy: { accountCode: 'asc' } })
     }
 
     return NextResponse.json({ success: true, accounts, count: accounts.length })

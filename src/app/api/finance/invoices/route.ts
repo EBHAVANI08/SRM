@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
     const where: any = { schoolId: user.schoolId }
     if (status) where.paymentStatus = status
 
-    const invoices = await db.gSTInvoice.findMany({ where, orderBy: { invoiceDate: 'desc' }, take: limit })
+    const invoices = await (db as any).gSTInvoice.findMany({ where, orderBy: { invoiceDate: 'desc' }, take: limit })
 
     const formatted = invoices.map(inv => ({ ...inv, lineItems: JSON.parse(inv.lineItems || '[]') }))
 
@@ -62,10 +62,10 @@ export async function POST(req: NextRequest) {
     }
     const grandTotal = subtotal + cgstTotal + sgstTotal + igstTotal
 
-    const invCount = await db.gSTInvoice.count()
+    const invCount = await (db as any).gSTInvoice.count()
     const invoiceNo = `INV-2026-${String(invCount + 1).padStart(4, '0')}`
 
-    const invoice = await db.gSTInvoice.create({
+    const invoice = await (db as any).gSTInvoice.create({
       data: {
         schoolId: user.schoolId,
         invoiceNo,

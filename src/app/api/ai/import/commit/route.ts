@@ -38,6 +38,8 @@ export async function POST(req: NextRequest) {
         description: `Importing ${rows.length} records. Mapping: ${JSON.stringify(mappedColumns)}`,
         assigneeRole: 'ADMIN',
         assigneeId: userId,
+        entityType: 'IMPORT',
+        entityId: targetType || 'bulk_import',
         priority: 'HIGH',
         status: 'IN_PROGRESS',
         metadata: JSON.stringify({ type: 'import', rowCount: rows.length, targetType }),

@@ -382,7 +382,7 @@ export async function approveProposal(
           name: ruleDef.name,
           description: `Auto-implemented from discovery proposal ${p.id}`,
           triggerEvent: ruleDef.triggerEvent,
-          conditions: ruleDef.conditions ? JSON.stringify(ruleDef.conditions) : null,
+          conditions: ruleDef.conditions ? JSON.stringify(ruleDef.conditions) : '[]',
           actions: typeof ruleDef.actions === 'string' ? ruleDef.actions : JSON.stringify(ruleDef.actions),
           tier: ruleDef.tier || 'B',
           simulationMode: false,

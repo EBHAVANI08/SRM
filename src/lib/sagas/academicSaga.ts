@@ -202,7 +202,7 @@ export async function enterMarks(
 
     // Create or update exam score
     await db.examScore.upsert({
-      where: { examId_studentId: { examId, studentId: mark.studentId } },
+      where: { examId_studentId: { examId, studentId: mark.studentId } } as any,
       update: { marksObtained: mark.marksObtained, percentage, grade },
       create: {
         examId,

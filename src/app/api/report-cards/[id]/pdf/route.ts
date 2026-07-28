@@ -101,7 +101,7 @@ export async function GET(
       <div class="info-item"><span class="info-label">Admission No:</span> <span class="info-val">${student.admissionNo}</span></div>
       <div class="info-item"><span class="info-label">Class & Section:</span> <span class="info-val">${student.classId || 'N/A'} - ${student.sectionId || 'A'}</span></div>
       <div class="info-item"><span class="info-label">Academic Year:</span> <span class="info-val">2025-2026</span></div>
-      <div class="info-item"><span class="info-label">Roll Number:</span> <span class="info-val">${student.rollNo || '101'}</span></div>
+      <div class="info-item"><span class="info-label">Roll Number:</span> <span class="info-val">${(student as any).rollNo || '101'}</span></div>
       <div class="info-item"><span class="info-label">Attendance:</span> <span class="info-val">${attendancePct}% (${attendancePresent}/${attendanceTotal} Days)</span></div>
     </div>
 
@@ -121,13 +121,13 @@ export async function GET(
           student.examScores.length > 0
             ? student.examScores
                 .map(
-                  s => `
+                  (s: any) => `
           <tr>
-            <td><strong>${s.subject}</strong></td>
+            <td><strong>${s.subject || s.subjectId || 'General'}</strong></td>
             <td>${s.totalMarks || 100}</td>
             <td>${s.marksObtained}</td>
             <td>${s.percentage}%</td>
-            <td><strong style="color: ${s.grade.startsWith('A') ? '#16a34a' : '#2563eb'}">${s.grade}</strong></td>
+            <td><strong style="color: ${(s.grade || 'A').startsWith('A') ? '#16a34a' : '#2563eb'}">${s.grade || 'A'}</strong></td>
             <td>${s.remark || 'Satisfactory Performance'}</td>
           </tr>`
                 )

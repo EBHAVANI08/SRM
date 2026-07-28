@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
     if (!['SUPER_ADMIN', 'SCHOOL_HEAD', 'ADMIN', 'IT_TEAM'].includes(user.role)) {
       return NextResponse.json({ success: false, error: 'Admin access required' }, { status: 403 })
     }
-    const reconciliations = await db.bankReconciliation.findMany({ where: { schoolId: user.schoolId }, orderBy: { statementMonth: 'desc' }, take: 20 })
+    const reconciliations = await (db as any).bankReconciliation.findMany({ where: { schoolId: user.schoolId }, orderBy: { statementMonth: 'desc' }, take: 20 })
     const formatted = reconciliations.map(r => ({ ...r, statementLines: JSON.parse(r.statementLines || '[]'), systemEntries: JSON.parse(r.systemEntries || '[]') }))
     return NextResponse.json({ success: true, reconciliations: formatted, count: formatted.length })
   } catch (e: any) {
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     const { bankAccount, statementMonth, statementLines, bankBalance, bookBalance } = body
     if (!bankAccount || !statementMonth) return NextResponse.json({ success: false, error: 'bankAccount and statementMonth required' }, { status: 400 })
 
-    const recon = await db.bankReconciliation.create({
+    const recon = await (db as any).bankReconciliation.create({
       data: {
         schoolId: user.schoolId, bankAccount, statementMonth,
         statementLines: JSON.stringify(statementLines || []),

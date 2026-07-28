@@ -43,8 +43,15 @@ export async function GET(req: NextRequest) {
       where: { schoolId },
       orderBy: { score: 'desc' },
       take: 50,
-      include: { student: { select: { fullName: true, admissionNo: true, sectionId: true } } },
     })
+
+    // Fetch student metadata for the scores
+    const studentIds = Array.from(new Set(allScores.map(s => s.studentId)))
+    const students = await db.student.findMany({
+      where: { id: { in: studentIds } },
+      select: { id: true, fullName: true, admissionNo: true, sectionId: true },
+    })
+    const studentMap = new Map(students.map(st => [st.id, st]))
 
     // Keep only latest version per student
     const seen = new Set<string>()
@@ -56,16 +63,19 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      scores: latest.map(s => ({
-        studentId: s.studentId,
-        studentName: s.student?.fullName || 'Unknown',
-        admissionNo: s.student?.admissionNo || '',
-        section: s.student?.sectionId || '',
-        score: s.score,
-        factors: JSON.parse(s.factors),
-        version: s.version,
-        computedAt: s.computedAt,
-      })),
+      scores: latest.map(s => {
+        const st = studentMap.get(s.studentId)
+        return {
+          studentId: s.studentId,
+          studentName: st?.fullName || 'Unknown',
+          admissionNo: st?.admissionNo || '',
+          section: st?.sectionId || '',
+          score: s.score,
+          factors: JSON.parse(s.factors),
+          version: s.version,
+          computedAt: s.computedAt,
+        }
+      }),
       count: latest.length,
       criticalCount: latest.filter(s => s.score >= 70).length,
       highCount: latest.filter(s => s.score >= 50 && s.score < 70).length,

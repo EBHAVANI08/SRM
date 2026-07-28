@@ -10,7 +10,7 @@ export async function GET(
   try {
     const { id } = await params
 
-    const fee = await db.feeRecord.findUnique({
+    const fee = await (db as any).feeRecord.findUnique({
       where: { id },
       include: {
         student: true,

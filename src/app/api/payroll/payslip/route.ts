@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
     if (month) where.month = month
     if (staffId) where.staffId = staffId
 
-    const payslips = await db.payslip.findMany({
+    const payslips = await (db as any).payslip.findMany({
       where,
       include: { staff: { select: { id: true, fullName: true, employeeId: true, designation: true, department: true, photo: true, bankAccountNo: true, bankIfsc: true, bankName: true, panNo: true } } },
       orderBy: { generatedAt: 'desc' },
@@ -87,8 +87,8 @@ export async function POST(req: NextRequest) {
 
     if (!staff) return NextResponse.json({ success: false, error: 'Staff not found' }, { status: 404 })
 
-    const salaryRecord = staff.salaryRecords[0]
-    const salaryStructure = staff.salaryStructures[0]
+    const salaryRecord = staff.salaryRecords[0] as any
+    const salaryStructure = staff.salaryStructures[0] as any
 
     // Use salary record if exists, else compute from structure
     let basic, hra, da, conveyance, specialAllowance, grossEarnings
@@ -152,12 +152,12 @@ export async function POST(req: NextRequest) {
     const esiEmployer = salaryStructure?.esiApplicable && grossEarnings < 21000 ? Math.round(grossEarnings * (salaryStructure.esiRateEmployer) / 100) : 0
 
     // Check if payslip already exists for this staff + month
-    const existing = await db.payslip.findFirst({ where: { staffId, month } })
+    const existing = await (db as any).payslip.findFirst({ where: { staffId, month } })
     if (existing) {
       return NextResponse.json({ success: true, payslip: existing, message: 'Payslip already exists for this month' })
     }
 
-    const payslip = await db.payslip.create({
+    const payslip = await (db as any).payslip.create({
       data: {
         schoolId: user.schoolId,
         staffId,

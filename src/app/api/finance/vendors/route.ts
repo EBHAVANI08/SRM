@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
     if (!['SUPER_ADMIN', 'SCHOOL_HEAD', 'ADMIN', 'IT_TEAM'].includes(user.role)) {
       return NextResponse.json({ success: false, error: 'Admin access required' }, { status: 403 })
     }
-    const vendors = await db.vendor.findMany({ where: { schoolId: user.schoolId }, orderBy: { name: 'asc' } })
+    const vendors = await (db as any).vendor.findMany({ where: { schoolId: user.schoolId }, orderBy: { name: 'asc' } })
     return NextResponse.json({ success: true, vendors, count: vendors.length })
   } catch (e: any) {
     return NextResponse.json({ success: false, error: e?.message }, { status: 500 })
@@ -27,10 +27,10 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     if (!body.name) return NextResponse.json({ success: false, error: 'Vendor name is required' }, { status: 400 })
 
-    const vCount = await db.vendor.count()
+    const vCount = await (db as any).vendor.count()
     const vendorCode = `V-${String(vCount + 1).padStart(3, '0')}`
 
-    const vendor = await db.vendor.create({
+    const vendor = await (db as any).vendor.create({
       data: {
         schoolId: user.schoolId,
         vendorCode,

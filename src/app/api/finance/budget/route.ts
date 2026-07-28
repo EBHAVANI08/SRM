@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
     }
     const sp = req.nextUrl.searchParams
     const fy = sp.get('financialYear') || '2026-27'
-    const budgets = await db.budget.findMany({ where: { schoolId: user.schoolId, financialYear: fy }, orderBy: { department: 'asc' } })
+    const budgets = await (db as any).budget.findMany({ where: { schoolId: user.schoolId, financialYear: fy }, orderBy: { department: 'asc' } })
 
     // Compute variance
     const formatted = budgets.map(b => ({
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     if (!financialYear || !department || !category || !budgetAmount) {
       return NextResponse.json({ success: false, error: 'financialYear, department, category, budgetAmount required' }, { status: 400 })
     }
-    const budget = await db.budget.create({
+    const budget = await (db as any).budget.create({
       data: {
         schoolId: user.schoolId, financialYear, department, category,
         budgetAmount: Number(budgetAmount), actualAmount: 0, variance: Number(budgetAmount), variancePercent: 100,

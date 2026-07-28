@@ -179,7 +179,7 @@ export async function processGateExitDetection(
         detectedAt: detection.detectedAt,
         faceConfidence: detection.faceConfidence,
         faceMatchType: detection.faceMatchType,
-        reason: detection.reason,
+        reason: detection.reason || 'Student exit detected',
         status: 'ACTIVE',
       },
     })

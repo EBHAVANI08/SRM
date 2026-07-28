@@ -147,7 +147,7 @@ If you cannot tell, return { "present": false, "confidence": 0.0 }.`
     let attendanceCreated = 0
     for (const studentId of present) {
       await db.attendance.upsert({
-        where: { studentId_date: { studentId, date: todayDate } },
+        where: { studentId_date: { studentId, date: todayDate } } as any,
         create: {
           studentId,
           date: todayDate,
@@ -167,7 +167,7 @@ If you cannot tell, return { "present": false, "confidence": 0.0 }.`
     }
     for (const studentId of absent) {
       await db.attendance.upsert({
-        where: { studentId_date: { studentId, date: todayDate } },
+        where: { studentId_date: { studentId, date: todayDate } } as any,
         create: {
           studentId,
           date: todayDate,

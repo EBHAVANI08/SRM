@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
     const sp = req.nextUrl.searchParams
     const limit = Number(sp.get('limit') || 50)
 
-    const entries = await db.journalEntry.findMany({
+    const entries = await (db as any).journalEntry.findMany({
       where: { schoolId: user.schoolId },
       include: { lines: { orderBy: { id: 'asc' } } },
       orderBy: { entryDate: 'desc' },
@@ -47,10 +47,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: `Journal not balanced: Debit ₹${totalDebit} ≠ Credit ₹${totalCredit}` }, { status: 400 })
     }
 
-    const entryCount = await db.journalEntry.count()
+    const entryCount = await (db as any).journalEntry.count()
     const entryNo = `JE-2026-${String(entryCount + 1).padStart(4, '0')}`
 
-    const entry = await db.journalEntry.create({
+    const entry = await (db as any).journalEntry.create({
       data: {
         schoolId: user.schoolId,
         entryNo,

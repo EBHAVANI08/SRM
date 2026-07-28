@@ -92,9 +92,8 @@ export async function POST(req: NextRequest) {
     // Upsert attendance record (one per student per day)
     const record = await db.attendance.upsert({
       where: {
-        // Use a composite unique if available, otherwise find+create
         studentId_date: studentId + '_' + (date || new Date().toISOString().split('T')[0])
-      },
+      } as any,
       update: {
         status,
         method: method || 'MANUAL',

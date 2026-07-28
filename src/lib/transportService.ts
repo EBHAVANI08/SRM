@@ -114,13 +114,13 @@ export async function processBusLocation(location: BusLocation): Promise<{
 
       const message = `🚌 BUS ARRIVING SOON
 
-Dear ${student.guardianName},
+Dear ${student.guardianName || 'Parent'},
 
-The school bus (Route: ${assignment.routeName || location.routeId}) is approaching ${pickupPointName} and will arrive in approximately ${etaMin} minutes.
+The school bus (Route: ${(assignment as any).routeName || location.routeId}) is approaching ${pickupPointName} and will arrive in approximately ${etaMin} minutes.
 
 Student: ${student.fullName}
 Pickup Point: ${pickupPointName}
-Vehicle: ${assignment.vehicleNo || location.vehicleId}
+Vehicle: ${(assignment as any).vehicleNo || location.vehicleId}
 
 Please ensure your child is ready at the pickup point.
 
@@ -146,7 +146,7 @@ Please ensure your child is ready at the pickup point.
           recipientId: student.id,
           recipientContact: student.guardianPhone,
           subject: `Bus Arriving`,
-          body: `Bus arriving at ${pickupPointName} in ~${etaMin} min for ${student.fullName}. Vehicle: ${assignment.vehicleNo || location.vehicleId}. — LearnX`,
+          body: `Bus arriving at ${pickupPointName} in ~${etaMin} min for ${student.fullName}. Vehicle: ${(assignment as any).vehicleNo || location.vehicleId}. — LearnX`,
           category: 'TRANSPORT',
           audience: 'MINIMUM',
           schoolId: 'school_default',

@@ -59,7 +59,7 @@ export async function indexStudent(studentId: string): Promise<KnowledgeCard> {
       student.fullName.toLowerCase(),
       student.admissionNo.toLowerCase(),
       student.sectionId?.toLowerCase() || '',
-      student.guardianName.toLowerCase(),
+      student.guardianName?.toLowerCase() || '',
       student.bloodGroup?.toLowerCase() || '',
       'student', 'admission', 'attendance', 'fees', 'exam',
     ].filter(Boolean),

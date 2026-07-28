@@ -588,7 +588,7 @@ export async function seedDefaultRules(schoolId: string = 'school_default'): Pro
           schoolId,
           name: rule.name,
           triggerEvent: rule.triggerEvent,
-          conditions: rule.conditions,
+          conditions: rule.conditions || '[]',
           actions: rule.actions,
           tier: rule.tier,
           simulationMode: rule.simulationMode,
