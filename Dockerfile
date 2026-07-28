@@ -4,7 +4,6 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
 RUN npm install
 
-
 FROM node:22-alpine AS builder
 WORKDIR /app
 
@@ -13,7 +12,6 @@ COPY . .
 
 RUN npx prisma generate
 RUN npm run build
-
 
 FROM node:22-alpine AS runner
 WORKDIR /app
